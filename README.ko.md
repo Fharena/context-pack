@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.11"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.12"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -363,7 +363,7 @@ Context Pack의 첫 번째 선택 로직은 일부러 단순하고 확인 가능
 
 - `setup` / `init`은 첫 설치 때 일반적인 source, test, docs, automation 경로를 보고 초기 area를 추론합니다. 이후 재실행은 `--infer-areas`를 명시하지 않으면 사용자가 정리한 manifest를 보존합니다.
 - 변경 파일은 area path glob과 매칭됩니다.
-- 작업 설명의 keyword가 area score를 올릴 수 있습니다.
+- 작업 설명의 keyword가 area score를 올릴 수 있습니다. 단, 흔한 stop word는 무시해서 일반적인 문장이 관련 없는 area를 선택하지 않게 합니다.
 - pack은 selected areas, related areas, Read First, Read Later로 context를 나눕니다.
 - stale warning은 area doc이 검토된 git 상태와 현재 git 상태를 비교합니다.
 
@@ -490,4 +490,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.11](https://github.com/Fharena/context-pack/releases/tag/v0.2.11).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.12](https://github.com/Fharena/context-pack/releases/tag/v0.2.12).

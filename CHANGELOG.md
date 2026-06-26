@@ -4,6 +4,16 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-06-27
+
+### Fixed
+
+- Task keyword scoring now ignores common stop words so phrases like `and`, `the`, or `with` do not select unrelated areas or make generated packs noisy.
+
+### Changed
+
+- First-run inferred docs areas now include usage/adoption keywords so public onboarding and adoption tasks route to documentation context more reliably.
+
 ## [0.2.11] - 2026-06-27
 
 ### Changed

@@ -719,6 +719,43 @@ class ContextPackTests(unittest.TestCase):
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- cli", pack)
 
+    def test_task_keyword_scoring_ignores_stop_words(self) -> None:
+        manifest = {
+            "areas": {
+                "runtime": {
+                    "description": "Runtime and worker behavior.",
+                    "paths": [],
+                    "keywords": ["runtime"],
+                },
+                "docs": {
+                    "description": "Documentation and adoption guidance.",
+                    "paths": [],
+                    "keywords": ["docs", "adoption"],
+                },
+                "overview": {
+                    "description": "Project orientation.",
+                    "paths": [],
+                    "keywords": ["overview"],
+                },
+            }
+        }
+
+        stop_word_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="and the with for this work",
+        )
+        self.assertEqual([item.area_id for item in stop_word_matches], ["overview"])
+
+        adoption_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="public adoption proof and evidence",
+        )
+        self.assertEqual(adoption_matches[0].area_id, "docs")
+        self.assertIn("task matched keywords: adoption", adoption_matches[0].reasons)
+        self.assertNotIn("and", adoption_matches[0].reasons[0])
+
     def test_first_modified_status_file_keeps_first_character(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

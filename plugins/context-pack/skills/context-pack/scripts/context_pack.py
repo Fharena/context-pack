@@ -62,8 +62,64 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.11"
+CONTEXT_PACK_VERSION = "0.2.12"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
+TOKEN_STOP_WORDS = {
+    "about",
+    "after",
+    "again",
+    "against",
+    "all",
+    "and",
+    "any",
+    "are",
+    "before",
+    "between",
+    "both",
+    "but",
+    "can",
+    "cannot",
+    "code",
+    "does",
+    "for",
+    "from",
+    "has",
+    "have",
+    "how",
+    "into",
+    "its",
+    "make",
+    "more",
+    "not",
+    "now",
+    "our",
+    "out",
+    "over",
+    "should",
+    "that",
+    "the",
+    "their",
+    "then",
+    "there",
+    "these",
+    "this",
+    "those",
+    "through",
+    "use",
+    "using",
+    "was",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "why",
+    "will",
+    "with",
+    "work",
+    "you",
+    "your",
+}
 
 
 @dataclasses.dataclass
@@ -430,7 +486,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "paths": ["README.md", "README.*.md", "docs/**"],
             "start_files": ["README.md", "docs"],
             "tests": [],
-            "keywords": ["docs", "readme", "agents", "claude", "onboarding"],
+            "keywords": ["docs", "readme", "agents", "claude", "onboarding", "usage", "adoption"],
             "contracts": [
                 "Docs should describe the current install and usage flow.",
                 "Agent guidance should be concise and actionable.",
@@ -1449,7 +1505,7 @@ def tokenize(value: str) -> set[str]:
     cleaned = []
     for ch in value.lower():
         cleaned.append(ch if ch.isalnum() else " ")
-    return {part for part in "".join(cleaned).split() if len(part) >= 3}
+    return {part for part in "".join(cleaned).split() if len(part) >= 3 and part not in TOKEN_STOP_WORDS}
 
 
 def area_text(area_id: str, area: dict[str, Any]) -> str:
