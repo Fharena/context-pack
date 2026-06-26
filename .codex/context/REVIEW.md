@@ -17,6 +17,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Review packs ignore committed branch changes when no dirty files exist.
   - Hook installation duplicates marker blocks or overwrites unrelated user hook logic.
   - Pack generation creates tracked generated files.
+  - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
   - `start` hides setup errors or creates noisy tracked files on first run.
   - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
   - `install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.
@@ -46,6 +47,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `python -m json.tool .agents/plugins/marketplace.json`
   - `python -m pip install -e .`
   - `context-pack --help`
+  - `context-pack setup --repo <tmp> --quiet`
   - `context-pack status --quiet`
   - `context-pack start --task "agent-first CLI UX" --quiet`
   - `context-pack start --review --base HEAD~1 --quiet`
@@ -92,6 +94,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.
   - Trigger description is too narrow and only catches session handoff use cases.
   - Skill guidance teaches lower-level commands before the one-command start path.
+  - Skill guidance teaches `init` plus `install-agent-docs` before the one-command `setup` path.
   - Install/update requests are routed to old local scripts instead of `install-codex`.
   - Claude/Cursor guidance drifts from the generated AGENTS.md rule block.
 
@@ -106,6 +109,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Git behavior is tested only with dirty files and misses committed review use cases.
   - Hook tests check creation but not idempotency or uninstall.
   - Installing shared agent docs twice duplicates marker blocks.
+  - Setup drifts from the init/install-agent-docs/hook commands it composes.
 
 ## Escalate Review Scope When
 - Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.

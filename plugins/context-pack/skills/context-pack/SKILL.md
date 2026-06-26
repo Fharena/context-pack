@@ -1,6 +1,6 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to set up project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
@@ -90,6 +90,16 @@ python scripts/context_pack.py install-agent-docs
 
 This creates or updates the managed Context Pack block in `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc` while preserving user text outside the marker block. Use `--target agents`, `--target claude`, or `--target cursor` for a narrower install.
 
+### Set Up A Repo
+
+Use when Context Pack is missing or the user asks to initialize, install, configure, or start project memory in a repo.
+
+```bash
+python scripts/context_pack.py setup
+```
+
+This initializes `.codex/context/`, `.codex/handoff/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+
 ### Fast Path
 
 Use this first when entering a repo or starting a non-trivial task. It initializes missing context docs, chooses a task/review/changed-files pack when enough signal exists, and prints what to read next.
@@ -116,12 +126,12 @@ Then read `.codex/packs/CONTEXT_PACK.md` if it was generated. If no pack was gen
 
 Use when `.codex/context/manifest.json` is missing or the user asks to set up Context Pack.
 
-Prefer the fast path above unless the user specifically asked for initialization only.
+Prefer `setup` unless the user specifically asked for low-level initialization only.
 
 1. Run:
 
    ```bash
-   python scripts/context_pack.py init
+   python scripts/context_pack.py setup
    ```
 
 2. Run:
@@ -132,7 +142,7 @@ Prefer the fast path above unless the user specifically asked for initialization
 
 3. If setup succeeds, summarize the created files and suggest the next natural-language prompt, such as "Build a review context pack for this branch."
 
-Do not install git hooks during init unless the user explicitly asks for automation.
+Do not install git hooks during setup unless the user explicitly asks for automation.
 
 ### Prepare A Task Or Debugging Pack
 

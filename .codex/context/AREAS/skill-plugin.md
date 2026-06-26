@@ -21,6 +21,7 @@ stale_if:
 - Teaching Claude, Cursor, or mixed-agent repos how to pick up Context Pack automatically.
 - Updating Codex plugin metadata or skill triggers.
 - Aligning README, SKILL.md, and engine command behavior.
+- Making first-time repo onboarding feel like one agent action instead of several manual CLI steps.
 
 ## Start With
 - `plugins/context-pack/skills/context-pack/SKILL.md`
@@ -30,6 +31,7 @@ stale_if:
 ## Contracts
 - The skill must route factual work to the deterministic engine first.
 - The skill should tell agents to use `context-pack start` proactively before broad reading, review, unfamiliar debugging, and handoff.
+- The skill should use `context-pack setup` when Context Pack is missing or the user asks to configure project memory.
 - The manifest must remain validation-ready.
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
 - Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
@@ -41,6 +43,7 @@ stale_if:
 - Product copy narrows the value to session handoff only.
 - Default prompt makes Context Pack feel manual-only instead of agent-first.
 - Skill guidance teaches lower-level commands before the one-command start path.
+- Skill guidance teaches `init` plus `install-agent-docs` before the one-command `setup` path.
 - Install/update requests are routed to old local scripts instead of `install-codex`.
 - Claude/Cursor guidance drifts from the generated `AGENTS.md` rule block.
 

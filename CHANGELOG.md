@@ -2,6 +2,18 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.8] - 2026-06-26
+
+### Added
+
+- `context-pack setup` as the one-command repo onboarding path: initialize context docs, handoff docs, `.gitignore`, shared agent docs, and run the same health checks.
+- `setup --agent-docs none|agents|claude|cursor|all` and `setup --git-hooks off|safe|aggressive` for explicit setup-time choices.
+- Tests for default setup, skipped agent docs, and safe git hook installation through setup.
+
+### Changed
+
+- README, Korean README, Codex skill guidance, packaged skill synthesis, and plugin metadata now lead with `setup` for first-time repo onboarding.
+
 ## [0.1.7] - 2026-06-26
 
 ### Added

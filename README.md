@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -74,7 +74,7 @@ If the Codex CLI is not on `PATH`, omit `--activate` and run the printed `codex 
 Then talk to your agent:
 
 ```text
-Use $context-pack to initialize this repo.
+Use $context-pack to set up this repo.
 Use $context-pack to start work on this bug.
 Use $context-pack to checkpoint this work.
 ```
@@ -91,18 +91,27 @@ For non-Codex agents or direct terminal use:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
+context-pack setup
 context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
 
-For mixed-agent repos, install shared repo rules once:
+For a one-command trial without installing the CLI permanently:
+
+```bash
+pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack setup
+```
+
+`setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
+
+If you already have a context library and only want to refresh shared repo rules:
 
 ```bash
 context-pack install-agent-docs
 ```
 
-This creates or updates the managed Context Pack block in `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`. Existing text outside the managed block is preserved. Use `--target claude`, `--target cursor`, or repeated `--target` flags when you only want specific agent docs.
+Both commands preserve existing text outside the managed Context Pack block. Use `setup --agent-docs none` when you only want the `.codex/` library, or `install-agent-docs --target claude` / `--target cursor` when you only want specific agent docs.
 
 ## Local Install Options
 
@@ -121,7 +130,7 @@ python scripts/install_skill.py
 Run from source without installing anything:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py init
+python plugins/context-pack/scripts/context_pack.py setup
 python plugins/context-pack/scripts/context_pack.py start --review --base main
 ```
 
@@ -199,6 +208,7 @@ The point is not to replace source code. The point is to make the agent start fr
 
 | Feature | What it saves |
 | --- | --- |
+| `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
@@ -216,7 +226,7 @@ The point is not to replace source code. The point is to make the agent start fr
 Tell the agent:
 
 ```text
-Use $context-pack to initialize this repo.
+Use $context-pack to set up Context Pack in this repo.
 Use $context-pack to make a context pack for this bug.
 Use $context-pack to review this branch against main.
 Use $context-pack to checkpoint this work.
@@ -228,6 +238,7 @@ Checkpoint this work for the next session.
 The more important path is implicit:
 
 - before broad repo reading: run `context-pack start --task "..."`
+- when Context Pack is missing: run `context-pack setup`
 - before review: run `context-pack start --review --base <base-ref>` when a base is known
 - during unfamiliar debugging: generate a task pack before opening many files
 - after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
@@ -267,6 +278,7 @@ Context Pack is not a vector database and not a generic memory bank. It is a ver
 The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
+- one-command `setup` for repo onboarding and shared agent rules
 - Codex plugin installation from an installed package or source checkout
 - shared repo-rule installation for `AGENTS.md`, `CLAUDE.md`, and Cursor project rules
 - one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
@@ -360,4 +372,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.7](https://github.com/Fharena/context-pack/releases/tag/v0.1.7).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.8](https://github.com/Fharena/context-pack/releases/tag/v0.1.8).

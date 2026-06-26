@@ -49,6 +49,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `python -m json.tool .agents/plugins/marketplace.json`
   - `python -m pip install -e .`
   - `context-pack --help`
+  - `context-pack setup --repo <tmp> --quiet`
   - `context-pack status --quiet`
   - `context-pack start --task "agent-first CLI UX" --quiet`
   - `context-pack start --review --base HEAD~1 --quiet`

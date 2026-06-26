@@ -33,6 +33,7 @@ stale_if:
 - Documenting shared agent rules for Codex, Claude, Cursor, or mixed-agent repos.
 - Preparing a local plugin/skill distribution.
 - Updating README command examples.
+- Improving clone-free or one-command first-run onboarding.
 
 ## Start With
 - `README.md`
@@ -54,6 +55,7 @@ stale_if:
 - GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
 - Packaged CLI behavior should match the bundled skill engine.
 - README should distinguish Codex plugin installation from shared repo-rule installation.
+- README should lead direct terminal users to `context-pack setup` before lower-level commands.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -65,6 +67,7 @@ stale_if:
 - Marketplace JSON points at a plugin path that does not exist in the repo.
 - Installer overwrites a local user customization without `--force`.
 - README teaches lower-level commands before the one-command `start` path.
+- README teaches `init` plus `install-agent-docs` before the one-command `setup` path.
 - README makes `install-agent-docs` sound required for single-agent Codex use.
 
 ## Expand Scope If

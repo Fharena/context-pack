@@ -17,7 +17,7 @@ stale_if:
 
 ## Read When
 - Changing `context_pack.py` commands or output.
-- Debugging start, install-codex, checkpoint, pack, review-pack, status, mark-reviewed, refresh, doctor, or git hook behavior.
+- Debugging setup, start, install-codex, checkpoint, pack, review-pack, status, mark-reviewed, refresh, doctor, or git hook behavior.
 - Debugging shared agent-doc installation for `AGENTS.md`, `CLAUDE.md`, or Cursor rules.
 - Adding new deterministic operations that should not spend agent tokens.
 
@@ -33,6 +33,7 @@ stale_if:
 - Packs should show scope-reduction metrics without pretending they replace source verification.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
 - Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
+- `setup` should stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - `install-codex` should refuse unsafe overwrites and work from both source checkouts and packaged CLI installs.
 - `install-agent-docs` should preserve existing user text and only replace the managed marker block.
@@ -47,6 +48,7 @@ stale_if:
 - Broad overview/context patterns dominate the pack instead of specific changed-file areas.
 - Contracts or failure modes repeat until the pack stops saving tokens.
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
+- `setup` skips shared agent docs or installs git hooks without explicit setup flags.
 - `start` hides setup errors or creates noisy tracked files on first run.
 - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
 - `install-agent-docs` duplicates marker blocks or strips existing `AGENTS.md`, `CLAUDE.md`, or Cursor rule content.

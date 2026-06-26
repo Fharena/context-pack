@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -82,7 +82,7 @@ Codex CLI가 `PATH`에 없다면 `--activate`를 빼고, 출력되는 `codex plu
 그 다음 사람은 명령어를 외울 필요 없이 에이전트에게 이렇게 말하면 됩니다.
 
 ```text
-Use $context-pack to initialize this repo.
+Use $context-pack to set up this repo.
 Use $context-pack to start work on this bug.
 Use $context-pack to checkpoint this work.
 ```
@@ -99,18 +99,27 @@ Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
+context-pack setup
 context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
 
-Codex, Claude, Cursor를 섞어 쓰는 repo라면 공통 에이전트 규칙을 한 번 설치할 수 있습니다.
+CLI를 영구 설치하지 않고 한 번 시험해보고 싶다면:
+
+```bash
+pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack setup
+```
+
+`setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
+
+이미 context library가 있고 공통 agent rule만 갱신하고 싶다면:
 
 ```bash
 context-pack install-agent-docs
 ```
 
-이 명령은 `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 안에 Context Pack 관리 블록을 만들거나 갱신합니다. 관리 블록 밖의 기존 문서는 보존합니다. 특정 파일만 원하면 `--target claude`, `--target cursor`처럼 지정하거나 `--target`을 여러 번 쓰면 됩니다.
+두 명령 모두 Context Pack 관리 블록 밖의 기존 문서는 보존합니다. `.codex/` 도서관만 만들고 싶다면 `setup --agent-docs none`을 쓰고, 특정 agent doc만 원하면 `install-agent-docs --target claude` 또는 `--target cursor`를 쓰면 됩니다.
 
 ## 로컬 설치 옵션
 
@@ -129,7 +138,7 @@ python scripts/install_skill.py
 아무것도 설치하지 않고 source에서 직접 실행:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py init
+python plugins/context-pack/scripts/context_pack.py setup
 python plugins/context-pack/scripts/context_pack.py start --review --base main
 ```
 
@@ -241,6 +250,7 @@ context-pack mark-reviewed runtime tests
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
+| `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리 |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
@@ -256,7 +266,7 @@ context-pack mark-reviewed runtime tests
 ## Agent-first UX
 
 ```text
-Use $context-pack to initialize this repo.
+Use $context-pack to set up Context Pack in this repo.
 Use $context-pack to make a context pack for this bug.
 Use $context-pack to review this branch against main.
 Use $context-pack to checkpoint this work.
@@ -270,6 +280,7 @@ Checkpoint this work for the next session.
 더 중요한 흐름은 암묵적 사용입니다.
 
 - repo를 넓게 읽기 전: `context-pack start --task "..."`
+- Context Pack이 없을 때: `context-pack setup`
 - 리뷰 전: base를 알면 `context-pack start --review --base <base-ref>`
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
 - 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
@@ -311,6 +322,7 @@ Python script가 맡는 일:
 - git 상태 수집
 - dirty file 목록
 - diff hash
+- repo onboarding과 공통 agent rule을 위한 원커맨드 `setup`
 - 설치된 package나 source checkout에서 Codex plugin 설치
 - `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 repo rule 설치
 - 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
@@ -405,4 +417,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.7](https://github.com/Fharena/context-pack/releases/tag/v0.1.7).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.8](https://github.com/Fharena/context-pack/releases/tag/v0.1.8).

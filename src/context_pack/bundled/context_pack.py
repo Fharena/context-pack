@@ -48,7 +48,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.1.7"
+CONTEXT_PACK_VERSION = "0.1.8"
 
 
 @dataclasses.dataclass
@@ -803,6 +803,64 @@ def cmd_install_agent_docs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_setup(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+
+    init_args = argparse.Namespace(
+        repo=str(repo),
+        quiet=True,
+        force=args.force,
+        no_agent_doc=True,
+        agent_doc="AGENTS.md",
+    )
+    result = cmd_init(init_args)
+    if result != 0:
+        return result
+
+    agent_docs: list[Path] = []
+    if args.agent_docs != "none":
+        targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
+        agent_docs = [append_agent_rules_for_kind(repo, kind) for kind in resolve_agent_doc_targets(targets)]
+
+    if args.git_hooks != "off":
+        hook_args = argparse.Namespace(repo=str(repo), quiet=True, mode=args.git_hooks)
+        result = cmd_install_git_hooks(hook_args)
+        if result != 0:
+            return result
+
+    errors, warnings = context_setup_issues(repo)
+    if not args.quiet:
+        print(f"Context Pack setup complete for {repo}")
+        print("")
+        print("Ready:")
+        print(f"- Context library: {CONTEXT_DIR}")
+        print(f"- Handoff docs: {HANDOFF_DIR}")
+        if agent_docs:
+            print("- Agent docs:")
+            for rel_path in agent_docs:
+                print(f"  - {rel_path}")
+        else:
+            print("- Agent docs: skipped")
+        print(f"- Git hooks: {args.git_hooks}")
+        if warnings:
+            print("")
+            print("Warnings:")
+            for item in warnings:
+                print(f"- {item}")
+        if errors:
+            print("")
+            print("Errors:")
+            for item in errors:
+                print(f"- {item}")
+        print("")
+        print("Next:")
+        print('- `context-pack start --task "..."` before broad reading')
+        print("- `context-pack start --review --base main` before branch review")
+        print("- `context-pack checkpoint --pack` after meaningful work")
+    return 1 if errors else 0
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
@@ -918,7 +976,7 @@ def cmd_start(args: argparse.Namespace) -> int:
                 print("Context library: missing")
                 print("")
                 print("Next:")
-                print("- Run `context-pack init` or rerun `context-pack start` without `--no-init`.")
+                print("- Run `context-pack setup` or rerun `context-pack start` without `--no-init`.")
             return 1
         init_args = argparse.Namespace(
             repo=str(repo),
@@ -1584,7 +1642,7 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("Context library: missing")
             print("")
             print("Next:")
-            print("- context-pack init")
+            print("- context-pack setup")
         return 1
 
     manifest = load_manifest(repo)
@@ -1626,7 +1684,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         print("")
         print("Next:")
         if errors:
-            print("- Fix setup errors or run `context-pack init`.")
+            print("- Fix setup errors or run `context-pack setup`.")
         elif snapshot.dirty_files:
             print("- Run `context-pack start --changed` before broad reading.")
             print("- After source verification, run `context-pack mark-reviewed <area>` for updated area docs.")
@@ -1752,7 +1810,7 @@ def packaged_skill_doc() -> str:
     return """\
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to set up project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
@@ -1760,6 +1818,16 @@ description: Prepare focused repo context for coding agents. Use proactively whe
 Use this skill as the agent-facing workflow for Context Pack. Run the bundled engine yourself, read the generated pack, then continue the user's coding, review, or handoff task.
 
 Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
+
+## Set Up A Repo
+
+When Context Pack is missing or the user asks to initialize, install, configure, or start project memory, run:
+
+```bash
+python scripts/context_pack.py setup
+```
+
+This initializes `.codex/context/`, `.codex/handoff/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
 
 ## Fast Path
 
@@ -1823,7 +1891,7 @@ def packaged_openai_yaml() -> str:
 interface:
   display_name: "Context Pack"
   short_description: "Start agents from focused repo context"
-  default_prompt: "Use $context-pack to start from focused repo context before broad reading, review, debugging, or handoff."
+  default_prompt: "Use $context-pack to set up this repo, then start from focused context before broad reading, review, debugging, or handoff."
 policy:
   allow_implicit_invocation: true
 """
@@ -2080,6 +2148,23 @@ def build_parser() -> argparse.ArgumentParser:
         description="Build repo-local context packs for coding agents.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("setup", help="Set up Context Pack in a repo with safe onboarding defaults")
+    add_common(p)
+    p.add_argument("--force", action="store_true", help="Overwrite existing context docs")
+    p.add_argument(
+        "--agent-docs",
+        choices=["all", "agents", "claude", "cursor", "none"],
+        default="all",
+        help="Agent docs to install during setup",
+    )
+    p.add_argument(
+        "--git-hooks",
+        choices=["off", "safe", "aggressive"],
+        default="off",
+        help="Optionally install repo-local git hooks during setup",
+    )
+    p.set_defaults(func=cmd_setup)
 
     p = sub.add_parser("init", help="Initialize .codex context docs in a repo")
     add_common(p)

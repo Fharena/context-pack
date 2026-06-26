@@ -88,6 +88,52 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue((repo / "AGENTS.md").exists())
             self.assertFalse((repo / ".codex/packs/CONTEXT_PACK.md").exists())
 
+    def test_setup_initializes_context_and_common_agent_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertIn("context-pack start", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("context-pack start", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
+            self.assertIn(
+                "alwaysApply: true",
+                (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8"),
+            )
+            self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
+
+    def test_setup_can_skip_agent_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(
+                self.engine.main(["setup", "--repo", str(repo), "--agent-docs", "none", "--quiet"]),
+                0,
+            )
+
+            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / "CLAUDE.md").exists())
+            self.assertFalse((repo / ".cursor/rules/context-pack.mdc").exists())
+
+    def test_setup_can_install_safe_git_hooks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(
+                self.engine.main(["setup", "--repo", str(repo), "--git-hooks", "safe", "--quiet"]),
+                0,
+            )
+
+            hooks = repo / ".git/hooks"
+            self.assertIn("context-pack:start", (hooks / "pre-commit").read_text(encoding="utf-8"))
+            self.assertIn("context-pack:start", (hooks / "post-checkout").read_text(encoding="utf-8"))
+            self.assertIn("context-pack:start", (hooks / "post-merge").read_text(encoding="utf-8"))
+            self.assertFalse((hooks / "post-commit").exists())
+
     def test_install_agent_docs_writes_common_agent_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
