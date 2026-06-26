@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+node_modules/
 
 # context-pack generated/local files
 .codex/packs/

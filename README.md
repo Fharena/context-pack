@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.10"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -96,6 +96,14 @@ context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
+
+Prefer `npx`? Run directly from GitHub:
+
+```bash
+npx github:Fharena/context-pack setup
+```
+
+This still requires Python 3.11+ on `PATH`; the Node wrapper only avoids installing the Python package first.
 
 For a one-command trial without installing the CLI permanently:
 
@@ -281,6 +289,7 @@ The script handles deterministic work:
 - git branch, HEAD, dirty files, diff hash
 - one-command `setup` for repo onboarding and shared agent rules
 - Codex plugin installation from an installed package or source checkout
+- GitHub `npx` wrapper for developers who do not start from Python tooling
 - shared repo-rule installation for `AGENTS.md`, `CLAUDE.md`, and Cursor project rules
 - one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
 - first-run inference for common source, test, docs, and automation areas
@@ -369,10 +378,12 @@ python -m json.tool .agents/plugins/marketplace.json
 python -m pip install -e .
 context-pack --help
 context-pack doctor --fix --help
+node bin/context-pack.js --help
+npm pack --dry-run
 ```
 
-GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu for Python 3.11 and 3.12.
+GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12.
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.9](https://github.com/Fharena/context-pack/releases/tag/v0.1.9).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.10](https://github.com/Fharena/context-pack/releases/tag/v0.1.10).

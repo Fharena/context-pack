@@ -25,6 +25,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `README.md`
   - `README.ko.md`
   - `CHANGELOG.md`
+  - `package.json`
+  - `bin/context-pack.js`
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
 - Matches:
@@ -33,6 +35,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `.agents/plugins/marketplace.json`
   - `.github/**`
   - `pyproject.toml`
+  - `package.json`
+  - `bin/**`
   - `src/context_pack/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
@@ -49,6 +53,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `python -m json.tool .agents/plugins/marketplace.json`
   - `python -m pip install -e .`
   - `context-pack --help`
+  - `node bin/context-pack.js --help`
+  - `npm pack --dry-run`
   - `context-pack setup --repo <tmp> --quiet`
   - `context-pack doctor --repo <tmp> --fix --quiet`
   - `context-pack status --quiet`

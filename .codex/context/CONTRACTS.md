@@ -17,7 +17,8 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - Install scripts must not overwrite existing local skill/plugin installs unless --force is explicit.
 - Codex plugin install must work from a package install without requiring a repo clone.
 - Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.
-- Release checks must include unit tests, plugin validation, and skill validation.
+- Release checks must include unit tests, plugin validation, skill validation, and npm wrapper validation.
+- Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic.
 
 ## overview
 - Treat context docs as routing hints, not ground truth.
@@ -32,4 +33,5 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 
 ## tests
 - Tests should exercise real command flows through the engine main entrypoint.
-- Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, dirty changed files, committed review diffs, and hook idempotency.
+- Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help, dirty changed files, committed review diffs, and hook idempotency.
+- Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.

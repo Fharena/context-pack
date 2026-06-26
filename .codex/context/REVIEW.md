@@ -32,6 +32,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `.agents/plugins/marketplace.json`
   - `.github/**`
   - `pyproject.toml`
+  - `package.json`
+  - `bin/**`
   - `src/context_pack/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
@@ -48,6 +50,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `python -m json.tool .agents/plugins/marketplace.json`
   - `python -m pip install -e .`
   - `context-pack --help`
+  - `node bin/context-pack.js --help`
+  - `npm pack --dry-run`
   - `context-pack setup --repo <tmp> --quiet`
   - `context-pack doctor --repo <tmp> --fix --quiet`
   - `context-pack status --quiet`
@@ -61,6 +65,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Marketplace entry points to the wrong relative plugin path.
   - README documents a command not covered by tests or validation.
   - Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
+  - npm package metadata drifts from Python/plugin versions or omits the bundled engine.
 
 ### overview
 - Doc: `.codex/context/AREAS/overview.md`
@@ -114,6 +119,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Installing shared agent docs twice duplicates marker blocks.
   - Setup drifts from the init/install-agent-docs/hook commands it composes.
   - Doctor is tested only as read-only validation after adding repair behavior.
+  - Node wrapper tests are skipped or missing after changing package metadata.
 
 ## Escalate Review Scope When
 - Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.

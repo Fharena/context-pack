@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "plugins" / "context-pack" / "skills" / "context-pack" / "scripts" / "context_pack.py"
 BUNDLED_ENGINE = ROOT / "src" / "context_pack" / "bundled" / "context_pack.py"
+NODE_WRAPPER = ROOT / "bin" / "context-pack.js"
 
 
 def load_engine():
@@ -707,15 +709,77 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("context-pack", proc.stdout)
 
+    def test_node_wrapper_runs_bundled_engine(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        proc = subprocess.run(
+            [node, str(NODE_WRAPPER), "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("context-pack", proc.stdout)
+        self.assertIn("setup", proc.stdout)
+
+    def test_node_wrapper_skips_old_python_candidates(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp)
+            env = os.environ.copy()
+            env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
+            if os.name == "nt":
+                (bin_dir / "py.cmd").write_text("@echo off\r\nexit /b 1\r\n", encoding="utf-8")
+                (bin_dir / "python.cmd").write_text(
+                    "@echo off\r\n"
+                    'if "%1"=="-c" exit /b 0\r\n'
+                    "echo context-pack\r\n"
+                    "echo setup\r\n"
+                    "exit /b 0\r\n",
+                    encoding="utf-8",
+                )
+            else:
+                old_python = bin_dir / "python3"
+                old_python.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+                old_python.chmod(0o755)
+                good_python = bin_dir / "python"
+                good_python.write_text(
+                    "#!/bin/sh\n"
+                    'if [ "$1" = "-c" ]; then exit 0; fi\n'
+                    "echo context-pack\n"
+                    "echo setup\n",
+                    encoding="utf-8",
+                )
+                good_python.chmod(0o755)
+
+            proc = subprocess.run(
+                [node, str(NODE_WRAPPER), "--help"],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn("context-pack", proc.stdout)
+            self.assertIn("setup", proc.stdout)
+
     def test_public_versions_stay_in_sync(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         package_init: dict[str, str] = {}
         exec((ROOT / "src/context_pack/__init__.py").read_text(encoding="utf-8"), package_init)
         plugin = json.loads((ROOT / "plugins/context-pack/.codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        npm_package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
         version = pyproject["project"]["version"]
         self.assertEqual(package_init["__version__"], version)
         self.assertEqual(plugin["version"], version)
+        self.assertEqual(npm_package["version"], version)
+        self.assertEqual(npm_package["bin"]["context-pack"], "bin/context-pack.js")
         self.assertEqual(self.engine.CONTEXT_PACK_VERSION, version)
 
 

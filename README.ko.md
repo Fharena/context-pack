@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.10"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -104,6 +104,14 @@ context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
+
+`npx`가 더 편하다면 GitHub에서 바로 실행할 수 있습니다.
+
+```bash
+npx github:Fharena/context-pack setup
+```
+
+이 경로도 `PATH`에 Python 3.11+가 필요합니다. Node wrapper는 Python 패키지를 먼저 설치하지 않게 해주는 얇은 진입점입니다.
 
 CLI를 영구 설치하지 않고 한 번 시험해보고 싶다면:
 
@@ -325,6 +333,7 @@ Python script가 맡는 일:
 - diff hash
 - repo onboarding과 공통 agent rule을 위한 원커맨드 `setup`
 - 설치된 package나 source checkout에서 Codex plugin 설치
+- Python tooling에서 시작하지 않는 개발자를 위한 GitHub `npx` wrapper
 - `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 repo rule 설치
 - 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
@@ -414,10 +423,12 @@ python -m json.tool .agents/plugins/marketplace.json
 python -m pip install -e .
 context-pack --help
 context-pack doctor --fix --help
+node bin/context-pack.js --help
+npm pack --dry-run
 ```
 
-GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test와 JSON validation을 실행합니다.
+GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Node/npm wrapper check를 실행합니다.
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.9](https://github.com/Fharena/context-pack/releases/tag/v0.1.9).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.10](https://github.com/Fharena/context-pack/releases/tag/v0.1.10).

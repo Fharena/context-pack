@@ -1,0 +1,38 @@
+{
+  "name": "@fharena/context-pack",
+  "version": "0.1.10",
+  "description": "Version-aware context packs for coding agents.",
+  "license": "MIT",
+  "bin": {
+    "context-pack": "bin/context-pack.js"
+  },
+  "files": [
+    "bin/",
+    "src/context_pack/bundled/context_pack.py",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fharena/context-pack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Fharena/context-pack/issues"
+  },
+  "homepage": "https://github.com/Fharena/context-pack#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "ai-agents",
+    "codex",
+    "claude",
+    "cursor",
+    "context-engineering",
+    "code-review"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -34,12 +34,15 @@ stale_if:
 - Preparing a local plugin/skill distribution.
 - Updating README command examples.
 - Improving clone-free or one-command first-run onboarding.
+- Updating npm/npx wrapper metadata or package contents.
 
 ## Start With
 - `README.md`
 - `README.ko.md`
 - `CHANGELOG.md`
 - `pyproject.toml`
+- `package.json`
+- `bin/context-pack.js`
 - `src/context_pack/cli.py`
 - `assets/demo.gif`
 - `scripts/install_skill.py`
@@ -54,6 +57,7 @@ stale_if:
 - Release checks include unit tests, plugin validation, and skill validation.
 - GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
 - Packaged CLI behavior should match the bundled skill engine.
+- Node/npx wrapper should delegate to the bundled Python engine without duplicating business logic.
 - README should distinguish Codex plugin installation from shared repo-rule installation.
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
@@ -65,6 +69,7 @@ stale_if:
 - Korean README drifts from the English install or release flow.
 - Demo GIF no longer matches the command output or product positioning.
 - CI depends on local-only validator paths from one developer machine.
+- npm package metadata drifts from Python/plugin versions or omits the bundled engine.
 - Marketplace JSON points at a plugin path that does not exist in the repo.
 - Installer overwrites a local user customization without `--force`.
 - README teaches lower-level commands before the one-command `start` path.

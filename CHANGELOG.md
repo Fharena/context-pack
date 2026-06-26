@@ -2,6 +2,19 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.10] - 2026-06-26
+
+### Added
+
+- npm package metadata and a `bin/context-pack.js` wrapper so developers can run Context Pack through Node tooling.
+- README and Korean README now show `npx github:Fharena/context-pack setup` as a Python-light onboarding path.
+- Node wrapper fallback skips Python candidates that are present but older than Python 3.11.
+- Tests for the Node wrapper, Python-version fallback, and npm package version/bin metadata.
+
+### Changed
+
+- Release validation docs now include `node bin/context-pack.js --help` and `npm pack --dry-run`.
+
 ## [0.1.9] - 2026-06-26
 
 ### Added
