@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.6"
+CONTEXT_PACK_VERSION = "0.2.7"
 
 
 @dataclasses.dataclass
@@ -419,8 +419,8 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
         "docs": {
             "doc": path_text(layout.areas_dir / "docs.md"),
             "description": "User-facing docs, onboarding notes, and repository guidance.",
-            "paths": ["README.md", "README.*.md", "docs/**", "AGENTS.md", "CLAUDE.md"],
-            "start_files": ["README.md", "AGENTS.md", "CLAUDE.md", "docs"],
+            "paths": ["README.md", "README.*.md", "docs/**"],
+            "start_files": ["README.md", "docs"],
             "tests": [],
             "keywords": ["docs", "readme", "agents", "claude", "onboarding"],
             "contracts": [
@@ -431,7 +431,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "Docs promise behavior the tool does not implement.",
                 "Local machine paths leak into public documentation.",
             ],
-            "stale_if_paths": ["README.md", "README.*.md", "docs/**", "AGENTS.md", "CLAUDE.md"],
+            "stale_if_paths": ["README.md", "README.*.md", "docs/**"],
         },
         "automation": {
             "doc": path_text(layout.areas_dir / "automation.md"),
@@ -863,8 +863,7 @@ def render_contracts(manifest: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
-    layout = layout or PRIMARY_LAYOUT
+def gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
     local_ignore = (
         f"{path_text(layout.local_path.parent)}/"
         if layout.name == "primary"
@@ -883,10 +882,21 @@ def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
                 path_text(LEGACY_LOCAL_PATH),
             ]
         )
+    return entries
+
+
+def missing_gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
     path = repo / ".gitignore"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     normalized = set(line.strip() for line in text.splitlines())
-    missing = [entry for entry in entries if entry not in normalized]
+    return [entry for entry in gitignore_entries(repo, layout) if entry not in normalized]
+
+
+def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
+    layout = layout or PRIMARY_LAYOUT
+    path = repo / ".gitignore"
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    missing = missing_gitignore_entries(repo, layout)
     if not missing:
         return
     prefix = "" if not text or text.endswith("\n") else "\n"
@@ -941,42 +951,81 @@ def resolve_agent_doc_targets(targets: list[str] | None) -> list[str]:
     return resolved
 
 
-def setup_target_action(repo: Path, rel_path: Path) -> str:
-    return "update" if (repo / rel_path).exists() else "create"
+def setup_file_action(repo: Path, rel_path: Path, *, force: bool) -> str:
+    if not (repo / rel_path).exists():
+        return "create"
+    return "overwrite" if force else "leave unchanged"
 
 
-def setup_context_targets(repo: Path, layout: ContextLayout) -> list[Path]:
+def setup_manifest_action(repo: Path, layout: ContextLayout, manifest: dict[str, Any], *, force: bool) -> str:
+    path = repo / layout.manifest_path
+    if not path.exists():
+        return "create"
+    if force:
+        return "overwrite"
+    if manifest_needs_write(path, manifest):
+        return "update"
+    return "leave unchanged"
+
+
+def setup_gitignore_action(repo: Path, layout: ContextLayout) -> str:
+    if not (repo / ".gitignore").exists():
+        return "create"
+    if missing_gitignore_entries(repo, layout):
+        return "append missing ignores"
+    return "leave unchanged"
+
+
+def setup_agent_doc_action(repo: Path, kind: str) -> str:
+    rel_path = AGENT_DOC_TARGETS[kind]
+    path = repo / rel_path
+    if not path.exists():
+        return "create"
+    text = path.read_text(encoding="utf-8")
+    if AGENT_RULES_START in text and AGENT_RULES_END in text:
+        return "refresh managed block"
+    if not text:
+        return "write managed block"
+    return "append managed block"
+
+
+def setup_context_target_actions(repo: Path, layout: ContextLayout, *, force: bool) -> list[tuple[str, Path]]:
     manifest = merge_inferred_areas(repo, load_manifest(repo, layout), layout)
-    targets = [
-        layout.manifest_path,
-        layout.index_path,
-        layout.review_path,
-        layout.contracts_path,
-        layout.current_path,
-        layout.log_path,
-        layout.decisions_path,
-        layout.local_path,
-        Path(".gitignore"),
-        layout.areas_dir / "overview.md",
+    targets: list[tuple[str, Path]] = [
+        (setup_manifest_action(repo, layout, manifest, force=force), layout.manifest_path),
+        (setup_file_action(repo, layout.areas_dir / "overview.md", force=force), layout.areas_dir / "overview.md"),
     ]
     for area_id, area in sorted((manifest.get("areas") or {}).items()):
         if area_id == "overview":
             continue
         doc = normalize_path(area.get("doc", ""))
         if doc:
-            targets.append(Path(doc))
-    return unique_paths(targets)
+            rel_path = Path(doc)
+            targets.append((setup_file_action(repo, rel_path, force=force), rel_path))
+    targets.extend(
+        [
+            (setup_file_action(repo, layout.index_path, force=force), layout.index_path),
+            (setup_file_action(repo, layout.review_path, force=force), layout.review_path),
+            (setup_file_action(repo, layout.contracts_path, force=force), layout.contracts_path),
+            (setup_file_action(repo, layout.current_path, force=force), layout.current_path),
+            (setup_file_action(repo, layout.log_path, force=force), layout.log_path),
+            (setup_file_action(repo, layout.decisions_path, force=force), layout.decisions_path),
+            (setup_file_action(repo, layout.local_path, force=force), layout.local_path),
+            (setup_gitignore_action(repo, layout), Path(".gitignore")),
+        ]
+    )
+    return unique_target_actions(targets)
 
 
-def unique_paths(paths: Iterable[Path]) -> list[Path]:
+def unique_target_actions(targets: Iterable[tuple[str, Path]]) -> list[tuple[str, Path]]:
     seen: set[str] = set()
-    unique_items: list[Path] = []
-    for path in paths:
+    unique_items: list[tuple[str, Path]] = []
+    for action, path in targets:
         key = path_text(path)
         if key in seen:
             continue
         seen.add(key)
-        unique_items.append(path)
+        unique_items.append((action, path))
     return unique_items
 
 
@@ -1013,22 +1062,26 @@ def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, 
     if args.quiet:
         return 0
 
-    agent_docs: list[Path] = []
+    agent_docs: list[tuple[str, Path]] = []
     if args.agent_docs != "none":
         targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
-        agent_docs = [AGENT_DOC_TARGETS[kind] for kind in resolve_agent_doc_targets(targets)]
+        agent_docs = [
+            (setup_agent_doc_action(repo, kind), AGENT_DOC_TARGETS[kind])
+            for kind in resolve_agent_doc_targets(targets)
+        ]
 
     print(f"Context Pack setup dry run for {repo}")
     print("")
-    print("Would create or update:")
-    for rel_path in setup_context_targets(repo, layout):
-        print(f"- {setup_target_action(repo, rel_path)} {path_text(rel_path)}")
+    print("Setup plan:")
+    print("Context files:")
+    for action, rel_path in setup_context_target_actions(repo, layout, force=args.force):
+        print(f"- {action} {path_text(rel_path)}")
 
     print("")
     if agent_docs:
         print("Agent docs:")
-        for rel_path in agent_docs:
-            print(f"- {setup_target_action(repo, rel_path)} {path_text(rel_path)}")
+        for action, rel_path in agent_docs:
+            print(f"- {action} {path_text(rel_path)}")
     else:
         print("Agent docs: skipped")
 

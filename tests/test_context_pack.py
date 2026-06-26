@@ -206,7 +206,8 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("Context Pack setup dry run", text)
-            self.assertIn("Would create or update:", text)
+            self.assertIn("Setup plan:", text)
+            self.assertIn("Context files:", text)
             self.assertIn("create .context-pack/manifest.json", text)
             self.assertIn("create AGENTS.md", text)
             self.assertIn("No files were written.", text)
@@ -218,6 +219,22 @@ class ContextPackTests(unittest.TestCase):
             self.assertFalse((repo / "AGENTS.md").exists())
             self.assertFalse((repo / "CLAUDE.md").exists())
             self.assertFalse((repo / ".cursor").exists())
+
+    def test_setup_dry_run_reports_preserved_existing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--dry-run"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("leave unchanged .context-pack/manifest.json", text)
+            self.assertIn("leave unchanged .context-pack/CURRENT.md", text)
+            self.assertIn("leave unchanged .gitignore", text)
+            self.assertIn("refresh managed block AGENTS.md", text)
+            self.assertNotIn("update .context-pack/CURRENT.md", text)
 
     def test_setup_dry_run_respects_agent_docs_and_git_hooks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.6"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -127,7 +127,7 @@ pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack set
 다음에 뭘 실행할지 모르겠다면 인자 없이 `context-pack`만 실행해 quickstart를 볼 수 있습니다. 설치 버전은 `context-pack --version`으로 확인합니다.
 
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
-먼저 무엇을 건드리는지 확인하고 싶다면 `setup --dry-run`을 실행하세요. 실제 파일이나 hook을 쓰지 않고 create/update 계획만 보여주며, 선택한 옵션을 보존한 적용 명령도 함께 출력합니다.
+먼저 무엇을 건드리는지 확인하고 싶다면 `setup --dry-run`을 실행하세요. 실제 파일이나 hook을 쓰지 않고 create/update/append/refresh/leave unchanged 계획을 구분해서 보여주며, 선택한 옵션을 보존한 적용 명령도 함께 출력합니다.
 
 이미 context library가 있고 공통 agent rule만 갱신하고 싶다면:
 
@@ -485,4 +485,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.6](https://github.com/Fharena/context-pack/releases/tag/v0.2.6).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.7](https://github.com/Fharena/context-pack/releases/tag/v0.2.7).

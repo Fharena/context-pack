@@ -4,6 +4,13 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-06-27
+
+### Changed
+
+- `context-pack setup --dry-run` now reports more precise setup actions, including preserved files, `.gitignore` appends, and managed agent-doc block refreshes.
+- Generated `AGENTS.md` and `CLAUDE.md` no longer cause an otherwise empty repo to infer a separate docs area on the next setup run.
+
 ## [0.2.6] - 2026-06-27
 
 ### Changed
