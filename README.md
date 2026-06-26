@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.10"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.0"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -46,9 +46,9 @@ Most AI coding waste starts before coding. The agent has to rediscover which fil
 
 Context Pack turns that repeated search into a small project library:
 
-- `.codex/context/` is the project index.
-- `.codex/handoff/` is the current work state.
-- `.codex/packs/CONTEXT_PACK.md` is the generated desk for the current task.
+- `.context-pack/INDEX.md` and `.context-pack/AREAS/*.md` are the project index.
+- `.context-pack/CURRENT.md` is the current work state.
+- `.context-pack/packs/CONTEXT_PACK.md` is the generated desk for the current task.
 
 ## Built For Multi-Session Agent Work
 
@@ -120,7 +120,15 @@ If you already have a context library and only want to refresh shared repo rules
 context-pack install-agent-docs
 ```
 
-Both commands preserve existing text outside the managed Context Pack block. Use `setup --agent-docs none` when you only want the `.codex/` library, or `install-agent-docs --target claude` / `--target cursor` when you only want specific agent docs.
+Both commands preserve existing text outside the managed Context Pack block. Use `setup --agent-docs none` when you only want the `.context-pack/` library, or `install-agent-docs --target claude` / `--target cursor` when you only want specific agent docs.
+
+Already using an older `.codex/context` library? Run:
+
+```bash
+context-pack migrate
+```
+
+Context Pack still reads the legacy layout when `.context-pack/` is not present, but new setup uses the vendor-neutral `.context-pack/` directory.
 
 ## Local Install Options
 
@@ -167,17 +175,17 @@ Git: yes; branch: main; HEAD: 67f7355488c0
 Context library: ok
 Dirty files: 0; diff hash: clean
 
-Generated work pack for task: .codex/packs/CONTEXT_PACK.md
+Generated work pack for task: .context-pack/packs/CONTEXT_PACK.md
 Selected areas: installer-release, skill-plugin, engine
 Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
 
 Read next:
-- .codex/packs/CONTEXT_PACK.md
-- .codex/context/AREAS/installer-release.md
-- .codex/context/AREAS/skill-plugin.md
-- .codex/context/AREAS/engine.md
+- .context-pack/packs/CONTEXT_PACK.md
+- .context-pack/AREAS/installer-release.md
+- .context-pack/AREAS/skill-plugin.md
+- .context-pack/AREAS/engine.md
 
-$ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
+$ Get-Content .context-pack/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
 
 Mode: work
@@ -197,16 +205,16 @@ Mode: work
 - tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
 
 ## Read First
-- .codex/context/AREAS/installer-release.md
+- .context-pack/AREAS/installer-release.md
 - README.md
 - README.ko.md
 - CHANGELOG.md
 - pyproject.toml
 
 ## Read Later
-- .codex/context/AREAS/skill-plugin.md
+- .context-pack/AREAS/skill-plugin.md
 - plugins/context-pack/skills/context-pack/SKILL.md
-- .codex/context/AREAS/engine.md
+- .context-pack/AREAS/engine.md
 
 ## Contracts To Check
 - The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
@@ -266,6 +274,7 @@ If you installed the Codex plugin, you usually do not type these commands yourse
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
+| `migrate` | Copies legacy `.codex/context` and `.codex/handoff` docs into `.context-pack/` |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
 | `pack` / `pack --changed` | Builds a compact task-specific or changed-files reading pack with selected and related areas |
@@ -303,10 +312,10 @@ For teams or personal repos that move between Codex, Claude, and Cursor, run `co
 
 After initialization, agents should read:
 
-1. `.codex/handoff/CURRENT.md`
-2. `.codex/context/INDEX.md`
-3. `.codex/packs/CONTEXT_PACK.md` when generated
-4. Relevant `.codex/context/AREAS/*.md`
+1. `.context-pack/CURRENT.md`
+2. `.context-pack/INDEX.md`
+3. `.context-pack/packs/CONTEXT_PACK.md` when generated
+4. Relevant `.context-pack/AREAS/*.md`
 5. Actual source files
 
 ## Why Not Just AGENTS.md Or CLAUDE.md?
@@ -323,7 +332,7 @@ Use those files. Context Pack is not a replacement.
 
 So the agent reads the rule file for behavior, then reads Context Pack for where to look first.
 
-`context-pack install-agent-docs` is the bridge between those layers: it writes the behavior rule into the agent-native files, while the generated packs and `.codex/context/` docs keep the dynamic routing state outside any single vendor memory system.
+`context-pack install-agent-docs` is the bridge between those layers: it writes the behavior rule into the agent-native files, while the generated packs and `.context-pack/` docs keep the dynamic routing state outside any single vendor memory system.
 
 ## How Context Pack Is Different
 
@@ -348,7 +357,7 @@ Context Pack's first pass is intentionally simple and inspectable:
 - Packs split context into selected areas, related areas, Read First, and Read Later.
 - Stale warnings compare reviewed area docs with the current git state.
 
-That makes the tool predictable, but not magical. For a complex monorepo, the best results come from editing `.codex/context/manifest.json` and `.codex/context/AREAS/*.md` so area boundaries match how the project is really owned. If an area is too broad, split it. If a generated pack is noisy, lower `--max-areas` / `--max-read-first`, tighten path globs, and mark verified areas with `mark-reviewed`.
+That makes the tool predictable, but not magical. For a complex monorepo, the best results come from editing `.context-pack/manifest.json` and `.context-pack/AREAS/*.md` so area boundaries match how the project is really owned. If an area is too broad, split it. If a generated pack is noisy, lower `--max-areas` / `--max-read-first`, tighten path globs, and mark verified areas with `mark-reviewed`.
 
 The current scoring is a routing heuristic, not a semantic understanding engine. That is deliberate: every selected file and warning should be explainable in plain Markdown before an agent spends tokens on source code.
 
@@ -395,22 +404,22 @@ You do not need to hand-write a full taxonomy to start. `init` creates useful de
 
 Track:
 
-- `.codex/context/manifest.json`
-- `.codex/context/INDEX.md`
-- `.codex/context/REVIEW.md`
-- `.codex/context/CONTRACTS.md`
-- `.codex/context/AREAS/*.md`
-- `.codex/handoff/CURRENT.md`
-- `.codex/handoff/LOG.md`
-- `.codex/handoff/DECISIONS.md`
+- `.context-pack/manifest.json`
+- `.context-pack/INDEX.md`
+- `.context-pack/REVIEW.md`
+- `.context-pack/CONTRACTS.md`
+- `.context-pack/AREAS/*.md`
+- `.context-pack/CURRENT.md`
+- `.context-pack/LOG.md`
+- `.context-pack/DECISIONS.md`
 
 Ignore:
 
-- `.codex/packs/`
-- `.codex/context/tmp/`
-- `.codex/handoff/LOCAL.md`
+- `.context-pack/packs/`
+- `.context-pack/tmp/`
+- `.context-pack/local/LOCAL.md`
 
-Automatic agent checkpoints write to `.codex/handoff/LOCAL.md` and `.codex/packs/` by default, so normal end-of-work checkpointing should not dirty tracked files. Use `context-pack checkpoint --publish --pack` when the handoff itself is part of the work you want to commit.
+Automatic agent checkpoints write to `.context-pack/local/LOCAL.md` and `.context-pack/packs/` by default, so normal end-of-work checkpointing should not dirty tracked files. Use `context-pack checkpoint --publish --pack` when the handoff itself is part of the work you want to commit.
 
 ## Automation
 
@@ -464,4 +473,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, and
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.10](https://github.com/Fharena/context-pack/releases/tag/v0.1.10).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.2.0](https://github.com/Fharena/context-pack/releases/tag/v0.2.0).

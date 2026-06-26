@@ -8,6 +8,11 @@ dist/
 node_modules/
 
 # context-pack generated/local files
+.context-pack/packs/
+.context-pack/tmp/
+.context-pack/local/
+
+# context-pack legacy generated/local files
 .codex/packs/
 .codex/context/tmp/
 .codex/handoff/LOCAL.md

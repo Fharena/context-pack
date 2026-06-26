@@ -4,7 +4,7 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 
 ## engine
 - The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
-- Generated packs must stay under .codex/packs/ and remain ignored by git.
+- Generated packs must stay under .context-pack/packs/ and remain ignored by git.
 - Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.
 - `setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.

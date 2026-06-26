@@ -39,7 +39,7 @@ stale_if:
 - `install-codex` should refuse unsafe overwrites and work from both source checkouts and packaged CLI installs.
 - `install-agent-docs` should preserve existing user text and only replace the managed marker block.
 - Hook install must preserve unrelated hook contents and be idempotent.
-- Generated packs live under `.codex/packs/` and stay ignored.
+- Generated packs live under `.context-pack/packs/` and stay ignored.
 
 ## Common Failure Modes
 - `git status` reports an untracked directory instead of files.
@@ -63,5 +63,5 @@ stale_if:
 - README/SKILL command examples change.
 
 ## Do Not Start With
-- `.codex/packs/`
+- `.context-pack/packs/`
 - append-only `LOG.md` unless debugging checkpoint history

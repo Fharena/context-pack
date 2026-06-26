@@ -35,13 +35,13 @@ class ContextPackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
-            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
             self.assertTrue((repo / "AGENTS.md").exists())
 
             self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--quiet"]), 0)
-            self.assertTrue((repo / ".codex/handoff/LOCAL.md").exists())
-            current = (repo / ".codex/handoff/CURRENT.md").read_text(encoding="utf-8")
+            self.assertTrue((repo / ".context-pack/local/LOCAL.md").exists())
+            current = (repo / ".context-pack/CURRENT.md").read_text(encoding="utf-8")
             self.assertIn("Git repo: no", current)
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
 
@@ -65,8 +65,8 @@ class ContextPackTests(unittest.TestCase):
                 check=True,
             ).stdout
             self.assertEqual(status.strip(), "")
-            self.assertTrue((repo / ".codex/handoff/LOCAL.md").exists())
-            self.assertTrue((repo / ".codex/packs/CONTEXT_PACK.md").exists())
+            self.assertTrue((repo / ".context-pack/local/LOCAL.md").exists())
+            self.assertTrue((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
             self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--publish", "--quiet"]), 0)
             status = subprocess.run(
@@ -76,8 +76,8 @@ class ContextPackTests(unittest.TestCase):
                 text=True,
                 check=True,
             ).stdout
-            self.assertIn(".codex/handoff/CURRENT.md", status)
-            self.assertIn(".codex/handoff/LOG.md", status)
+            self.assertIn(".context-pack/CURRENT.md", status)
+            self.assertIn(".context-pack/LOG.md", status)
 
     def test_start_initializes_missing_context_library(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,10 +85,97 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--quiet"]), 0)
 
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
-            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
             self.assertTrue((repo / "AGENTS.md").exists())
-            self.assertFalse((repo / ".codex/packs/CONTEXT_PACK.md").exists())
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
+    def test_legacy_codex_layout_still_routes_until_migrated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/cli.py").write_text("def main():\n    return 0\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS").mkdir(parents=True)
+            (repo / ".codex/handoff").mkdir(parents=True)
+            (repo / ".codex/context/manifest.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "generated_by": "context-pack",
+                        "areas": {
+                            "cli": {
+                                "doc": ".codex/context/AREAS/cli.md",
+                                "description": "Command-line entrypoints.",
+                                "paths": ["src/cli.py"],
+                                "start_files": ["src/cli.py"],
+                                "tests": [],
+                                "keywords": ["cli", "command"],
+                            }
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (repo / ".codex/context/AREAS/cli.md").write_text(
+                "---\nid: cli\nlast_reviewed_head: unknown\nstatus: active\n---\n# CLI\n",
+                encoding="utf-8",
+            )
+            (repo / ".codex/context/INDEX.md").write_text("# Context Index\n", encoding="utf-8")
+            (repo / ".codex/context/REVIEW.md").write_text("# Review Router\n", encoding="utf-8")
+            (repo / ".codex/context/CONTRACTS.md").write_text("# Contracts\n", encoding="utf-8")
+            (repo / ".codex/handoff/CURRENT.md").write_text("# Current Handoff\n", encoding="utf-8")
+
+            self.assertEqual(
+                self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug", "--quiet"]),
+                0,
+            )
+
+            self.assertTrue((repo / ".codex/packs/CONTEXT_PACK.md").exists())
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
+    def test_migrate_legacy_codex_layout_to_context_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".codex/context/AREAS").mkdir(parents=True)
+            (repo / ".codex/handoff").mkdir(parents=True)
+            (repo / ".codex/context/manifest.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "generated_by": "context-pack",
+                        "areas": {
+                            "runtime": {
+                                "doc": ".codex/context/AREAS/runtime.md",
+                                "description": "Runtime selection.",
+                                "paths": ["src/runtime.py"],
+                                "start_files": [".codex/context/INDEX.md", "src/runtime.py"],
+                                "tests": [],
+                                "keywords": ["runtime"],
+                            }
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (repo / ".codex/context/AREAS/runtime.md").write_text(
+                "# Runtime\n\nSee `.codex/context/INDEX.md` first.\n",
+                encoding="utf-8",
+            )
+            (repo / ".codex/context/INDEX.md").write_text("# Context Index\n", encoding="utf-8")
+            (repo / ".codex/handoff/CURRENT.md").write_text("# Current\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["migrate", "--repo", str(repo), "--quiet"]), 0)
+
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["areas"]["runtime"]["doc"], ".context-pack/AREAS/runtime.md")
+            self.assertIn(".context-pack/INDEX.md", manifest["areas"]["runtime"]["start_files"])
+            area_doc = (repo / ".context-pack/AREAS/runtime.md").read_text(encoding="utf-8")
+            self.assertIn(".context-pack/INDEX.md", area_doc)
+            self.assertNotIn(".codex/context", area_doc)
 
     def test_setup_initializes_context_and_common_agent_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -96,8 +183,8 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
 
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
-            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
             self.assertIn("context-pack start", (repo / "AGENTS.md").read_text(encoding="utf-8"))
             self.assertIn("context-pack start", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
             self.assertIn(
@@ -115,7 +202,7 @@ class ContextPackTests(unittest.TestCase):
                 0,
             )
 
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertFalse((repo / "AGENTS.md").exists())
             self.assertFalse((repo / "CLAUDE.md").exists())
             self.assertFalse((repo / ".cursor/rules/context-pack.mdc").exists())
@@ -143,8 +230,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 1)
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--fix", "--quiet"]), 0)
 
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
-            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
             self.assertTrue((repo / "AGENTS.md").exists())
             self.assertTrue((repo / "CLAUDE.md").exists())
             self.assertTrue((repo / ".cursor/rules/context-pack.mdc").exists())
@@ -158,7 +245,7 @@ class ContextPackTests(unittest.TestCase):
                 0,
             )
 
-            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertFalse((repo / "AGENTS.md").exists())
             self.assertFalse((repo / "CLAUDE.md").exists())
             self.assertFalse((repo / ".cursor/rules/context-pack.mdc").exists())
@@ -230,10 +317,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/cli.py").write_text("def main():\n    return 0\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["cli"] = {
-                "doc": ".codex/context/AREAS/cli.md",
+                "doc": ".context-pack/AREAS/cli.md",
                 "description": "Command-line entrypoints.",
                 "paths": ["src/cli.py"],
                 "start_files": ["src/cli.py"],
@@ -241,7 +328,7 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["cli", "command"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/cli.md").write_text(
+            (repo / ".context-pack/AREAS/cli.md").write_text(
                 "---\nid: cli\nlast_reviewed_head: unknown\nstatus: active\n---\n# CLI\n",
                 encoding="utf-8",
             )
@@ -250,7 +337,7 @@ class ContextPackTests(unittest.TestCase):
                 self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug", "--quiet"]),
                 0,
             )
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: work", pack)
             self.assertIn("## Scope Reduction", pack)
             self.assertIn("- Repo files considered:", pack)
@@ -268,10 +355,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime selection.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py"],
@@ -279,7 +366,7 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["runtime"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
                 encoding="utf-8",
             )
@@ -289,7 +376,7 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--quiet"]), 0)
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: work", pack)
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)
@@ -304,10 +391,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime selection.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py"],
@@ -315,7 +402,7 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["runtime"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
                 encoding="utf-8",
             )
@@ -330,7 +417,7 @@ class ContextPackTests(unittest.TestCase):
                 self.engine.main(["start", "--repo", str(repo), "--review", "--base", "HEAD~1", "--quiet"]),
                 0,
             )
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: review", pack)
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)
@@ -346,13 +433,13 @@ class ContextPackTests(unittest.TestCase):
             (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest = json.loads((repo / ".codex/context/manifest.json").read_text(encoding="utf-8"))
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
             self.assertIn("source", manifest["areas"])
             self.assertIn("tests", manifest["areas"])
             self.assertIn("docs", manifest["areas"])
-            self.assertTrue((repo / ".codex/context/AREAS/source.md").exists())
-            self.assertTrue((repo / ".codex/context/AREAS/tests.md").exists())
-            self.assertTrue((repo / ".codex/context/AREAS/docs.md").exists())
+            self.assertTrue((repo / ".context-pack/AREAS/source.md").exists())
+            self.assertTrue((repo / ".context-pack/AREAS/tests.md").exists())
+            self.assertTrue((repo / ".context-pack/AREAS/docs.md").exists())
 
     def test_changed_file_selects_area_and_generates_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -364,10 +451,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "tests/test_runtime.py").write_text("def test_choose():\n    pass\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime selection.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py"],
@@ -378,14 +465,14 @@ class ContextPackTests(unittest.TestCase):
                 "stale_if_paths": ["src/runtime.py"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n"
                 "# Runtime\n\n## Contracts\n- Missing config must not crash startup.\n",
                 encoding="utf-8",
             )
 
             self.assertEqual(self.engine.main(["pack", "--repo", str(repo), "--changed", "--quiet"]), 0)
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)
             self.assertIn("Runtime choice must be explainable.", pack)
@@ -402,10 +489,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "docs/runtime.md").write_text("# Runtime docs\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime internals.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py", "docs/runtime.md"],
@@ -419,7 +506,7 @@ class ContextPackTests(unittest.TestCase):
                 "failure_modes": ["Fallback path silently changes behavior."],
             }
             manifest["areas"]["docs-runtime"] = {
-                "doc": ".codex/context/AREAS/docs-runtime.md",
+                "doc": ".context-pack/AREAS/docs-runtime.md",
                 "description": "Runtime docs.",
                 "paths": ["docs/runtime.md"],
                 "start_files": ["docs/runtime.md"],
@@ -427,12 +514,12 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["runtime", "docs"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n"
                 "# Runtime\n\n## Contracts\n- Runtime choice must be explainable.\n",
                 encoding="utf-8",
             )
-            (repo / ".codex/context/AREAS/docs-runtime.md").write_text(
+            (repo / ".context-pack/AREAS/docs-runtime.md").write_text(
                 "---\nid: docs-runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Docs Runtime\n",
                 encoding="utf-8",
             )
@@ -455,7 +542,7 @@ class ContextPackTests(unittest.TestCase):
                 ),
                 0,
             )
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("## Related Areas", pack)
             self.assertIn("## Read Later", pack)
             self.assertEqual(pack.count("Runtime choice must be explainable."), 1)
@@ -464,10 +551,10 @@ class ContextPackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["cli"] = {
-                "doc": ".codex/context/AREAS/cli.md",
+                "doc": ".context-pack/AREAS/cli.md",
                 "description": "Command-line interface behavior.",
                 "paths": ["src/cli.py"],
                 "start_files": ["src/cli.py"],
@@ -475,13 +562,13 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["cli", "command"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/cli.md").write_text(
+            (repo / ".context-pack/AREAS/cli.md").write_text(
                 "---\nid: cli\nlast_reviewed_head: unknown\nstatus: active\n---\n# CLI\n",
                 encoding="utf-8",
             )
 
             self.assertEqual(self.engine.main(["pack", "--repo", str(repo), "--task", "cli command bug", "--quiet"]), 0)
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- cli", pack)
 
     def test_first_modified_status_file_keeps_first_character(self) -> None:
@@ -509,10 +596,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src").mkdir()
             (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime selection.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py"],
@@ -520,7 +607,7 @@ class ContextPackTests(unittest.TestCase):
                 "keywords": ["runtime"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: oldhead\nstatus: review_needed\n---\n# Runtime\n",
                 encoding="utf-8",
             )
@@ -540,7 +627,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Stale warnings:", status_proc.stdout)
 
             self.assertEqual(self.engine.main(["mark-reviewed", "--repo", str(repo), "runtime", "--quiet"]), 0)
-            area_doc = (repo / ".codex/context/AREAS/runtime.md").read_text(encoding="utf-8")
+            area_doc = (repo / ".context-pack/AREAS/runtime.md").read_text(encoding="utf-8")
             self.assertIn("status: active", area_doc)
             self.assertIn("last_reviewed_head:", area_doc)
 
@@ -554,10 +641,10 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
-            manifest_path = repo / ".codex/context/manifest.json"
+            manifest_path = repo / ".context-pack/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["areas"]["runtime"] = {
-                "doc": ".codex/context/AREAS/runtime.md",
+                "doc": ".context-pack/AREAS/runtime.md",
                 "description": "Runtime selection.",
                 "paths": ["src/runtime.py"],
                 "start_files": ["src/runtime.py"],
@@ -566,7 +653,7 @@ class ContextPackTests(unittest.TestCase):
                 "contracts": ["Runtime choice must be explainable."],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            (repo / ".codex/context/AREAS/runtime.md").write_text(
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
                 "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
                 encoding="utf-8",
             )
@@ -578,7 +665,7 @@ class ContextPackTests(unittest.TestCase):
             subprocess.run(["git", "commit", "-m", "change runtime"], cwd=repo, check=True, capture_output=True)
 
             self.assertEqual(self.engine.main(["review-pack", "--repo", str(repo), "--base", "HEAD~1", "--quiet"]), 0)
-            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: review", pack)
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)

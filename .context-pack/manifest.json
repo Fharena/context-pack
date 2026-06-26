@@ -3,7 +3,7 @@
     "engine": {
       "contracts": [
         "The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.",
-        "Generated packs must stay under .codex/packs/ and remain ignored by git.",
+        "Generated packs must stay under .context-pack/packs/ and remain ignored by git.",
         "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
         "`setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.",
         "`doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.",
@@ -13,7 +13,7 @@
         "Generated packs should show scope-reduction metrics without pretending they replace source verification."
       ],
       "description": "Deterministic context-pack engine: git snapshot, start routing, area matching, pack generation, doctor, and git hooks.",
-      "doc": ".codex/context/AREAS/engine.md",
+      "doc": ".context-pack/AREAS/engine.md",
       "failure_modes": [
         "Dirty files are matched only at directory level, missing the real changed file.",
         "Review packs ignore committed branch changes when no dirty files exist.",
@@ -75,7 +75,7 @@
         "Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic."
       ],
       "description": "Install and release workflow for local skill/plugin distribution.",
-      "doc": ".codex/context/AREAS/installer-release.md",
+      "doc": ".context-pack/AREAS/installer-release.md",
       "failure_modes": [
         "Installer replaces a user's existing skill/plugin without explicit --force.",
         "Marketplace entry points to the wrong relative plugin path.",
@@ -166,7 +166,7 @@
         "Verify source code when the context fingerprint is stale."
       ],
       "description": "Default project orientation and safe starting point.",
-      "doc": ".codex/context/AREAS/overview.md",
+      "doc": ".context-pack/AREAS/overview.md",
       "failure_modes": [
         "Trusting old summaries after HEAD or dirty files changed.",
         "Reading logs or generated packs before current source files.",
@@ -192,11 +192,11 @@
         "CLAUDE.md",
         "codex.md",
         ".agents/plugins/marketplace.json",
-        ".codex/context/**"
+        ".context-pack/**"
       ],
       "stale_if_paths": [
-        ".codex/context/**",
-        ".codex/handoff/**",
+        ".context-pack/**",
+        ".context-pack/**",
         "AGENTS.md",
         "CLAUDE.md",
         ".cursor/rules/**",
@@ -211,8 +211,8 @@
         "README.ko.md",
         "AGENTS.md",
         "CHANGELOG.md",
-        ".codex/context/INDEX.md",
-        ".codex/handoff/CURRENT.md"
+        ".context-pack/INDEX.md",
+        ".context-pack/CURRENT.md"
       ],
       "tests": []
     },
@@ -225,7 +225,7 @@
         "The skill should be implicitly invokable for context setup, install/update requests, shared agent-doc rules, start routing, review packs, checkpointing, and token-saving repo orientation."
       ],
       "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
-      "doc": ".codex/context/AREAS/skill-plugin.md",
+      "doc": ".context-pack/AREAS/skill-plugin.md",
       "failure_modes": [
         "Skill docs describe behavior that the script cannot perform.",
         "Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.",
@@ -279,7 +279,7 @@
         "Version sync tests should include Python package, plugin manifest, engine, and npm package metadata."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
-      "doc": ".codex/context/AREAS/tests.md",
+      "doc": ".context-pack/AREAS/tests.md",
       "failure_modes": [
         "Tests import the engine in a way that differs from script execution.",
         "Git behavior is tested only with dirty files and misses committed review use cases.",

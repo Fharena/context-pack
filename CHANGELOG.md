@@ -4,14 +4,22 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-27
+
 ### Changed
 
+- Switched the default repo context library from Codex-branded `.codex/context` and `.codex/handoff` paths to vendor-neutral `.context-pack/`.
+- Updated README, Korean README, generated agent rules, and the Codex skill docs to describe `.context-pack/` as the shared multi-agent context library.
 - Tightened the English README onboarding flow to match the Korean README positioning.
 - Made `pack --changed` visible in the feature tables.
 - Reframed source-run commands as contributor-oriented local install options.
 - Added README positioning against repo rules, vendor memory, RAG, and context dumpers.
 - Documented area selection heuristics, monorepo tuning, and current scoring limits.
 - Clarified the current project scope, GitHub-first install paths, and CI coverage.
+
+### Added
+
+- Added `context-pack migrate` to copy legacy `.codex/context` and `.codex/handoff` docs into `.context-pack/` while rewriting internal path references.
 
 ## [0.1.10] - 2026-06-26
 

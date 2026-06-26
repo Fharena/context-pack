@@ -21,19 +21,33 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-CONTEXT_DIR = Path(".codex/context")
+CONTEXT_DIR = Path(".context-pack")
 AREAS_DIR = CONTEXT_DIR / "AREAS"
-HANDOFF_DIR = Path(".codex/handoff")
-PACKS_DIR = Path(".codex/packs")
+HANDOFF_DIR = CONTEXT_DIR
+PACKS_DIR = CONTEXT_DIR / "packs"
+LOCAL_DIR = CONTEXT_DIR / "local"
 MANIFEST_PATH = CONTEXT_DIR / "manifest.json"
 INDEX_PATH = CONTEXT_DIR / "INDEX.md"
 REVIEW_PATH = CONTEXT_DIR / "REVIEW.md"
 CONTRACTS_PATH = CONTEXT_DIR / "CONTRACTS.md"
-CURRENT_PATH = HANDOFF_DIR / "CURRENT.md"
-LOG_PATH = HANDOFF_DIR / "LOG.md"
-DECISIONS_PATH = HANDOFF_DIR / "DECISIONS.md"
-LOCAL_PATH = HANDOFF_DIR / "LOCAL.md"
+CURRENT_PATH = CONTEXT_DIR / "CURRENT.md"
+LOG_PATH = CONTEXT_DIR / "LOG.md"
+DECISIONS_PATH = CONTEXT_DIR / "DECISIONS.md"
+LOCAL_PATH = LOCAL_DIR / "LOCAL.md"
 PACK_PATH = PACKS_DIR / "CONTEXT_PACK.md"
+LEGACY_CONTEXT_DIR = Path(".codex/context")
+LEGACY_AREAS_DIR = LEGACY_CONTEXT_DIR / "AREAS"
+LEGACY_HANDOFF_DIR = Path(".codex/handoff")
+LEGACY_PACKS_DIR = Path(".codex/packs")
+LEGACY_MANIFEST_PATH = LEGACY_CONTEXT_DIR / "manifest.json"
+LEGACY_INDEX_PATH = LEGACY_CONTEXT_DIR / "INDEX.md"
+LEGACY_REVIEW_PATH = LEGACY_CONTEXT_DIR / "REVIEW.md"
+LEGACY_CONTRACTS_PATH = LEGACY_CONTEXT_DIR / "CONTRACTS.md"
+LEGACY_CURRENT_PATH = LEGACY_HANDOFF_DIR / "CURRENT.md"
+LEGACY_LOG_PATH = LEGACY_HANDOFF_DIR / "LOG.md"
+LEGACY_DECISIONS_PATH = LEGACY_HANDOFF_DIR / "DECISIONS.md"
+LEGACY_LOCAL_PATH = LEGACY_HANDOFF_DIR / "LOCAL.md"
+LEGACY_PACK_PATH = LEGACY_PACKS_DIR / "CONTEXT_PACK.md"
 AGENTS_PATH = Path("AGENTS.md")
 AGENT_DOC_TARGETS = {
     "agents": Path("AGENTS.md"),
@@ -48,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.1.10"
+CONTEXT_PACK_VERSION = "0.2.0"
 
 
 @dataclasses.dataclass
@@ -69,6 +83,62 @@ class AreaSelection:
     score: int
     reasons: list[str]
     matched_files: list[str]
+
+
+@dataclasses.dataclass(frozen=True)
+class ContextLayout:
+    name: str
+    storage_dir: Path
+    context_dir: Path
+    areas_dir: Path
+    handoff_dir: Path
+    packs_dir: Path
+    manifest_path: Path
+    index_path: Path
+    review_path: Path
+    contracts_path: Path
+    current_path: Path
+    log_path: Path
+    decisions_path: Path
+    local_path: Path
+    pack_path: Path
+
+
+PRIMARY_LAYOUT = ContextLayout(
+    name="primary",
+    storage_dir=CONTEXT_DIR,
+    context_dir=CONTEXT_DIR,
+    areas_dir=AREAS_DIR,
+    handoff_dir=HANDOFF_DIR,
+    packs_dir=PACKS_DIR,
+    manifest_path=MANIFEST_PATH,
+    index_path=INDEX_PATH,
+    review_path=REVIEW_PATH,
+    contracts_path=CONTRACTS_PATH,
+    current_path=CURRENT_PATH,
+    log_path=LOG_PATH,
+    decisions_path=DECISIONS_PATH,
+    local_path=LOCAL_PATH,
+    pack_path=PACK_PATH,
+)
+
+LEGACY_LAYOUT = ContextLayout(
+    name="legacy",
+    storage_dir=Path(".codex"),
+    context_dir=LEGACY_CONTEXT_DIR,
+    areas_dir=LEGACY_AREAS_DIR,
+    handoff_dir=LEGACY_HANDOFF_DIR,
+    packs_dir=LEGACY_PACKS_DIR,
+    manifest_path=LEGACY_MANIFEST_PATH,
+    index_path=LEGACY_INDEX_PATH,
+    review_path=LEGACY_REVIEW_PATH,
+    contracts_path=LEGACY_CONTRACTS_PATH,
+    current_path=LEGACY_CURRENT_PATH,
+    log_path=LEGACY_LOG_PATH,
+    decisions_path=LEGACY_DECISIONS_PATH,
+    local_path=LEGACY_LOCAL_PATH,
+    pack_path=LEGACY_PACK_PATH,
+)
 
 
 def eprint(message: str) -> None:
@@ -200,31 +270,72 @@ def collect_snapshot(start: Path) -> Snapshot:
     )
 
 
-def ensure_dirs(repo: Path) -> None:
-    for rel in [CONTEXT_DIR, AREAS_DIR, HANDOFF_DIR, PACKS_DIR]:
+def layout_exists(repo: Path, layout: ContextLayout) -> bool:
+    if layout.name == "legacy":
+        return any(
+            (repo / rel).exists()
+            for rel in [layout.manifest_path, layout.index_path, layout.current_path]
+        )
+    return (repo / layout.manifest_path).exists() or (repo / layout.context_dir).exists() or (repo / layout.handoff_dir).exists()
+
+
+def resolve_layout(repo: Path, *, for_write: bool = False) -> ContextLayout:
+    if (repo / PRIMARY_LAYOUT.manifest_path).exists() or (repo / PRIMARY_LAYOUT.storage_dir).exists():
+        return PRIMARY_LAYOUT
+    if not for_write and layout_exists(repo, LEGACY_LAYOUT):
+        return LEGACY_LAYOUT
+    if for_write and layout_exists(repo, LEGACY_LAYOUT):
+        return LEGACY_LAYOUT
+    return PRIMARY_LAYOUT
+
+
+def path_text(path: str | Path) -> str:
+    return normalize_path(path)
+
+
+def rewrite_legacy_paths(text: str) -> str:
+    replacements = [
+        (".codex/context/AREAS/", ".context-pack/AREAS/"),
+        (".codex/context/tmp/", ".context-pack/tmp/"),
+        (".codex/context/", ".context-pack/"),
+        (".codex/handoff/LOCAL.md", ".context-pack/local/LOCAL.md"),
+        (".codex/handoff/", ".context-pack/"),
+        (".codex/packs/", ".context-pack/packs/"),
+        (".codex/context/**", ".context-pack/**"),
+        (".codex/handoff/**", ".context-pack/**"),
+    ]
+    for old, new in replacements:
+        text = text.replace(old, new)
+    return text
+
+
+def ensure_dirs(repo: Path, layout: ContextLayout | None = None) -> None:
+    layout = layout or resolve_layout(repo, for_write=True)
+    for rel in [layout.context_dir, layout.areas_dir, layout.handoff_dir, layout.packs_dir, layout.local_path.parent]:
         (repo / rel).mkdir(parents=True, exist_ok=True)
 
 
-def default_manifest() -> dict[str, Any]:
+def default_manifest(layout: ContextLayout | None = None) -> dict[str, Any]:
+    layout = layout or PRIMARY_LAYOUT
     return {
         "version": 1,
         "generated_by": "context-pack",
         "areas": {
             "overview": {
-                "doc": ".codex/context/AREAS/overview.md",
+                "doc": path_text(layout.areas_dir / "overview.md"),
                 "description": "Default project orientation and safe starting point.",
                 "paths": [
                     "README.md",
                     "AGENTS.md",
                     "CLAUDE.md",
                     "codex.md",
-                    ".codex/context/**",
+                    path_text(layout.context_dir / "**"),
                 ],
                 "start_files": [
                     "README.md",
                     "AGENTS.md",
-                    ".codex/context/INDEX.md",
-                    ".codex/handoff/CURRENT.md",
+                    path_text(layout.index_path),
+                    path_text(layout.current_path),
                 ],
                 "tests": [],
                 "keywords": [
@@ -245,8 +356,8 @@ def default_manifest() -> dict[str, Any]:
                     "Editing the wrong checkout or copied workspace.",
                 ],
                 "stale_if_paths": [
-                    ".codex/context/**",
-                    ".codex/handoff/**",
+                    path_text(layout.context_dir / "**"),
+                    path_text(layout.handoff_dir / "**"),
                     "AGENTS.md",
                     "README.md",
                 ],
@@ -269,10 +380,11 @@ def existing_patterns(repo: Path, patterns: list[str]) -> list[str]:
     return [pattern for pattern in patterns if pattern_has_match(repo, pattern)]
 
 
-def inferred_area_candidates(repo: Path) -> dict[str, dict[str, Any]]:
+def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) -> dict[str, dict[str, Any]]:
+    layout = layout or resolve_layout(repo)
     candidates = {
         "source": {
-            "doc": ".codex/context/AREAS/source.md",
+            "doc": path_text(layout.areas_dir / "source.md"),
             "description": "Application or library source code.",
             "paths": ["src/**", "lib/**", "app/**", "packages/**"],
             "start_files": ["src", "lib", "app", "packages"],
@@ -289,7 +401,7 @@ def inferred_area_candidates(repo: Path) -> dict[str, dict[str, Any]]:
             "stale_if_paths": ["src/**", "lib/**", "app/**", "packages/**"],
         },
         "tests": {
-            "doc": ".codex/context/AREAS/tests.md",
+            "doc": path_text(layout.areas_dir / "tests.md"),
             "description": "Test suites, fixtures, and validation commands.",
             "paths": ["tests/**", "test/**", "__tests__/**", "spec/**"],
             "start_files": ["tests", "test", "__tests__", "spec"],
@@ -305,7 +417,7 @@ def inferred_area_candidates(repo: Path) -> dict[str, dict[str, Any]]:
             "stale_if_paths": ["tests/**", "test/**", "__tests__/**", "spec/**"],
         },
         "docs": {
-            "doc": ".codex/context/AREAS/docs.md",
+            "doc": path_text(layout.areas_dir / "docs.md"),
             "description": "User-facing docs, onboarding notes, and repository guidance.",
             "paths": ["README.md", "README.*.md", "docs/**", "AGENTS.md", "CLAUDE.md"],
             "start_files": ["README.md", "AGENTS.md", "CLAUDE.md", "docs"],
@@ -322,7 +434,7 @@ def inferred_area_candidates(repo: Path) -> dict[str, dict[str, Any]]:
             "stale_if_paths": ["README.md", "README.*.md", "docs/**", "AGENTS.md", "CLAUDE.md"],
         },
         "automation": {
-            "doc": ".codex/context/AREAS/automation.md",
+            "doc": path_text(layout.areas_dir / "automation.md"),
             "description": "Build, release, scripts, CI, packaging, and developer automation.",
             "paths": [".github/**", "scripts/**", "pyproject.toml", "package.json", "Makefile"],
             "start_files": ["pyproject.toml", "package.json", "Makefile", ".github/workflows", "scripts"],
@@ -354,10 +466,10 @@ def inferred_area_candidates(repo: Path) -> dict[str, dict[str, Any]]:
     return inferred
 
 
-def merge_inferred_areas(repo: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+def merge_inferred_areas(repo: Path, manifest: dict[str, Any], layout: ContextLayout | None = None) -> dict[str, Any]:
     manifest.setdefault("areas", {})
     areas = manifest["areas"]
-    for area_id, area in inferred_area_candidates(repo).items():
+    for area_id, area in inferred_area_candidates(repo, layout).items():
         areas.setdefault(area_id, area)
     return manifest
 
@@ -366,22 +478,23 @@ def manifest_needs_write(path: Path, manifest: dict[str, Any]) -> bool:
     if not path.exists():
         return True
     try:
-        current = json.loads(path.read_text(encoding="utf-8"))
+        current = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError:
         return True
     return current != manifest
 
 
-def load_manifest(repo: Path) -> dict[str, Any]:
-    path = repo / MANIFEST_PATH
+def load_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
+    layout = layout or resolve_layout(repo)
+    path = repo / layout.manifest_path
     if not path.exists():
-        return default_manifest()
+        return default_manifest(layout)
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in {MANIFEST_PATH}: {exc}") from exc
+        raise SystemExit(f"Invalid JSON in {layout.manifest_path}: {exc}") from exc
     if not isinstance(data, dict):
-        raise SystemExit(f"{MANIFEST_PATH} must contain a JSON object")
+        raise SystemExit(f"{layout.manifest_path} must contain a JSON object")
     data.setdefault("version", 1)
     data.setdefault("areas", {})
     return data
@@ -440,7 +553,8 @@ def render_fingerprint(snapshot: Snapshot) -> str:
     )
 
 
-def overview_area_doc(snapshot: Snapshot) -> str:
+def overview_area_doc(snapshot: Snapshot, layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
     return f"""---
 id: overview
 last_reviewed_head: {snapshot.head}
@@ -448,7 +562,7 @@ status: active
 paths:
   - README.md
   - AGENTS.md
-  - .codex/context/**
+  - {path_text(layout.context_dir / "**")}
 tests: []
 stale_if:
   - AGENTS.md changes
@@ -466,8 +580,8 @@ stale_if:
 ## Start With
 - README.md
 - AGENTS.md
-- .codex/context/INDEX.md
-- .codex/handoff/CURRENT.md
+- {path_text(layout.index_path)}
+- {path_text(layout.current_path)}
 
 ## Contracts
 - Context docs are routing hints, not ground truth.
@@ -484,13 +598,14 @@ stale_if:
 - The changed file does not match any known area.
 
 ## Do Not Start With
-- .codex/packs/
+- {path_text(layout.packs_dir)}/
 - archived logs
 - generated artifacts
 """
 
 
-def generic_area_doc(area_id: str, area: dict[str, Any], snapshot: Snapshot) -> str:
+def generic_area_doc(area_id: str, area: dict[str, Any], snapshot: Snapshot, layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
     paths = "\n".join(f"  - {item}" for item in area.get("paths", []) or [])
     tests = "\n".join(f"  - {item}" for item in area.get("tests", []) or [])
     stale = "\n".join(f"  - {item} changes" for item in area.get("stale_if_paths", []) or [])
@@ -515,7 +630,7 @@ stale_if:
 - {area.get("description", "Working in this area.")}
 
 ## Start With
-{start or "- Use `.codex/context/INDEX.md` to choose source files."}
+{start or f"- Use `{path_text(layout.index_path)}` to choose source files."}
 
 ## Contracts
 {contracts or "- Verify behavior in source before trusting summaries."}
@@ -528,12 +643,13 @@ stale_if:
 - A changed file does not match any known area.
 
 ## Do Not Start With
-- `.codex/packs/`
+- `{path_text(layout.packs_dir)}/`
 - generated artifacts unless the task is about generation
 """
 
 
-def current_doc(snapshot: Snapshot) -> str:
+def current_doc(snapshot: Snapshot, layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
     fingerprint = render_fingerprint(snapshot)
     return f"""# Current Handoff
 
@@ -542,12 +658,12 @@ def current_doc(snapshot: Snapshot) -> str:
 {FINGERPRINT_END}
 
 ## Active Goal
-- Keep this short. Move details into `.codex/context/AREAS/*.md`.
+- Keep this short. Move details into `{path_text(layout.areas_dir)}/*.md`.
 
 ## Read First
-1. `.codex/handoff/CURRENT.md`
-2. `.codex/context/INDEX.md`
-3. The relevant `.codex/context/AREAS/*.md` files
+1. `{path_text(layout.current_path)}`
+2. `{path_text(layout.index_path)}`
+3. The relevant `{path_text(layout.areas_dir)}/*.md` files
 
 ## Next Actions
 1. Generate or consult a context pack before broad repo reading.
@@ -561,7 +677,8 @@ def current_doc(snapshot: Snapshot) -> str:
 """
 
 
-def local_checkpoint_doc(snapshot: Snapshot) -> str:
+def local_checkpoint_doc(snapshot: Snapshot, layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
     fingerprint = render_fingerprint(snapshot)
     return f"""# Local Checkpoint
 
@@ -572,7 +689,7 @@ This file is machine-local and ignored by git. Use it for automatic agent work-u
 {FINGERPRINT_END}
 
 ## Latest
-- Generated packs live in `.codex/packs/` and are also ignored.
+- Generated packs live in `{path_text(layout.packs_dir)}/` and are also ignored.
 - Publish durable handoff state with `context-pack checkpoint --publish` when it should travel through git.
 
 ## Local Log
@@ -594,9 +711,9 @@ def checkpoint_entry(snapshot: Snapshot) -> str:
     )
 
 
-def agent_rules() -> str:
+def agent_rules(layout: ContextLayout | None = None) -> str:
     return f"""{AGENT_RULES_START}
-{agent_rules_body()}
+{agent_rules_body(layout)}
 {AGENT_RULES_END}
 """
 
@@ -610,14 +727,16 @@ alwaysApply: true
 """
 
 
-def agent_rules_document(kind: str) -> str:
+def agent_rules_document(kind: str, layout: ContextLayout | None = None) -> str:
     if kind == "cursor":
-        return cursor_rule_frontmatter() + "\n" + agent_rules()
-    return agent_rules()
+        return cursor_rule_frontmatter() + "\n" + agent_rules(layout)
+    return agent_rules(layout)
 
 
-def agent_rules_body() -> str:
-    return """\
+def agent_rules_body(layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
+    pack_path = path_text(layout.pack_path)
+    return f"""\
 ## Context Pack
 
 At the start of substantial work, run `context-pack start --task "<short task description>"` when available. With no clear task, run `context-pack start`. This initializes missing context docs, chooses a focused pack when possible, and prints what to read next.
@@ -626,13 +745,14 @@ Use Context Pack proactively. Do not wait for the user to name it when starting 
 
 When a review needs orientation, prefer `context-pack start --review --base <base-ref>`. When changed files are the only signal, use `context-pack start --changed`.
 
-For reviews and debugging, prefer a generated context pack from `.codex/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
+For reviews and debugging, prefer a generated context pack from `{pack_path}` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
 At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available. This writes an ignored local checkpoint by default so automatic agent use does not dirty tracked handoff files. Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
 """
 
 
-def render_index(manifest: dict[str, Any]) -> str:
+def render_index(manifest: dict[str, Any], layout: ContextLayout | None = None) -> str:
+    layout = layout or PRIMARY_LAYOUT
     lines = [
         "# Context Index",
         "",
@@ -669,7 +789,7 @@ def render_index(manifest: dict[str, Any]) -> str:
         [
             "",
             "## Generated Packs",
-            "- `.codex/packs/CONTEXT_PACK.md` is generated and should not be committed.",
+            f"- `{path_text(layout.pack_path)}` is generated and should not be committed.",
         ]
     )
     return "\n".join(lines).rstrip() + "\n"
@@ -730,12 +850,26 @@ def render_contracts(manifest: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def append_gitignore(repo: Path) -> None:
+def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
+    layout = layout or PRIMARY_LAYOUT
+    local_ignore = (
+        f"{path_text(layout.local_path.parent)}/"
+        if layout.name == "primary"
+        else path_text(layout.local_path)
+    )
     entries = [
-        ".codex/packs/",
-        ".codex/context/tmp/",
-        ".codex/handoff/LOCAL.md",
+        f"{path_text(layout.packs_dir)}/",
+        f"{path_text(layout.context_dir / 'tmp')}/",
+        local_ignore,
     ]
+    if layout.name == "primary" and layout_exists(repo, LEGACY_LAYOUT):
+        entries.extend(
+            [
+                f"{path_text(LEGACY_PACKS_DIR)}/",
+                f"{path_text(LEGACY_CONTEXT_DIR / 'tmp')}/",
+                path_text(LEGACY_LOCAL_PATH),
+            ]
+        )
     path = repo / ".gitignore"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     normalized = set(line.strip() for line in text.splitlines())
@@ -747,12 +881,13 @@ def append_gitignore(repo: Path) -> None:
     write_text_lf(path, text + prefix + block)
 
 
-def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md") -> None:
+def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md", layout: ContextLayout | None = None) -> None:
+    layout = layout or resolve_layout(repo)
     path = repo / agent_doc
     text = path.read_text(encoding="utf-8") if path.exists() else ""
-    rules = agent_rules()
+    rules = agent_rules(layout)
     if AGENT_RULES_START in text and AGENT_RULES_END in text:
-        text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body())
+        text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body(layout))
     else:
         if text and not text.endswith("\n"):
             text += "\n"
@@ -760,18 +895,19 @@ def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md") -> None:
     write_text_lf(path, text.lstrip())
 
 
-def append_agent_rules_for_kind(repo: Path, kind: str) -> Path:
+def append_agent_rules_for_kind(repo: Path, kind: str, layout: ContextLayout | None = None) -> Path:
+    layout = layout or resolve_layout(repo)
     rel_path = AGENT_DOC_TARGETS[kind]
     path = repo / rel_path
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     if AGENT_RULES_START in text and AGENT_RULES_END in text:
-        text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body())
+        text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body(layout))
     elif not text:
-        text = agent_rules_document(kind)
+        text = agent_rules_document(kind, layout)
     else:
         if not text.endswith("\n"):
             text += "\n"
-        text += "\n" + agent_rules()
+        text += "\n" + agent_rules(layout)
     write_text_lf(path, text)
     return rel_path
 
@@ -795,7 +931,8 @@ def resolve_agent_doc_targets(targets: list[str] | None) -> list[str]:
 def cmd_install_agent_docs(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    written = [append_agent_rules_for_kind(repo, kind) for kind in resolve_agent_doc_targets(args.target)]
+    layout = resolve_layout(repo)
+    written = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(args.target)]
     if not args.quiet:
         print(f"Installed Context Pack agent docs in {repo}")
         for rel_path in written:
@@ -806,6 +943,7 @@ def cmd_install_agent_docs(args: argparse.Namespace) -> int:
 def cmd_setup(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
+    layout = resolve_layout(repo, for_write=True)
 
     init_args = argparse.Namespace(
         repo=str(repo),
@@ -821,7 +959,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
     agent_docs: list[Path] = []
     if args.agent_docs != "none":
         targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
-        agent_docs = [append_agent_rules_for_kind(repo, kind) for kind in resolve_agent_doc_targets(targets)]
+        agent_docs = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(targets)]
 
     if args.git_hooks != "off":
         hook_args = argparse.Namespace(repo=str(repo), quiet=True, mode=args.git_hooks)
@@ -834,8 +972,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print(f"Context Pack setup complete for {repo}")
         print("")
         print("Ready:")
-        print(f"- Context library: {CONTEXT_DIR}")
-        print(f"- Handoff docs: {HANDOFF_DIR}")
+        print(f"- Context library: {layout.context_dir}")
+        print(f"- Handoff docs: {layout.handoff_dir}")
         if agent_docs:
             print("- Agent docs:")
             for rel_path in agent_docs:
@@ -864,36 +1002,37 @@ def cmd_setup(args: argparse.Namespace) -> int:
 def cmd_init(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    ensure_dirs(repo)
-    manifest = merge_inferred_areas(repo, load_manifest(repo))
+    layout = resolve_layout(repo, for_write=True)
+    ensure_dirs(repo, layout)
+    manifest = merge_inferred_areas(repo, load_manifest(repo, layout), layout)
 
-    manifest_path = repo / MANIFEST_PATH
+    manifest_path = repo / layout.manifest_path
     if args.force or manifest_needs_write(manifest_path, manifest):
         write_json(manifest_path, manifest)
-    write_if_missing(repo / AREAS_DIR / "overview.md", overview_area_doc(snapshot), force=args.force)
+    write_if_missing(repo / layout.areas_dir / "overview.md", overview_area_doc(snapshot, layout), force=args.force)
     for area_id, area in (manifest.get("areas") or {}).items():
         if area_id == "overview":
             continue
-        write_if_missing(repo / normalize_path(area.get("doc", "")), generic_area_doc(area_id, area, snapshot), force=args.force)
-    write_if_missing(repo / INDEX_PATH, render_index(manifest), force=args.force)
-    write_if_missing(repo / REVIEW_PATH, render_review(manifest), force=args.force)
-    write_if_missing(repo / CONTRACTS_PATH, render_contracts(manifest), force=args.force)
-    write_if_missing(repo / CURRENT_PATH, current_doc(snapshot), force=args.force)
-    write_if_missing(repo / LOG_PATH, "# Context Pack Log\n\nAppend-only operational log.\n", force=args.force)
-    write_if_missing(repo / DECISIONS_PATH, "# Decisions\n\nRecord durable direction changes only.\n", force=args.force)
-    write_if_missing(repo / LOCAL_PATH, local_checkpoint_doc(snapshot), force=args.force)
+        write_if_missing(repo / normalize_path(area.get("doc", "")), generic_area_doc(area_id, area, snapshot, layout), force=args.force)
+    write_if_missing(repo / layout.index_path, render_index(manifest, layout), force=args.force)
+    write_if_missing(repo / layout.review_path, render_review(manifest), force=args.force)
+    write_if_missing(repo / layout.contracts_path, render_contracts(manifest), force=args.force)
+    write_if_missing(repo / layout.current_path, current_doc(snapshot, layout), force=args.force)
+    write_if_missing(repo / layout.log_path, "# Context Pack Log\n\nAppend-only operational log.\n", force=args.force)
+    write_if_missing(repo / layout.decisions_path, "# Decisions\n\nRecord durable direction changes only.\n", force=args.force)
+    write_if_missing(repo / layout.local_path, local_checkpoint_doc(snapshot, layout), force=args.force)
 
-    append_gitignore(repo)
+    append_gitignore(repo, layout)
     if not args.no_agent_doc:
-        append_agent_rules(repo, agent_doc=args.agent_doc)
+        append_agent_rules(repo, agent_doc=args.agent_doc, layout=layout)
 
     if not args.quiet:
         print(f"Initialized Context Pack in {repo}")
         print("")
         print("Created:")
-        print(f"- Context index: {INDEX_PATH}")
-        print(f"- Handoff: {CURRENT_PATH}")
-        print(f"- Manifest: {MANIFEST_PATH}")
+        print(f"- Context index: {layout.index_path}")
+        print(f"- Handoff: {layout.current_path}")
+        print(f"- Manifest: {layout.manifest_path}")
         print("")
         print("Ask your agent next:")
         print('- "Use $context-pack to build a review context pack for this branch."')
@@ -907,34 +1046,35 @@ def cmd_init(args: argparse.Namespace) -> int:
 def cmd_checkpoint(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    ensure_dirs(repo)
+    layout = resolve_layout(repo, for_write=True)
+    ensure_dirs(repo, layout)
 
     entry = checkpoint_entry(snapshot)
     if args.publish:
-        if not (repo / CURRENT_PATH).exists():
-            write_if_missing(repo / CURRENT_PATH, current_doc(snapshot))
+        if not (repo / layout.current_path).exists():
+            write_if_missing(repo / layout.current_path, current_doc(snapshot, layout))
 
-        current = (repo / CURRENT_PATH).read_text(encoding="utf-8")
+        current = (repo / layout.current_path).read_text(encoding="utf-8")
         current = replace_marker(current, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
-        write_text_lf(repo / CURRENT_PATH, current)
+        write_text_lf(repo / layout.current_path, current)
 
-        if not (repo / LOG_PATH).exists():
-            write_if_missing(repo / LOG_PATH, "# Context Pack Log\n\nAppend-only operational log.\n")
-        with (repo / LOG_PATH).open("a", encoding="utf-8", newline="\n") as handle:
+        if not (repo / layout.log_path).exists():
+            write_if_missing(repo / layout.log_path, "# Context Pack Log\n\nAppend-only operational log.\n")
+        with (repo / layout.log_path).open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(entry)
-        checkpoint_path = CURRENT_PATH
+        checkpoint_path = layout.current_path
         checkpoint_kind = "Published handoff"
     else:
-        if not (repo / LOCAL_PATH).exists():
-            write_if_missing(repo / LOCAL_PATH, local_checkpoint_doc(snapshot))
+        if not (repo / layout.local_path).exists():
+            write_if_missing(repo / layout.local_path, local_checkpoint_doc(snapshot, layout))
 
-        local = (repo / LOCAL_PATH).read_text(encoding="utf-8")
+        local = (repo / layout.local_path).read_text(encoding="utf-8")
         local = replace_marker(local, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
         if "## Local Log" not in local:
             local = local.rstrip() + "\n\n## Local Log\n"
         local = local.rstrip() + "\n" + entry.lstrip("\n")
-        write_text_lf(repo / LOCAL_PATH, local)
-        checkpoint_path = LOCAL_PATH
+        write_text_lf(repo / layout.local_path, local)
+        checkpoint_path = layout.local_path
         checkpoint_kind = "Local checkpoint"
 
     if args.pack:
@@ -942,7 +1082,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
             repo=str(repo),
             task=None,
             changed=True,
-            output=str(repo / PACK_PATH),
+            output=str(repo / layout.pack_path),
             quiet=True,
             mode="work",
             max_areas=4,
@@ -956,7 +1096,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         print(f"{checkpoint_kind} updated at {normalize_path(checkpoint_path)}")
         print(f"HEAD: {snapshot.head}; dirty: {len(snapshot.dirty_files)} file(s); hash: {snapshot.diff_hash}")
         if args.pack:
-            print(f"Context pack: {normalize_path(PACK_PATH)}")
+            print(f"Context pack: {normalize_path(layout.pack_path)}")
         if not args.publish:
             print("Note: local checkpoints are ignored by git. Use --publish when this handoff should be committed.")
         print('Next agent prompt: "Use $context-pack to continue from the current handoff."')
@@ -966,7 +1106,8 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
 def cmd_start(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    had_context = (repo / MANIFEST_PATH).exists()
+    layout = resolve_layout(repo)
+    had_context = (repo / layout.manifest_path).exists()
     initialized = False
 
     if not had_context:
@@ -990,6 +1131,7 @@ def cmd_start(args: argparse.Namespace) -> int:
             return result
         initialized = True
         snapshot = collect_snapshot(repo)
+        layout = resolve_layout(repo)
 
     mode = "work"
     changed = False
@@ -1008,7 +1150,7 @@ def cmd_start(args: argparse.Namespace) -> int:
 
     pack_generated = bool(pack_reason)
     selected: list[AreaSelection] = []
-    output_path = Path(args.output) if args.output else repo / PACK_PATH
+    output_path = Path(args.output) if args.output else repo / layout.pack_path
     if not output_path.is_absolute():
         output_path = repo / output_path
 
@@ -1026,7 +1168,7 @@ def cmd_start(args: argparse.Namespace) -> int:
             max_contracts=args.max_contracts,
             max_failure_modes=args.max_failure_modes,
         )
-        manifest = load_manifest(repo)
+        manifest = load_manifest(repo, layout)
         changed_files = resolve_changed_files(repo, snapshot, pack_args)
         selected = selected_area_matches(manifest, changed_files=changed_files, task=args.task)[: args.max_areas]
         result = build_pack(pack_args)
@@ -1037,7 +1179,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         print(f"Context Pack Start for {repo}")
         print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head}")
         if initialized:
-            print(f"Initialized: {normalize_path(MANIFEST_PATH)}")
+            print(f"Initialized: {normalize_path(layout.manifest_path)}")
         else:
             print("Context library: ok")
         print(f"Dirty files: {len(snapshot.dirty_files)}; diff hash: {snapshot.diff_hash}")
@@ -1052,7 +1194,7 @@ def cmd_start(args: argparse.Namespace) -> int:
             print("Read next:")
             print(f"- {rel_to_repo(output_path, repo)}")
             for item in selected:
-                area = (load_manifest(repo).get("areas") or {}).get(item.area_id, {})
+                area = (load_manifest(repo, layout).get("areas") or {}).get(item.area_id, {})
                 doc = area.get("doc")
                 if doc:
                     print(f"- {doc}")
@@ -1230,6 +1372,9 @@ def repo_files(repo: Path) -> list[str]:
 
     ignored_parts = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     ignored_prefixes = {
+        ".context-pack/packs/",
+        ".context-pack/tmp/",
+        ".context-pack/local/",
         ".codex/packs/",
         ".codex/context/tmp/",
     }
@@ -1313,6 +1458,7 @@ def render_pack(
     snapshot: Snapshot,
     selections: list[AreaSelection],
     *,
+    layout: ContextLayout | None = None,
     related_selections: list[AreaSelection] | None = None,
     changed_files: list[str],
     task: str | None,
@@ -1321,6 +1467,7 @@ def render_pack(
     max_contracts: int = 12,
     max_failure_modes: int = 10,
 ) -> str:
+    layout = layout or resolve_layout(repo)
     areas = manifest.get("areas") or {}
     related_selections = related_selections or []
     changed = changed_files
@@ -1360,8 +1507,8 @@ def render_pack(
         collect_area(selection, primary=False)
 
     if mode == "review":
-        read_first.insert(0, ".codex/context/REVIEW.md")
-        read_first.insert(0, ".codex/context/CONTRACTS.md")
+        read_first.insert(0, path_text(layout.review_path))
+        read_first.insert(0, path_text(layout.contracts_path))
 
     read_first_unique = unique(read_first)
     read_first_visible = read_first_unique[:max_read_first]
@@ -1474,8 +1621,9 @@ def render_pack(
 def build_pack(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    ensure_dirs(repo)
-    manifest = load_manifest(repo)
+    layout = resolve_layout(repo, for_write=True)
+    ensure_dirs(repo, layout)
+    manifest = load_manifest(repo, layout)
     changed = resolve_changed_files(repo, snapshot, args)
     matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
     max_areas = getattr(args, "max_areas", 4) or len(matches)
@@ -1487,6 +1635,7 @@ def build_pack(args: argparse.Namespace) -> int:
         manifest,
         snapshot,
         primary,
+        layout=layout,
         related_selections=related,
         changed_files=changed,
         task=args.task,
@@ -1495,7 +1644,7 @@ def build_pack(args: argparse.Namespace) -> int:
         max_contracts=getattr(args, "max_contracts", 12),
         max_failure_modes=getattr(args, "max_failure_modes", 10),
     )
-    output = Path(args.output) if args.output else repo / PACK_PATH
+    output = Path(args.output) if args.output else repo / layout.pack_path
     if not output.is_absolute():
         output = repo / output
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1600,14 +1749,15 @@ def update_frontmatter_status(path: Path, status: str) -> bool:
 def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
+    layout = resolve_layout(repo)
 
-    required = [CONTEXT_DIR, AREAS_DIR, HANDOFF_DIR, MANIFEST_PATH, INDEX_PATH, CURRENT_PATH]
+    required = [layout.context_dir, layout.areas_dir, layout.handoff_dir, layout.manifest_path, layout.index_path, layout.current_path]
     for rel in required:
         if not (repo / rel).exists():
             errors.append(f"missing {rel}")
 
-    if (repo / MANIFEST_PATH).exists():
-        manifest = load_manifest(repo)
+    if (repo / layout.manifest_path).exists():
+        manifest = load_manifest(repo, layout)
         areas = manifest.get("areas") or {}
         if not areas:
             warnings.append("manifest has no areas")
@@ -1621,12 +1771,21 @@ def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
     gitignore = repo / ".gitignore"
     if gitignore.exists():
         text = gitignore.read_text(encoding="utf-8")
-        if ".codex/packs/" not in text:
-            warnings.append(".codex/packs/ is not ignored")
-        if ".codex/handoff/LOCAL.md" not in text:
-            warnings.append(".codex/handoff/LOCAL.md is not ignored")
+        required_ignores = [
+            f"{path_text(layout.packs_dir)}/",
+            f"{path_text(layout.context_dir / 'tmp')}/",
+            f"{path_text(layout.local_path.parent)}/" if layout.name == "primary" else path_text(layout.local_path),
+        ]
+        for item in required_ignores:
+            if item not in text:
+                warnings.append(f"{item} is not ignored")
     else:
         warnings.append(".gitignore missing")
+
+    if layout.name == "legacy":
+        warnings.append("using legacy .codex context layout; run `context-pack migrate` to use .context-pack")
+    elif layout_exists(repo, LEGACY_LAYOUT):
+        warnings.append("legacy .codex context files are still present after .context-pack setup")
 
     return errors, warnings
 
@@ -1634,9 +1793,10 @@ def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
 def cmd_status(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
+    layout = resolve_layout(repo)
     errors, warnings = context_setup_issues(repo)
 
-    if not (repo / MANIFEST_PATH).exists():
+    if not (repo / layout.manifest_path).exists():
         if not args.quiet:
             print(f"Context Pack Status for {repo}")
             print("Context library: missing")
@@ -1645,7 +1805,7 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("- context-pack setup")
         return 1
 
-    manifest = load_manifest(repo)
+    manifest = load_manifest(repo, layout)
     matches = selected_area_matches(manifest, changed_files=snapshot.dirty_files, task=args.task)
     max_areas = getattr(args, "max_areas", 4)
     primary = matches[:max_areas]
@@ -1696,7 +1856,8 @@ def cmd_status(args: argparse.Namespace) -> int:
 def cmd_mark_reviewed(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    manifest = load_manifest(repo)
+    layout = resolve_layout(repo)
+    manifest = load_manifest(repo, layout)
     areas = manifest.get("areas") or {}
 
     if args.all:
@@ -1734,11 +1895,12 @@ def cmd_mark_reviewed(args: argparse.Namespace) -> int:
 def cmd_refresh(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    ensure_dirs(repo)
-    manifest = load_manifest(repo)
-    write_text_lf(repo / INDEX_PATH, render_index(manifest))
-    write_text_lf(repo / REVIEW_PATH, render_review(manifest))
-    write_text_lf(repo / CONTRACTS_PATH, render_contracts(manifest))
+    layout = resolve_layout(repo, for_write=True)
+    ensure_dirs(repo, layout)
+    manifest = load_manifest(repo, layout)
+    write_text_lf(repo / layout.index_path, render_index(manifest, layout))
+    write_text_lf(repo / layout.review_path, render_review(manifest))
+    write_text_lf(repo / layout.contracts_path, render_contracts(manifest))
 
     marked: list[str] = []
     if args.mark_stale:
@@ -1758,7 +1920,8 @@ def cmd_refresh(args: argparse.Namespace) -> int:
 
 def cmd_gc(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
-    packs = snapshot.repo_root / PACKS_DIR
+    layout = resolve_layout(snapshot.repo_root)
+    packs = snapshot.repo_root / layout.packs_dir
     if not packs.exists():
         return 0
     removed = 0
@@ -1773,6 +1936,108 @@ def cmd_gc(args: argparse.Namespace) -> int:
             removed += 1
     if not args.quiet:
         print(f"Removed {removed} generated pack item(s)")
+    return 0
+
+
+def migrate_file(repo: Path, source_rel: Path, target_rel: Path, *, force: bool) -> bool:
+    source = repo / source_rel
+    target = repo / target_rel
+    if not source.exists() or not source.is_file():
+        return False
+    if target.exists() and not force:
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    text = source.read_text(encoding="utf-8")
+    write_text_lf(target, rewrite_legacy_paths(text))
+    return True
+
+
+def safe_remove_tree(path: Path, repo: Path) -> None:
+    resolved = path.resolve()
+    repo_resolved = repo.resolve()
+    if resolved == repo_resolved or repo_resolved not in resolved.parents:
+        raise SystemExit(f"Refusing to remove path outside repo: {path}")
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def cmd_migrate(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    if not layout_exists(repo, LEGACY_LAYOUT):
+        if not args.quiet:
+            print("No legacy .codex context layout found.")
+        return 0
+    if layout_exists(repo, PRIMARY_LAYOUT) and not args.force:
+        if not args.quiet:
+            print(".context-pack already exists. Use --force to overwrite copied files.")
+        return 1
+
+    ensure_dirs(repo, PRIMARY_LAYOUT)
+    mappings = [
+        (LEGACY_MANIFEST_PATH, MANIFEST_PATH),
+        (LEGACY_INDEX_PATH, INDEX_PATH),
+        (LEGACY_REVIEW_PATH, REVIEW_PATH),
+        (LEGACY_CONTRACTS_PATH, CONTRACTS_PATH),
+        (LEGACY_CURRENT_PATH, CURRENT_PATH),
+        (LEGACY_LOG_PATH, LOG_PATH),
+        (LEGACY_DECISIONS_PATH, DECISIONS_PATH),
+        (LEGACY_LOCAL_PATH, LOCAL_PATH),
+    ]
+    migrated = 0
+    skipped = 0
+    for source_rel, target_rel in mappings:
+        before = (repo / target_rel).exists()
+        if migrate_file(repo, source_rel, target_rel, force=args.force):
+            migrated += 1
+        elif (repo / source_rel).exists() and before:
+            skipped += 1
+
+    legacy_areas = repo / LEGACY_AREAS_DIR
+    if legacy_areas.exists():
+        for source in legacy_areas.rglob("*"):
+            if not source.is_file():
+                continue
+            rel = source.relative_to(legacy_areas)
+            target_rel = AREAS_DIR / rel
+            before = (repo / target_rel).exists()
+            if migrate_file(repo, LEGACY_AREAS_DIR / rel, target_rel, force=args.force):
+                migrated += 1
+            elif before:
+                skipped += 1
+
+    if args.include_packs:
+        legacy_packs = repo / LEGACY_PACKS_DIR
+        if legacy_packs.exists():
+            for source in legacy_packs.rglob("*"):
+                if not source.is_file():
+                    continue
+                rel = source.relative_to(legacy_packs)
+                target = repo / PACKS_DIR / rel
+                if target.exists() and not args.force:
+                    skipped += 1
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+                migrated += 1
+
+    append_gitignore(repo, PRIMARY_LAYOUT)
+
+    if args.remove_legacy:
+        for rel in [LEGACY_CONTEXT_DIR, LEGACY_HANDOFF_DIR]:
+            safe_remove_tree(repo / rel, repo)
+        if args.include_packs:
+            safe_remove_tree(repo / LEGACY_PACKS_DIR, repo)
+
+    if not args.quiet:
+        print(f"Migrated legacy .codex context to {CONTEXT_DIR}")
+        print(f"- Copied/rewritten files: {migrated}")
+        if skipped:
+            print(f"- Skipped existing files: {skipped}")
+        if args.remove_legacy:
+            print("- Removed legacy context/handoff directories")
+        else:
+            print("- Legacy files left in place; remove them after verifying .context-pack")
     return 0
 
 
@@ -1827,7 +2092,13 @@ When Context Pack is missing or the user asks to initialize, install, configure,
 python scripts/context_pack.py setup
 ```
 
-This initializes `.codex/context/`, `.codex/handoff/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+
+If a repo already has the legacy `.codex/context` layout and the user wants the vendor-neutral layout, run:
+
+```bash
+python scripts/context_pack.py migrate
+```
 
 ## Fast Path
 
@@ -1851,7 +2122,7 @@ With no task:
 python scripts/context_pack.py start
 ```
 
-Read `.codex/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
+Read `.context-pack/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
 
 When reporting back, include selected areas and scope-reduction numbers when present.
 
@@ -1879,6 +2150,7 @@ This writes ignored local state by default. Use `checkpoint --publish --pack` on
 
 - `python scripts/context_pack.py status`
 - `python scripts/context_pack.py doctor --fix`
+- `python scripts/context_pack.py migrate`
 - `python scripts/context_pack.py mark-reviewed <area-id>`
 - `python scripts/context_pack.py refresh`
 - `python scripts/context_pack.py doctor`
@@ -2187,7 +2459,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_setup)
 
-    p = sub.add_parser("init", help="Initialize .codex context docs in a repo")
+    p = sub.add_parser("init", help="Initialize .context-pack docs in a repo")
     add_common(p)
     p.add_argument("--force", action="store_true", help="Overwrite existing context files")
     p.add_argument("--no-agent-doc", action="store_true", help="Do not update AGENTS.md")
@@ -2274,6 +2546,13 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p)
     p.add_argument("--all", action="store_true", help="Also remove CONTEXT_PACK.md")
     p.set_defaults(func=cmd_gc)
+
+    p = sub.add_parser("migrate", help="Migrate legacy .codex context docs to .context-pack")
+    add_common(p)
+    p.add_argument("--force", action="store_true", help="Overwrite existing .context-pack files during migration")
+    p.add_argument("--include-packs", action="store_true", help="Also copy generated legacy packs")
+    p.add_argument("--remove-legacy", action="store_true", help="Remove legacy .codex context and handoff dirs after copying")
+    p.set_defaults(func=cmd_migrate)
 
     p = sub.add_parser("snapshot", help="Print current repo fingerprint as JSON")
     add_common(p)

@@ -5,7 +5,7 @@ For code review, map changed files to areas, then check the listed contracts, te
 ## Area Routing
 
 ### engine
-- Doc: `.codex/context/AREAS/engine.md`
+- Doc: `.context-pack/AREAS/engine.md`
 - If changed files match:
   - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
   - `plugins/context-pack/scripts/context_pack.py`
@@ -25,7 +25,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Scope-reduction numbers are missing or imply false precision about exact token savings.
 
 ### installer-release
-- Doc: `.codex/context/AREAS/installer-release.md`
+- Doc: `.context-pack/AREAS/installer-release.md`
 - If changed files match:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
@@ -68,7 +68,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - npm package metadata drifts from Python/plugin versions or omits the bundled engine.
 
 ### overview
-- Doc: `.codex/context/AREAS/overview.md`
+- Doc: `.context-pack/AREAS/overview.md`
 - If changed files match:
   - `README.md`
   - `README.ko.md`
@@ -81,14 +81,14 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `CLAUDE.md`
   - `codex.md`
   - `.agents/plugins/marketplace.json`
-  - `.codex/context/**`
+  - `.context-pack/**`
 - Common failure modes:
   - Trusting old summaries after HEAD or dirty files changed.
   - Reading logs or generated packs before current source files.
   - Editing the wrong checkout or copied workspace.
 
 ### skill-plugin
-- Doc: `.codex/context/AREAS/skill-plugin.md`
+- Doc: `.context-pack/AREAS/skill-plugin.md`
 - If changed files match:
   - `plugins/context-pack/.codex-plugin/plugin.json`
   - `plugins/context-pack/skills/context-pack/SKILL.md`
@@ -107,7 +107,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Claude/Cursor guidance drifts from the generated AGENTS.md rule block.
 
 ### tests
-- Doc: `.codex/context/AREAS/tests.md`
+- Doc: `.context-pack/AREAS/tests.md`
 - If changed files match:
   - `tests/test_context_pack.py`
 - Inspect/run tests:

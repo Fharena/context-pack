@@ -15,9 +15,9 @@ Start from the right shelf instead of rereading the repo.
 
 Context Pack keeps a repo-local context library and generates small task-specific packs:
 
-- `.codex/context/` -> stable project index and area docs
-- `.codex/handoff/` -> current checkout/work state
-- `.codex/packs/CONTEXT_PACK.md` -> generated reading pack for this task
+- `.context-pack/INDEX.md` and `.context-pack/AREAS/*.md` -> stable project index and area docs
+- `.context-pack/CURRENT.md` -> current checkout/work state
+- `.context-pack/packs/CONTEXT_PACK.md` -> generated reading pack for this task
 
 Treat these docs as routing hints, not source of truth. Always verify behavior in source code before editing or reviewing.
 
@@ -36,7 +36,7 @@ do the work. Do not stop at instructions.
 
 Also use this skill without explicit naming when:
 
-- entering a repo that already has `.codex/context/manifest.json`
+- entering a repo that already has `.context-pack/manifest.json`
 - starting a task that may touch multiple files or unknown ownership
 - reviewing dirty files, a branch, or a PR
 - debugging a failure in an unfamiliar area
@@ -98,7 +98,13 @@ Use when Context Pack is missing or the user asks to initialize, install, config
 python scripts/context_pack.py setup
 ```
 
-This initializes `.codex/context/`, `.codex/handoff/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+
+If a repo already has the legacy `.codex/context` layout and the user wants the vendor-neutral layout, run:
+
+```bash
+python scripts/context_pack.py migrate
+```
 
 ### Fast Path
 
@@ -120,11 +126,11 @@ With no task, use:
 python scripts/context_pack.py start
 ```
 
-Then read `.codex/packs/CONTEXT_PACK.md` if it was generated. If no pack was generated, follow the command's next action.
+Then read `.context-pack/packs/CONTEXT_PACK.md` if it was generated. If no pack was generated, follow the command's next action.
 
 ### Initialize Project Memory
 
-Use when `.codex/context/manifest.json` is missing or the user asks to set up Context Pack.
+Use when `.context-pack/manifest.json` is missing or the user asks to set up Context Pack.
 
 Prefer `setup` unless the user specifically asked for low-level initialization only.
 
@@ -146,7 +152,7 @@ Do not install git hooks during setup unless the user explicitly asks for automa
 
 ### Prepare A Task Or Debugging Pack
 
-Use before broad repo reading for a feature, bug, or debugging task. If `.codex/context/manifest.json` exists and the task is non-trivial, prefer generating a pack even when the user did not explicitly ask for Context Pack.
+Use before broad repo reading for a feature, bug, or debugging task. If `.context-pack/manifest.json` exists and the task is non-trivial, prefer generating a pack even when the user did not explicitly ask for Context Pack.
 
 1. Run:
 
@@ -154,7 +160,7 @@ Use before broad repo reading for a feature, bug, or debugging task. If `.codex/
    python scripts/context_pack.py start --task "<short task description>"
    ```
 
-2. Read `.codex/packs/CONTEXT_PACK.md`.
+2. Read `.context-pack/packs/CONTEXT_PACK.md`.
 3. Read only the listed area docs and source files first.
 4. Continue the user's task from that focused context.
 
@@ -180,7 +186,7 @@ Use when reviewing local changes, a branch, or a PR.
    python scripts/context_pack.py start --review
    ```
 
-3. Read `.codex/packs/CONTEXT_PACK.md`.
+3. Read `.context-pack/packs/CONTEXT_PACK.md`.
 4. Review changed files against the listed contracts, failure modes, and tests before widening scope.
 
 ### Checkpoint Work
@@ -230,7 +236,7 @@ python scripts/context_pack.py mark-reviewed <area-id>
 
 ### Refresh Context Routing
 
-Use after `.codex/context/manifest.json` or area ownership changes.
+Use after `.context-pack/manifest.json` or area ownership changes.
 
 ```bash
 python scripts/context_pack.py refresh
@@ -268,11 +274,11 @@ python scripts/context_pack.py uninstall-git-hooks
 
 ## Area Manifest
 
-The engine uses `.codex/context/manifest.json`. Each area may include:
+The engine uses `.context-pack/manifest.json`. Each area may include:
 
 ```json
 {
-  "doc": ".codex/context/AREAS/runtime.md",
+  "doc": ".context-pack/AREAS/runtime.md",
   "description": "Runtime selection and telemetry scoring.",
   "paths": ["src/runtime/**", "tests/test_runtime*.py"],
   "start_files": ["src/runtime/tuner.py"],
@@ -292,6 +298,6 @@ Prefer a few high-value responsibility areas over one summary per folder.
 - Read generated packs as routing hints, not source truth.
 - Verify stale warnings against source before acting.
 - Keep `CURRENT.md` short; move durable knowledge into `AREAS/*.md`.
-- Do not commit `.codex/packs/` or `.codex/handoff/LOCAL.md`.
+- Do not commit `.context-pack/packs/` or `.context-pack/local/LOCAL.md`.
 - If a changed file maps to no area, inspect source and update the manifest or area docs after the task.
 - For committed branch reviews, prefer `start --review --base <base-ref>`.

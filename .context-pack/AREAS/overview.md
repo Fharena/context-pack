@@ -5,7 +5,7 @@ status: active
 paths:
   - README.md
   - AGENTS.md
-  - .codex/context/**
+  - .context-pack/**
 tests: []
 stale_if:
   - AGENTS.md changes
@@ -23,8 +23,8 @@ stale_if:
 ## Start With
 - README.md
 - AGENTS.md
-- .codex/context/INDEX.md
-- .codex/handoff/CURRENT.md
+- .context-pack/INDEX.md
+- .context-pack/CURRENT.md
 
 ## Contracts
 - Context docs are routing hints, not ground truth.
@@ -41,6 +41,6 @@ stale_if:
 - The changed file does not match any known area.
 
 ## Do Not Start With
-- .codex/packs/
+- .context-pack/packs/
 - archived logs
 - generated artifacts
