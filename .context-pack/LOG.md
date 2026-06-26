@@ -172,3 +172,11 @@ Append-only operational log.
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (45 passed); `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist\context_pack-0.2.9*`
 - Notes: v0.2.9 text-budget metrics committed; next step is push/tag/release.
+
+## 2026-06-27T07:22:34+09:00
+- Branch: main
+- HEAD: f30bbcb667e3
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (45 passed); `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist\context_pack-0.2.10*`
+- Notes: v0.2.10 start terminal text-budget summary committed; next step is push/tag/release.
