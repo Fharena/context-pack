@@ -134,6 +134,44 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("context-pack:start", (hooks / "post-merge").read_text(encoding="utf-8"))
             self.assertFalse((hooks / "post-commit").exists())
 
+    def test_doctor_fix_repairs_missing_setup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 1)
+            self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--fix", "--quiet"]), 0)
+
+            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / "AGENTS.md").exists())
+            self.assertTrue((repo / "CLAUDE.md").exists())
+            self.assertTrue((repo / ".cursor/rules/context-pack.mdc").exists())
+
+    def test_doctor_fix_can_skip_agent_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(
+                self.engine.main(["doctor", "--repo", str(repo), "--fix", "--agent-docs", "none", "--quiet"]),
+                0,
+            )
+
+            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / "CLAUDE.md").exists())
+            self.assertFalse((repo / ".cursor/rules/context-pack.mdc").exists())
+
+    def test_doctor_fix_does_not_install_git_hooks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--fix", "--quiet"]), 0)
+
+            self.assertFalse((repo / ".git/hooks/pre-commit").exists())
+            self.assertFalse((repo / ".git/hooks/post-checkout").exists())
+            self.assertFalse((repo / ".git/hooks/post-merge").exists())
+
     def test_install_agent_docs_writes_common_agent_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

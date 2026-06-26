@@ -32,6 +32,7 @@ stale_if:
 - The skill must route factual work to the deterministic engine first.
 - The skill should tell agents to use `context-pack start` proactively before broad reading, review, unfamiliar debugging, and handoff.
 - The skill should use `context-pack setup` when Context Pack is missing or the user asks to configure project memory.
+- The skill should use `context-pack doctor --fix` when setup is present but broken or incomplete.
 - The manifest must remain validation-ready.
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
 - Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
@@ -44,6 +45,7 @@ stale_if:
 - Default prompt makes Context Pack feel manual-only instead of agent-first.
 - Skill guidance teaches lower-level commands before the one-command start path.
 - Skill guidance teaches `init` plus `install-agent-docs` before the one-command `setup` path.
+- Skill guidance treats doctor as read-only even when repair is available.
 - Install/update requests are routed to old local scripts instead of `install-codex`.
 - Claude/Cursor guidance drifts from the generated `AGENTS.md` rule block.
 

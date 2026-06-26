@@ -6,6 +6,7 @@
         "Generated packs must stay under .codex/packs/ and remain ignored by git.",
         "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
         "`setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.",
+        "`doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.",
         "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.",
         "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.",
         "`install-agent-docs` must preserve existing user text and only replace the managed marker block.",
@@ -19,6 +20,7 @@
         "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
         "Pack generation creates tracked generated files.",
         "`setup` skips shared agent docs or installs git hooks without explicit setup flags.",
+        "`doctor --fix` reports success while required context files are still missing.",
         "`start` hides setup errors or creates noisy tracked files on first run.",
         "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.",
         "`install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.",
@@ -41,6 +43,7 @@
         "claude",
         "cursor",
         "doctor",
+        "fix",
         "manifest"
       ],
       "paths": [
@@ -135,6 +138,7 @@
         "python -m pip install -e .",
         "context-pack --help",
         "context-pack setup --repo <tmp> --quiet",
+        "context-pack doctor --repo <tmp> --fix --quiet",
         "context-pack status --quiet",
         "context-pack start --task \"agent-first CLI UX\" --quiet",
         "context-pack start --review --base HEAD~1 --quiet",
@@ -204,6 +208,7 @@
         "The Codex skill must tell agents to use deterministic script commands before semantic summarization.",
         "Plugin manifest must remain validation-ready and avoid unsupported fields.",
         "The skill should use `context-pack setup` when Context Pack is missing or the user asks to configure project memory.",
+        "The skill should use `context-pack doctor --fix` when setup is present but broken or incomplete.",
         "The skill should be implicitly invokable for context setup, install/update requests, shared agent-doc rules, start routing, review packs, checkpointing, and token-saving repo orientation."
       ],
       "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
@@ -214,6 +219,7 @@
         "Trigger description is too narrow and only catches session handoff use cases.",
         "Skill guidance teaches lower-level commands before the one-command start path.",
         "Skill guidance teaches `init` plus `install-agent-docs` before the one-command `setup` path.",
+        "Skill guidance treats doctor as read-only even when repair is available.",
         "Install/update requests are routed to old local scripts instead of `install-codex`.",
         "Claude/Cursor guidance drifts from the generated AGENTS.md rule block."
       ],
@@ -229,6 +235,8 @@
         "start",
         "install",
         "instructions",
+        "doctor",
+        "fix",
         "metadata"
       ],
       "paths": [
@@ -254,7 +262,7 @@
     "tests": {
       "contracts": [
         "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, first-run setup, first-run start, install-codex, install-agent-docs, dirty changed files, committed review diffs, and hook idempotency."
+        "Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, dirty changed files, committed review diffs, and hook idempotency."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
       "doc": ".codex/context/AREAS/tests.md",
@@ -263,7 +271,8 @@
         "Git behavior is tested only with dirty files and misses committed review use cases.",
         "Hook tests check creation but not idempotency or uninstall.",
         "Installing shared agent docs twice duplicates marker blocks.",
-        "Setup drifts from the init/install-agent-docs/hook commands it composes."
+        "Setup drifts from the init/install-agent-docs/hook commands it composes.",
+        "Doctor is tested only as read-only validation after adding repair behavior."
       ],
       "keywords": [
         "test",
@@ -271,6 +280,8 @@
         "validation",
         "git",
         "setup",
+        "doctor",
+        "fix",
         "start",
         "review-pack"
       ],

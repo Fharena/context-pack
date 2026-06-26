@@ -214,6 +214,14 @@ Use when deciding whether to generate a pack, when stale warnings feel noisy, or
 python scripts/context_pack.py status
 ```
 
+If setup files are missing or corrupted, repair them before continuing:
+
+```bash
+python scripts/context_pack.py doctor --fix
+```
+
+Use `doctor --fix --agent-docs none` only when the user explicitly does not want repo agent docs.
+
 If an area doc has been verified against current source, mark it reviewed:
 
 ```bash

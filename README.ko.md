@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -260,7 +260,7 @@ context-pack mark-reviewed runtime tests
 | `pack` | selected/related 영역으로 나뉜 compact 작업별 reading pack 생성 |
 | `review-pack` | dirty files 또는 `--base` 기준 compact 코드 리뷰 팩 생성 |
 | `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
-| `doctor` | context library가 정상인지 검증 |
+| `doctor` | context library가 정상인지 검증하고, `doctor --fix`로 누락된 setup 파일 복구 |
 | `install-git-hooks` | 선택적 repo-local checkpoint 자동화 |
 
 ## Agent-first UX
@@ -281,6 +281,7 @@ Checkpoint this work for the next session.
 
 - repo를 넓게 읽기 전: `context-pack start --task "..."`
 - Context Pack이 없을 때: `context-pack setup`
+- setup이 깨진 것 같을 때: `context-pack doctor --fix`
 - 리뷰 전: base를 알면 `context-pack start --review --base <base-ref>`
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
 - 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
@@ -334,6 +335,7 @@ Python script가 맡는 일:
 - contract와 failure mode 중복 제거
 - stale warning
 - context health status와 reviewed-state 업데이트
+- 누락된 setup 파일을 복구하는 `doctor --fix`
 - hook 설치
 - doctor 검증
 
@@ -411,10 +413,11 @@ python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
 python -m json.tool .agents/plugins/marketplace.json
 python -m pip install -e .
 context-pack --help
+context-pack doctor --fix --help
 ```
 
 GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test와 JSON validation을 실행합니다.
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.8](https://github.com/Fharena/context-pack/releases/tag/v0.1.8).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.9](https://github.com/Fharena/context-pack/releases/tag/v0.1.9).

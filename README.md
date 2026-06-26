@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -218,7 +218,7 @@ The point is not to replace source code. The point is to make the agent start fr
 | `pack` | Builds a compact task-specific reading pack with selected and related areas |
 | `review-pack` | Builds a compact code-review pack from dirty files or `--base` |
 | `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
-| `doctor` | Checks whether the context library is usable |
+| `doctor` | Checks whether the context library is usable; `doctor --fix` repairs missing setup files |
 | `install-git-hooks` | Adds opt-in repo-local checkpoint automation |
 
 ## Agent-First UX
@@ -239,6 +239,7 @@ The more important path is implicit:
 
 - before broad repo reading: run `context-pack start --task "..."`
 - when Context Pack is missing: run `context-pack setup`
+- when setup looks broken: run `context-pack doctor --fix`
 - before review: run `context-pack start --review --base <base-ref>` when a base is known
 - during unfamiliar debugging: generate a task pack before opening many files
 - after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
@@ -290,6 +291,7 @@ The script handles deterministic work:
 - contract and failure-mode deduplication
 - stale warnings
 - context health status and reviewed-state updates
+- `doctor --fix` repair for missing setup files
 - generated file cleanup
 - optional git hook installation
 
@@ -366,10 +368,11 @@ python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
 python -m json.tool .agents/plugins/marketplace.json
 python -m pip install -e .
 context-pack --help
+context-pack doctor --fix --help
 ```
 
 GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu for Python 3.11 and 3.12.
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.8](https://github.com/Fharena/context-pack/releases/tag/v0.1.8).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.9](https://github.com/Fharena/context-pack/releases/tag/v0.1.9).

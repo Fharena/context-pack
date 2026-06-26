@@ -48,7 +48,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.1.8"
+CONTEXT_PACK_VERSION = "0.1.9"
 
 
 @dataclasses.dataclass
@@ -1878,6 +1878,7 @@ This writes ignored local state by default. Use `checkpoint --publish --pack` on
 ## Other Commands
 
 - `python scripts/context_pack.py status`
+- `python scripts/context_pack.py doctor --fix`
 - `python scripts/context_pack.py mark-reviewed <area-id>`
 - `python scripts/context_pack.py refresh`
 - `python scripts/context_pack.py doctor`
@@ -2108,9 +2109,29 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     errors, warnings = context_setup_issues(repo)
 
+    if args.fix:
+        if not args.quiet:
+            print(f"Repairing Context Pack setup in {repo}")
+        setup_args = argparse.Namespace(
+            repo=str(repo),
+            quiet=True,
+            force=False,
+            agent_docs=args.agent_docs,
+            git_hooks="off",
+        )
+        result = cmd_setup(setup_args)
+        snapshot = collect_snapshot(repo)
+        errors, warnings = context_setup_issues(repo)
+        if result != 0 and errors:
+            if not args.quiet:
+                print("Repair incomplete.")
+            return result
+
     if not args.quiet:
         print(f"Context-pack doctor for {repo}")
         print(f"HEAD: {snapshot.head}; dirty files: {len(snapshot.dirty_files)}")
+        if args.fix:
+            print("Repair: completed" if not errors else "Repair: attempted")
         for item in warnings:
             print(f"WARNING: {item}")
         for item in errors:
@@ -2227,6 +2248,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("doctor", help="Validate context-pack repo setup")
     add_common(p)
     p.add_argument("--strict", action="store_true", help="Treat warnings as failures")
+    p.add_argument("--fix", action="store_true", help="Repair missing setup files before validating")
+    p.add_argument(
+        "--agent-docs",
+        choices=["all", "agents", "claude", "cursor", "none"],
+        default="all",
+        help="Agent docs to install when --fix repairs setup",
+    )
     p.set_defaults(func=cmd_doctor)
 
     p = sub.add_parser("status", help="Show context health, selected areas, and next action")

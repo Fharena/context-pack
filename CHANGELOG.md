@@ -2,6 +2,18 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.9] - 2026-06-26
+
+### Added
+
+- `context-pack doctor --fix` to repair missing Context Pack setup files before validating the repo.
+- `doctor --fix --agent-docs none|agents|claude|cursor|all` to control whether repair also restores shared agent docs.
+- Tests for doctor repair on an empty repo, agent-doc-free repair, and no implicit git hook installation.
+
+### Changed
+
+- README, Korean README, Codex skill guidance, packaged skill synthesis, and plugin metadata now present doctor as both a validation and repair path.
+
 ## [0.1.8] - 2026-06-26
 
 ### Added

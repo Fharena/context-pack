@@ -56,6 +56,7 @@ stale_if:
 - Packaged CLI behavior should match the bundled skill engine.
 - README should distinguish Codex plugin installation from shared repo-rule installation.
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
+- README should show `doctor --fix` as the recovery path for broken or partial setup.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -68,6 +69,7 @@ stale_if:
 - Installer overwrites a local user customization without `--force`.
 - README teaches lower-level commands before the one-command `start` path.
 - README teaches `init` plus `install-agent-docs` before the one-command `setup` path.
+- README tells users to reinstall from scratch instead of repairing with `doctor --fix`.
 - README makes `install-agent-docs` sound required for single-agent Codex use.
 
 ## Expand Scope If
