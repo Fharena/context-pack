@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 87eed3099781
+- HEAD: b3874ff8eb2b
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T07:52:54+09:00
+- Updated at: 2026-06-27T08:22:15+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: v0.2.11 refreshes the terminal demo GIF, makes README demo images package-safe with a GitHub raw URL, and publishes handoff state through `87eed30`.
+- Product hardening for Context Pack. Latest work: v0.2.12 ignores stop words in task keyword scoring, improves docs/adoption task routing, and is committed at `b3874ff`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,7 +18,7 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `main`, tag `v0.2.11`, and create/watch the GitHub Release.
+1. Push `main`, tag `v0.2.12`, and create/watch the GitHub Release.
 2. Next product iteration: improve public proof further with real before/after measurements or a short landing-page-style demo section.
 
 ## Watch Outs
@@ -28,10 +28,10 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (46 passed)
+- `python -m unittest discover -s tests -v` (47 passed)
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
 - `python scripts/validate_packaged_cli.py`
 - `npm pack --dry-run`
 - `python -m build`
-- `python -m twine check dist\context_pack-0.2.11*`
+- `python -m twine check dist\context_pack-0.2.12*`
