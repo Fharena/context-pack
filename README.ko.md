@@ -100,6 +100,7 @@ context-pack install-codex --activate
 Codex가 아니거나 터미널에서 직접 repo를 설정하고 싶다면:
 
 ```bash
+npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
@@ -126,6 +127,7 @@ pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack set
 다음에 뭘 실행할지 모르겠다면 인자 없이 `context-pack`만 실행해 quickstart를 볼 수 있습니다. 설치 버전은 `context-pack --version`으로 확인합니다.
 
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
+먼저 무엇을 건드리는지 확인하고 싶다면 `setup --dry-run`을 실행하세요. 실제 파일이나 hook을 쓰지 않고 create/update 계획만 보여줍니다.
 
 이미 context library가 있고 공통 agent rule만 갱신하고 싶다면:
 
@@ -272,7 +274,7 @@ context-pack mark-reviewed runtime tests
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
-| `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리 |
+| `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 파일을 쓰기 전에 계획만 볼 수 있음 |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |

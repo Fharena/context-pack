@@ -45,6 +45,8 @@ def main() -> int:
     run([str(binary), "--help"])
 
     repo = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-setup-"))
+    run_output([str(binary), "setup", "--repo", str(repo), "--dry-run"], "No files were written.")
+    assert not (repo / ".context-pack").exists()
     run([str(binary), "setup", "--repo", str(repo), "--quiet"])
     assert (repo / ".context-pack" / "manifest.json").exists()
     assert (repo / ".context-pack" / "CURRENT.md").exists()

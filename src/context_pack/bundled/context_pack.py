@@ -941,6 +941,96 @@ def resolve_agent_doc_targets(targets: list[str] | None) -> list[str]:
     return resolved
 
 
+def setup_target_action(repo: Path, rel_path: Path) -> str:
+    return "update" if (repo / rel_path).exists() else "create"
+
+
+def setup_context_targets(repo: Path, layout: ContextLayout) -> list[Path]:
+    manifest = merge_inferred_areas(repo, load_manifest(repo, layout), layout)
+    targets = [
+        layout.manifest_path,
+        layout.index_path,
+        layout.review_path,
+        layout.contracts_path,
+        layout.current_path,
+        layout.log_path,
+        layout.decisions_path,
+        layout.local_path,
+        Path(".gitignore"),
+        layout.areas_dir / "overview.md",
+    ]
+    for area_id, area in sorted((manifest.get("areas") or {}).items()):
+        if area_id == "overview":
+            continue
+        doc = normalize_path(area.get("doc", ""))
+        if doc:
+            targets.append(Path(doc))
+    return unique_paths(targets)
+
+
+def unique_paths(paths: Iterable[Path]) -> list[Path]:
+    seen: set[str] = set()
+    unique_items: list[Path] = []
+    for path in paths:
+        key = path_text(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_items.append(path)
+    return unique_items
+
+
+def setup_hook_targets(mode: str) -> list[str]:
+    if mode == "off":
+        return []
+    hooks = ["pre-commit", "post-checkout", "post-merge"]
+    if mode == "aggressive":
+        hooks.append("post-commit")
+    return hooks
+
+
+def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, layout: ContextLayout) -> int:
+    if args.quiet:
+        return 0
+
+    agent_docs: list[Path] = []
+    if args.agent_docs != "none":
+        targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
+        agent_docs = [AGENT_DOC_TARGETS[kind] for kind in resolve_agent_doc_targets(targets)]
+
+    print(f"Context Pack setup dry run for {repo}")
+    print("")
+    print("Would create or update:")
+    for rel_path in setup_context_targets(repo, layout):
+        print(f"- {setup_target_action(repo, rel_path)} {path_text(rel_path)}")
+
+    print("")
+    if agent_docs:
+        print("Agent docs:")
+        for rel_path in agent_docs:
+            print(f"- {setup_target_action(repo, rel_path)} {path_text(rel_path)}")
+    else:
+        print("Agent docs: skipped")
+
+    hooks = setup_hook_targets(args.git_hooks)
+    print("")
+    print(f"Git hooks: {args.git_hooks}")
+    hook_error = False
+    if hooks:
+        if not snapshot.is_git:
+            hook_error = True
+            print("- would fail: git hooks require a git repository")
+        else:
+            for hook in hooks:
+                print(f"- install or update .git/hooks/{hook}")
+
+    print("")
+    print("No files were written.")
+    print("Next:")
+    print("- Run `context-pack setup` to apply this plan.")
+    return 1 if hook_error else 0
+
+
 def cmd_install_agent_docs(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
@@ -957,6 +1047,9 @@ def cmd_setup(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = resolve_layout(repo, for_write=True)
+
+    if args.dry_run:
+        return cmd_setup_dry_run(args, repo, snapshot, layout)
 
     init_args = argparse.Namespace(
         repo=str(repo),
@@ -2467,6 +2560,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         setup_args = argparse.Namespace(
             repo=str(repo),
             quiet=True,
+            dry_run=False,
             force=False,
             agent_docs=args.agent_docs,
             git_hooks="off",
@@ -2525,6 +2619,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("setup", help="Set up Context Pack in a repo with safe onboarding defaults")
     add_common(p)
+    p.add_argument("--dry-run", action="store_true", help="Preview setup changes without writing files")
     p.add_argument("--force", action="store_true", help="Overwrite existing context docs")
     p.add_argument(
         "--agent-docs",

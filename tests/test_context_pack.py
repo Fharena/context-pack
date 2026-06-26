@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -192,6 +194,72 @@ class ContextPackTests(unittest.TestCase):
                 (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8"),
             )
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
+
+    def test_setup_dry_run_does_not_write_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--dry-run"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Context Pack setup dry run", text)
+            self.assertIn("Would create or update:", text)
+            self.assertIn("create .context-pack/manifest.json", text)
+            self.assertIn("create AGENTS.md", text)
+            self.assertIn("No files were written.", text)
+            self.assertIn("context-pack setup", text)
+            self.assertFalse((repo / ".context-pack").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / "CLAUDE.md").exists())
+            self.assertFalse((repo / ".cursor").exists())
+
+    def test_setup_dry_run_respects_agent_docs_and_git_hooks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(
+                        [
+                            "setup",
+                            "--repo",
+                            str(repo),
+                            "--dry-run",
+                            "--agent-docs",
+                            "none",
+                            "--git-hooks",
+                            "safe",
+                        ]
+                    ),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Agent docs: skipped", text)
+            self.assertIn("Git hooks: safe", text)
+            self.assertIn(".git/hooks/pre-commit", text)
+            self.assertIn(".git/hooks/post-checkout", text)
+            self.assertIn(".git/hooks/post-merge", text)
+            self.assertFalse((repo / ".context-pack").exists())
+            self.assertFalse((repo / ".git/hooks/pre-commit").exists())
+
+    def test_setup_dry_run_reports_git_hook_errors_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["setup", "--repo", str(repo), "--dry-run", "--git-hooks", "safe"]),
+                    1,
+                )
+
+            self.assertIn("would fail: git hooks require a git repository", output.getvalue())
+            self.assertFalse((repo / ".context-pack").exists())
 
     def test_setup_can_skip_agent_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

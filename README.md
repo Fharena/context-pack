@@ -93,6 +93,7 @@ context-pack install-codex --activate
 For repo setup with Claude, Cursor, other agents, or direct terminal use:
 
 ```bash
+npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
@@ -119,6 +120,7 @@ Examples below use `context-pack` for readability. If you are staying on the Git
 Not sure what to run next? Run `context-pack` with no arguments to print the quickstart, or `context-pack --version` to confirm the installed version.
 
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
+Run `setup --dry-run` first when you want to preview every file and hook that setup would create or update without writing anything.
 
 If you already have a context library and only want to refresh shared repo rules:
 
@@ -275,7 +277,7 @@ If you installed the Codex plugin, you usually do not type these commands yourse
 
 | Feature | What it saves |
 | --- | --- |
-| `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check |
+| `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan without writing files |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
