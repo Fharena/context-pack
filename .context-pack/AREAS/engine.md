@@ -37,6 +37,8 @@ stale_if:
 - `setup` should stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `doctor --fix` should repair missing setup files through the same safe setup path and must not install git hooks.
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
+- Running `context-pack` with no arguments should print a quickstart and exit successfully.
+- `context-pack --version` should report the public package version.
 - `install-codex` should refuse unsafe overwrites and work from both source checkouts and packaged CLI installs.
 - `install-agent-docs` should preserve existing user text and only replace the managed marker block.
 - Hook install must preserve unrelated hook contents and be idempotent.
@@ -54,6 +56,8 @@ stale_if:
 - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
 - `doctor --fix` reports success while required context files are still missing.
 - `start` hides setup errors or creates noisy tracked files on first run.
+- No-argument CLI invocation exits with an argparse error instead of a useful first-run quickstart.
+- Users cannot confirm the installed package version through `context-pack --version`.
 - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
 - `install-agent-docs` duplicates marker blocks or strips existing `AGENTS.md`, `CLAUDE.md`, or Cursor rule content.
 - Scope-reduction numbers are missing or imply false precision about exact token savings.

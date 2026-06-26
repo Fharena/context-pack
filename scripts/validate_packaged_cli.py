@@ -16,6 +16,14 @@ def run(args: list[str], *, cwd: pathlib.Path = ROOT) -> None:
     subprocess.run(args, cwd=cwd, check=True)
 
 
+def run_output(args: list[str], expected: str, *, cwd: pathlib.Path = ROOT) -> None:
+    print("+", " ".join(args), flush=True)
+    output = subprocess.check_output(args, cwd=cwd, text=True)
+    if expected not in output:
+        raise AssertionError(f"Expected {expected!r} in output:\n{output}")
+    print(output, end="")
+
+
 def main() -> int:
     npm = shutil.which("npm") or "npm"
     pack_dir = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-npm-pack-"))
@@ -32,6 +40,8 @@ def main() -> int:
     run([npm, "install", "--prefix", str(prefix), str(tgz), "--silent"])
 
     binary = prefix / "node_modules" / ".bin" / ("context-pack.cmd" if os.name == "nt" else "context-pack")
+    run_output([str(binary)], "Start here:")
+    run_output([str(binary), "--version"], info[0]["version"])
     run([str(binary), "--help"])
 
     repo = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-setup-"))

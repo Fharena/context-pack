@@ -116,6 +116,8 @@ The `npx` route is a thin wrapper over the same Python engine. It avoids asking 
 
 Examples below use `context-pack` for readability. If you are staying on the GitHub `npx` path, replace `context-pack` with `npx github:Fharena/context-pack`.
 
+Not sure what to run next? Run `context-pack` with no arguments to print the quickstart, or `context-pack --version` to confirm the installed version.
+
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
 
 If you already have a context library and only want to refresh shared repo rules:

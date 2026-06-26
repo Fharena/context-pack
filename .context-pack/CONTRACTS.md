@@ -9,6 +9,8 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - `setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.
 - `start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
+- Running `context-pack` with no arguments should print a quickstart and exit successfully.
+- `context-pack --version` should report the public package version.
 - `install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.
 - `install-agent-docs` must preserve existing user text and only replace the managed marker block.
 - Generated packs should show scope-reduction metrics without pretending they replace source verification.
@@ -37,5 +39,5 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 
 ## tests
 - Tests should exercise real command flows through the engine main entrypoint.
-- Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.
+- Coverage should include no-git repos, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.

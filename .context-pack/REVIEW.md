@@ -20,6 +20,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
   - `doctor --fix` reports success while required context files are still missing.
   - `start` hides setup errors or creates noisy tracked files on first run.
+  - No-argument CLI invocation exits with an argparse error instead of a useful first-run quickstart.
+  - Users cannot confirm the installed package version through `context-pack --version`.
   - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
   - `install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.
   - Scope-reduction numbers are missing or imply false precision about exact token savings.
@@ -127,7 +129,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Installing shared agent docs twice duplicates marker blocks.
   - Setup drifts from the init/install-agent-docs/hook commands it composes.
   - Doctor is tested only as read-only validation after adding repair behavior.
-  - Node wrapper tests stop at `--help` after README starts recommending `npx` setup or install-codex paths.
+  - Node wrapper tests stop at `--help` after README starts recommending no-argument quickstart, `npx` setup, or install-codex paths.
 
 ## Escalate Review Scope When
 - Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.

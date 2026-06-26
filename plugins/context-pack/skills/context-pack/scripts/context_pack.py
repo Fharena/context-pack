@@ -2520,6 +2520,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="context-pack",
         description="Build repo-local context packs for coding agents.",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {CONTEXT_PACK_VERSION}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("setup", help="Set up Context Pack in a repo with safe onboarding defaults")
@@ -2669,7 +2670,30 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def print_quickstart() -> None:
+    print("Context Pack")
+    print("Version-aware context packs for Codex, Claude, Cursor, and coding agents.")
+    print("")
+    print("Start here:")
+    print("  context-pack setup")
+    print('  context-pack start --task "fix login timeout"')
+    print("  context-pack start --review --base main")
+    print("  context-pack checkpoint --pack")
+    print("")
+    print("Codex plugin:")
+    print("  context-pack install-codex --activate")
+    print("")
+    print("Need details?")
+    print("  context-pack --help")
+    print("  context-pack doctor --fix")
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        print_quickstart()
+        return 0
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

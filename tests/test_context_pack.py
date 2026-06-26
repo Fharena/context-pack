@@ -837,6 +837,38 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("context-pack", proc.stdout)
 
+    def test_python_module_without_args_shows_quickstart(self) -> None:
+        env = os.environ.copy()
+        src = str(ROOT / "src")
+        env["PYTHONPATH"] = src + os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else src
+        proc = subprocess.run(
+            [sys.executable, "-m", "context_pack"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("Start here:", proc.stdout)
+        self.assertIn("context-pack setup", proc.stdout)
+        self.assertIn("context-pack install-codex --activate", proc.stdout)
+
+    def test_python_module_reports_version(self) -> None:
+        env = os.environ.copy()
+        src = str(ROOT / "src")
+        env["PYTHONPATH"] = src + os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else src
+        proc = subprocess.run(
+            [sys.executable, "-m", "context_pack", "--version"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(self.engine.CONTEXT_PACK_VERSION, proc.stdout)
+
     def test_node_wrapper_runs_bundled_engine(self) -> None:
         node = shutil.which("node")
         if not node:
@@ -851,6 +883,36 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("context-pack", proc.stdout)
         self.assertIn("setup", proc.stdout)
+
+    def test_node_wrapper_without_args_shows_quickstart(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        proc = subprocess.run(
+            [node, str(NODE_WRAPPER)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("Start here:", proc.stdout)
+        self.assertIn("context-pack setup", proc.stdout)
+        self.assertIn("context-pack install-codex --activate", proc.stdout)
+
+    def test_node_wrapper_reports_version(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        proc = subprocess.run(
+            [node, str(NODE_WRAPPER), "--version"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(self.engine.CONTEXT_PACK_VERSION, proc.stdout)
 
     def test_node_wrapper_can_setup_repo(self) -> None:
         node = shutil.which("node")

@@ -8,6 +8,8 @@
         "`setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.",
         "`doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.",
         "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.",
+        "Running `context-pack` with no arguments should print a quickstart and exit successfully.",
+        "`context-pack --version` should report the public package version.",
         "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.",
         "`install-agent-docs` must preserve existing user text and only replace the managed marker block.",
         "Generated packs should show scope-reduction metrics without pretending they replace source verification."
@@ -22,6 +24,8 @@
         "`setup` skips shared agent docs or installs git hooks without explicit setup flags.",
         "`doctor --fix` reports success while required context files are still missing.",
         "`start` hides setup errors or creates noisy tracked files on first run.",
+        "No-argument CLI invocation exits with an argparse error instead of a useful first-run quickstart.",
+        "Users cannot confirm the installed package version through `context-pack --version`.",
         "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.",
         "`install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.",
         "Scope-reduction numbers are missing or imply false precision about exact token savings."
@@ -296,7 +300,7 @@
     "tests": {
       "contracts": [
         "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.",
+        "Coverage should include no-git repos, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.",
         "Version sync tests should include Python package, plugin manifest, engine, and npm package metadata."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
@@ -308,7 +312,7 @@
         "Installing shared agent docs twice duplicates marker blocks.",
         "Setup drifts from the init/install-agent-docs/hook commands it composes.",
         "Doctor is tested only as read-only validation after adding repair behavior.",
-        "Node wrapper tests stop at `--help` after README starts recommending `npx` setup or install-codex paths."
+        "Node wrapper tests stop at `--help` after README starts recommending no-argument quickstart, `npx` setup, or install-codex paths."
       ],
       "keywords": [
         "test",

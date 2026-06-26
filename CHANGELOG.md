@@ -8,6 +8,7 @@ All notable changes to Context Pack will be documented here.
 
 - Added a `Release` GitHub Actions workflow that builds GitHub Release assets from a tag, verifies Python/npm versions, uploads Python wheel/sdist and npm tarball assets, and can optionally publish to PyPI/npm through trusted publishing.
 - Added test coverage and a local validation script proving the Node/npx wrapper can run first-time `setup` and `install-codex`, not just `--help`.
+- Added a no-argument quickstart and `--version` flag so `context-pack` and the Node/npx wrapper handle first-run inspection without argparse errors.
 
 ### Changed
 

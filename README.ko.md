@@ -123,6 +123,8 @@ pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack set
 
 아래 예시는 읽기 쉽게 `context-pack`으로 적습니다. GitHub `npx` 경로를 계속 쓴다면 `context-pack` 자리에 `npx github:Fharena/context-pack`를 붙이면 됩니다.
 
+다음에 뭘 실행할지 모르겠다면 인자 없이 `context-pack`만 실행해 quickstart를 볼 수 있습니다. 설치 버전은 `context-pack --version`으로 확인합니다.
+
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
 
 이미 context library가 있고 공통 agent rule만 갱신하고 싶다면:
