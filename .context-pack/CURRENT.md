@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: b3874ff8eb2b
+- HEAD: 4d912bcf84c5
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T08:22:15+09:00
+- Updated at: 2026-06-27T08:23:26+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: v0.2.12 ignores stop words in task keyword scoring, improves docs/adoption task routing, and is committed at `b3874ff`.
+- Product hardening for Context Pack. Latest work: v0.2.12 ignores stop words in task keyword scoring, improves docs/adoption task routing, and publishes handoff state through `4d912bc`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
