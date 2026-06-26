@@ -148,3 +148,11 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: not recorded
+
+## 2026-06-27T05:47:35+09:00
+- Branch: main
+- HEAD: 8d6040595a7e
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (44 passed); `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`
+- Notes: v0.2.7 setup dry-run precision committed; next step is push/tag/release.
