@@ -2,6 +2,21 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.2] - 2026-06-26
+
+### Added
+
+- `context-pack status` for context health, likely areas, stale warnings, and next actions.
+- `context-pack mark-reviewed` for closing stale warnings after source verification.
+- Pack budget controls: `--max-areas`, `--max-read-first`, `--max-contracts`, and `--max-failure-modes`.
+
+### Changed
+
+- Packs now rank selected areas by relevance and move overflow context into `Read Later`.
+- Packs now deduplicate similar contract and failure-mode bullets.
+- `overview` is treated as fallback/related context instead of dominating packs through broad `.codex/context/**` matches.
+- Skill and repo guidance now tell agents to use Context Pack proactively before broad reading, review, unfamiliar debugging, and handoff.
+
 ## [0.1.1] - 2026-06-26
 
 ### Added

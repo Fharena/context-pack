@@ -28,15 +28,16 @@ stale_if:
 
 ## Contracts
 - The skill must route factual work to the deterministic engine first.
+- The skill should tell agents to use Context Pack proactively before broad reading, review, unfamiliar debugging, and handoff.
 - The manifest must remain validation-ready.
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
-- Trigger language must cover initialization, context packs, review packs, checkpoints, stale checks, and token-saving orientation.
+- Trigger language must cover initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
 
 ## Common Failure Modes
 - Skill docs drift from engine commands.
 - Manifest includes unsupported fields.
 - Product copy narrows the value to session handoff only.
-- Default prompt omits the `$context-pack` skill name.
+- Default prompt makes Context Pack feel manual-only instead of agent-first.
 
 ## Expand Scope If
 - New commands are added.

@@ -98,6 +98,74 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Missing config must not crash startup.", pack)
             self.assertIn("tests/test_runtime.py", pack)
 
+    def test_pack_limits_primary_areas_and_moves_extra_context_to_read_later(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            (repo / "src").mkdir()
+            (repo / "docs").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+            (repo / "docs/runtime.md").write_text("# Runtime docs\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".codex/context/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".codex/context/AREAS/runtime.md",
+                "description": "Runtime internals.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py", "docs/runtime.md"],
+                "tests": [],
+                "keywords": ["runtime"],
+                "contracts": [
+                    "Runtime choice must be explainable.",
+                    "Runtime choice must be explainable.",
+                    "Runtime choices must be explainable.",
+                ],
+                "failure_modes": ["Fallback path silently changes behavior."],
+            }
+            manifest["areas"]["docs-runtime"] = {
+                "doc": ".codex/context/AREAS/docs-runtime.md",
+                "description": "Runtime docs.",
+                "paths": ["docs/runtime.md"],
+                "start_files": ["docs/runtime.md"],
+                "tests": [],
+                "keywords": ["runtime", "docs"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n"
+                "# Runtime\n\n## Contracts\n- Runtime choice must be explainable.\n",
+                encoding="utf-8",
+            )
+            (repo / ".codex/context/AREAS/docs-runtime.md").write_text(
+                "---\nid: docs-runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Docs Runtime\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                self.engine.main(
+                    [
+                        "pack",
+                        "--repo",
+                        str(repo),
+                        "--task",
+                        "runtime internals bug",
+                        "--changed",
+                        "--max-areas",
+                        "1",
+                        "--max-read-first",
+                        "2",
+                        "--quiet",
+                    ]
+                ),
+                0,
+            )
+            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("## Related Areas", pack)
+            self.assertIn("## Read Later", pack)
+            self.assertEqual(pack.count("Runtime choice must be explainable."), 1)
+
     def test_task_selects_area_by_keyword(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -137,6 +205,50 @@ class ContextPackTests(unittest.TestCase):
             snapshot = self.engine.collect_snapshot(repo)
             self.assertIn("README.md", snapshot.dirty_files)
             self.assertNotIn("EADME.md", snapshot.dirty_files)
+
+    def test_status_and_mark_reviewed_manage_area_health(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".codex/context/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".codex/context/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "tests": [],
+                "keywords": ["runtime"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: oldhead\nstatus: review_needed\n---\n# Runtime\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
+
+            status_proc = subprocess.run(
+                [sys.executable, str(ENGINE), "status", "--repo", str(repo)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(status_proc.returncode, 0, status_proc.stderr)
+            self.assertIn("runtime", status_proc.stdout)
+            self.assertIn("Stale warnings:", status_proc.stdout)
+
+            self.assertEqual(self.engine.main(["mark-reviewed", "--repo", str(repo), "runtime", "--quiet"]), 0)
+            area_doc = (repo / ".codex/context/AREAS/runtime.md").read_text(encoding="utf-8")
+            self.assertIn("status: active", area_doc)
+            self.assertIn("last_reviewed_head:", area_doc)
 
     def test_review_pack_can_use_base_ref_for_committed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

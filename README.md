@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -24,7 +24,7 @@
 
 Stop paying agents to rediscover your repo.
 
-Context Pack keeps a small repo-local project library, checkpoints git state, and generates task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
+Context Pack keeps a small repo-local project library, checkpoints git state, and generates compact task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
 
 This gets more useful as coding agents move across local IDEs, cloud worktrees, hosted app sessions, and remote machines. When the workspace changes, the repo should carry the map.
 
@@ -78,13 +78,14 @@ Use $context-pack to build a review context pack for this branch.
 Use $context-pack to checkpoint this work.
 ```
 
-The agent runs the engine, reads the generated pack, and continues from the focused context.
+The agent runs the engine, reads the generated pack, and continues from the focused context. In a context-enabled repo, the skill is also designed for proactive use: an agent should reach for it before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool.
 
 For non-Codex agents or direct terminal use:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
 context-pack init
+context-pack status
 context-pack review-pack --base main
 ```
 
@@ -126,38 +127,44 @@ codex plugin add context-pack@context-pack
 ## Terminal Demo
 
 ```text
-$ context-pack review-pack --base main
+$ context-pack pack --changed --max-areas 3 --max-read-first 8
 Context pack written to .codex/packs/CONTEXT_PACK.md
-Selected areas: engine, installer-release, tests
+Selected areas: engine, tests, installer-release
+Related areas: skill-plugin
 
 Read next:
 - .codex/packs/CONTEXT_PACK.md
 - .codex/context/AREAS/engine.md
-- .codex/context/AREAS/installer-release.md
 - .codex/context/AREAS/tests.md
+- .codex/context/AREAS/installer-release.md
 
 $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
 
-Mode: review
+Mode: work
 
 ## Selected Areas
-- engine
-- installer-release
-- tests
+- engine (score 24): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/bundled/context_pack.py, tests/test_context_pack.py
+- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
+- installer-release (score 10): changed files matched: src/context_pack/bundled/context_pack.py
+
+## Related Areas
+- skill-plugin (score 4): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py
 
 ## Read First
 - .codex/context/AREAS/engine.md
 - plugins/context-pack/skills/context-pack/scripts/context_pack.py
+- src/context_pack/cli.py
 - tests/test_context_pack.py
+- src/context_pack/bundled/context_pack.py
+
+## Read Later
+- .codex/context/AREAS/skill-plugin.md
+- plugins/context-pack/skills/context-pack/SKILL.md
 
 ## Contracts To Check
-- The engine must remain stdlib-only.
-- Generated packs must stay under .codex/packs/.
-- Hook install must preserve unrelated hook contents.
-
-## Tests
-- tests/test_context_pack.py
+- The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
+- ... more contract(s) omitted; inspect area docs if needed
 ```
 
 The point is not to replace source code. The point is to make the agent start from the right shelf.
@@ -167,9 +174,11 @@ The point is not to replace source code. The point is to make the agent start fr
 | Feature | What it saves |
 | --- | --- |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
+| `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash |
-| `pack` | Builds a task-specific reading pack |
-| `review-pack` | Builds a code-review pack from dirty files or `--base` |
+| `pack` | Builds a compact task-specific reading pack with selected and related areas |
+| `review-pack` | Builds a compact code-review pack from dirty files or `--base` |
+| `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
 | `doctor` | Checks whether the context library is usable |
 | `install-git-hooks` | Adds opt-in repo-local checkpoint automation |
 
@@ -186,6 +195,14 @@ Initialize context-pack in this repo.
 Build a review context pack for my changes.
 Checkpoint this work for the next session.
 ```
+
+The more important path is implicit:
+
+- before broad repo reading: run `context-pack status`, then `pack --task` or `pack --changed`
+- before review: run `review-pack --base <base-ref>` when a base is known
+- during unfamiliar debugging: generate a task pack before opening many files
+- after meaningful edits or review notes: checkpoint the work so the next agent can resume
+- after verifying changed source against area docs: run `mark-reviewed <area>` to close stale warnings
 
 After initialization, agents should read:
 
@@ -217,9 +234,12 @@ The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
 - first-run inference for common source, test, docs, and automation areas
-- changed-file to area matching
-- context pack assembly
+- changed-file and task scoring for area matching
+- compact context pack assembly with primary and related areas
+- Read First / Read Later splitting
+- contract and failure-mode deduplication
 - stale warnings
+- context health status and reviewed-state updates
 - generated file cleanup
 - optional git hook installation
 
@@ -254,6 +274,8 @@ Ignore:
 ## Automation
 
 Optional safe git hooks. You do not need this to use Context Pack.
+
+The primary automation model is agent behavior: the installed skill and repo `AGENTS.md` tell agents to use Context Pack proactively at task, review, debugging, and handoff boundaries. Git hooks are only a mechanical backup for git boundaries such as checkout, merge, and commit.
 
 ```powershell
 context-pack install-git-hooks --mode safe
@@ -298,4 +320,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.1](https://github.com/Fharena/context-pack/releases/tag/v0.1.1).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.2](https://github.com/Fharena/context-pack/releases/tag/v0.1.2).

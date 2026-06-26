@@ -56,6 +56,14 @@ class Snapshot:
     status_lines: list[str]
 
 
+@dataclasses.dataclass
+class AreaSelection:
+    area_id: str
+    score: int
+    reasons: list[str]
+    matched_files: list[str]
+
+
 def eprint(message: str) -> None:
     print(message, file=sys.stderr)
 
@@ -556,7 +564,11 @@ def agent_rules_body() -> str:
     return """\
 ## Context Pack
 
-At the start of substantial work, read `.codex/handoff/CURRENT.md` and `.codex/context/INDEX.md`, then use the relevant `.codex/context/AREAS/*.md` files before broad repo reading. When a task or review needs orientation, generate a focused context pack first.
+At the start of substantial work, run `context-pack status` when available, read `.codex/handoff/CURRENT.md` and `.codex/context/INDEX.md`, then use the relevant `.codex/context/AREAS/*.md` files before broad repo reading.
+
+Use Context Pack proactively. Do not wait for the user to name it when starting a non-trivial task, debugging unfamiliar code, reviewing dirty files or a branch, entering an existing context-enabled repo, or preparing work another agent may continue.
+
+When a task or review needs orientation, generate a focused context pack first with `context-pack pack --task "..."`, `context-pack pack --changed`, or `context-pack review-pack --base <base-ref>`.
 
 For reviews and debugging, prefer a generated context pack from `.codex/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
@@ -772,6 +784,10 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
             output=str(repo / PACK_PATH),
             quiet=True,
             mode="work",
+            max_areas=4,
+            max_read_first=12,
+            max_contracts=12,
+            max_failure_modes=10,
         )
         build_pack(pack_args)
 
@@ -817,31 +833,76 @@ def area_text(area_id: str, area: dict[str, Any]) -> str:
     return " ".join(str(part) for part in parts)
 
 
+def selected_area_matches(
+    manifest: dict[str, Any],
+    *,
+    changed_files: list[str],
+    task: str | None,
+) -> list[AreaSelection]:
+    areas = manifest.get("areas") or {}
+    selections: list[AreaSelection] = []
+    task_tokens = tokenize(task or "")
+
+    for area_id, area in areas.items():
+        score = 0
+        reasons: list[str] = []
+        matched_files: list[str] = []
+        path_patterns = area.get("paths", []) or []
+        stale_patterns = area.get("stale_if_paths", []) or []
+
+        for path in changed_files:
+            if matches_any(path, path_patterns):
+                score += 10
+                matched_files.append(path)
+            elif matches_any(path, stale_patterns):
+                score += 4
+                matched_files.append(path)
+
+        if matched_files:
+            shown = ", ".join(unique(matched_files)[:3])
+            more = len(unique(matched_files)) - 3
+            reasons.append(f"changed files matched: {shown}" + (f" (+{more} more)" if more > 0 else ""))
+
+        if task_tokens:
+            overlap = task_tokens & tokenize(area_text(area_id, area))
+            if overlap:
+                score += 6 * len(overlap)
+                reasons.append("task matched keywords: " + ", ".join(sorted(overlap)[:5]))
+
+        if area_id == "overview" and score > 0:
+            score = min(score, 3)
+
+        if score > 0:
+            selections.append(
+                AreaSelection(
+                    area_id=area_id,
+                    score=score,
+                    reasons=reasons or ["selected by context-pack"],
+                    matched_files=unique(matched_files),
+                )
+            )
+
+    selections.sort(key=lambda item: (-item.score, item.area_id))
+
+    if not selections and "overview" in areas:
+        selections.append(
+            AreaSelection(
+                area_id="overview",
+                score=1,
+                reasons=["fallback orientation"],
+                matched_files=[],
+            )
+        )
+    return selections
+
+
 def selected_areas(
     manifest: dict[str, Any],
     *,
     changed_files: list[str],
     task: str | None,
 ) -> list[str]:
-    areas = manifest.get("areas") or {}
-    selected: set[str] = set()
-
-    for path in changed_files:
-        for area_id, area in areas.items():
-            patterns = (area.get("paths", []) or []) + (area.get("stale_if_paths", []) or [])
-            if matches_any(path, patterns):
-                selected.add(area_id)
-
-    if task:
-        task_tokens = tokenize(task)
-        for area_id, area in areas.items():
-            score = len(task_tokens & tokenize(area_text(area_id, area)))
-            if score:
-                selected.add(area_id)
-
-    if not selected and "overview" in areas:
-        selected.add("overview")
-    return sorted(selected)
+    return [item.area_id for item in selected_area_matches(manifest, changed_files=changed_files, task=task)]
 
 
 def read_text(path: Path) -> str:
@@ -894,6 +955,39 @@ def unique(items: Iterable[str]) -> list[str]:
     return out
 
 
+def similarity(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
+def unique_text(items: Iterable[str]) -> list[str]:
+    seen_exact: set[str] = set()
+    seen_tokens: list[set[str]] = []
+    out: list[str] = []
+    for raw in items:
+        item = " ".join(str(raw).strip().split())
+        if not item:
+            continue
+        key = item.casefold().strip(". ")
+        if key in seen_exact:
+            continue
+        tokens = tokenize(key)
+        if tokens and any(similarity(tokens, previous) >= 0.68 for previous in seen_tokens):
+            continue
+        seen_exact.add(key)
+        seen_tokens.append(tokens)
+        out.append(item)
+    return out
+
+
+def split_limited(items: Iterable[str], limit: int | None) -> tuple[list[str], list[str]]:
+    values = unique_text(items)
+    if limit is None or limit < 1:
+        return values, []
+    return values[:limit], values[limit:]
+
+
 def area_doc_path(repo: Path, area: dict[str, Any]) -> Path:
     return repo / normalize_path(area.get("doc", ""))
 
@@ -919,43 +1013,67 @@ def render_pack(
     repo: Path,
     manifest: dict[str, Any],
     snapshot: Snapshot,
-    area_ids: list[str],
+    selections: list[AreaSelection],
     *,
+    related_selections: list[AreaSelection] | None = None,
     changed_files: list[str],
     task: str | None,
     mode: str,
+    max_read_first: int = 12,
+    max_contracts: int = 12,
+    max_failure_modes: int = 10,
 ) -> str:
     areas = manifest.get("areas") or {}
+    related_selections = related_selections or []
     changed = changed_files
     read_first: list[str] = []
+    read_later: list[str] = []
     tests: list[str] = []
     contracts: list[str] = []
     failures: list[str] = []
     warnings: list[str] = []
 
-    for area_id in area_ids:
-        area = areas.get(area_id, {})
+    def collect_area(selection: AreaSelection, *, primary: bool) -> None:
+        area = areas.get(selection.area_id, {})
         doc_path = normalize_path(area.get("doc", ""))
         if doc_path:
-            read_first.append(doc_path)
-        read_first.extend(area.get("start_files", []) or [])
-        read_first.extend(path for path in changed if matches_any(path, area.get("paths", []) or []))
-        tests.extend(area.get("tests", []) or [])
-        contracts.extend(area.get("contracts", []) or [])
-        failures.extend(area.get("failure_modes", []) or [])
+            (read_first if primary else read_later).append(doc_path)
+        target = read_first if primary else read_later
+        target.extend(area.get("start_files", []) or [])
+        target.extend(path for path in changed if matches_any(path, area.get("paths", []) or []))
+        if primary:
+            tests.extend(area.get("tests", []) or [])
+            contracts.extend(area.get("contracts", []) or [])
+            failures.extend(area.get("failure_modes", []) or [])
 
         doc = area_doc_path(repo, area)
         text = read_text(doc)
-        contracts.extend(extract_section_bullets(text, "Contracts"))
-        failures.extend(extract_section_bullets(text, "Common Failure Modes"))
+        if primary:
+            contracts.extend(extract_section_bullets(text, "Contracts"))
+            failures.extend(extract_section_bullets(text, "Common Failure Modes"))
 
-        warning = stale_warning(repo, snapshot, area_id, area, changed)
+        warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
         if warning:
             warnings.append(warning)
+
+    for selection in selections:
+        collect_area(selection, primary=True)
+    for selection in related_selections:
+        collect_area(selection, primary=False)
 
     if mode == "review":
         read_first.insert(0, ".codex/context/REVIEW.md")
         read_first.insert(0, ".codex/context/CONTRACTS.md")
+
+    read_first_unique = unique(read_first)
+    read_first_visible = read_first_unique[:max_read_first]
+    read_later = unique(read_first_unique[max_read_first:] + read_later)
+    contracts_visible, contracts_hidden = split_limited(contracts, max_contracts)
+    failures_visible, failures_hidden = split_limited(failures, max_failure_modes)
+
+    def path_line(item: str) -> str:
+        suffix = "" if item and (repo / item).exists() else " (missing)"
+        return f"- `{item}`{suffix}"
 
     task_label = task if task else ("changed files" if changed else "general orientation")
     lines = [
@@ -974,17 +1092,30 @@ def render_pack(
         "",
         "## Selected Areas",
     ]
-    for area_id in area_ids:
-        lines.append(f"- {area_id}")
-    if not area_ids:
+    for item in selections:
+        reason = "; ".join(item.reasons)
+        lines.append(f"- {item.area_id} (score {item.score}): {reason}")
+    if not selections:
         lines.append("- none")
 
+    if related_selections:
+        lines.extend(["", "## Related Areas"])
+        for item in related_selections:
+            reason = "; ".join(item.reasons)
+            lines.append(f"- {item.area_id} (score {item.score}): {reason}")
+
     lines.extend(["", "## Read First"])
-    for item in unique(read_first):
-        if item and (repo / item).exists():
-            lines.append(f"- `{item}`")
-        elif item:
-            lines.append(f"- `{item}` (missing)")
+    for item in read_first_visible:
+        lines.append(path_line(item))
+    if not read_first_visible:
+        lines.append("- none")
+
+    if read_later:
+        lines.extend(["", "## Read Later"])
+        for item in read_later[:20]:
+            lines.append(path_line(item))
+        if len(read_later) > 20:
+            lines.append(f"- ... {len(read_later) - 20} more item(s) omitted")
 
     lines.extend(["", "## Changed Files"])
     if changed:
@@ -994,15 +1125,19 @@ def render_pack(
         lines.append("- none")
 
     lines.extend(["", "## Contracts To Check"])
-    for item in unique(contracts):
+    for item in contracts_visible:
         lines.append(f"- {item}")
-    if not contracts:
+    if contracts_hidden:
+        lines.append(f"- ... {len(contracts_hidden)} more contract(s) omitted; inspect area docs if needed")
+    if not contracts_visible:
         lines.append("- none recorded")
 
     lines.extend(["", "## Common Failure Modes"])
-    for item in unique(failures):
+    for item in failures_visible:
         lines.append(f"- {item}")
-    if not failures:
+    if failures_hidden:
+        lines.append(f"- ... {len(failures_hidden)} more failure mode(s) omitted; inspect area docs if needed")
+    if not failures_visible:
         lines.append("- none recorded")
 
     lines.extend(["", "## Tests"])
@@ -1034,8 +1169,24 @@ def build_pack(args: argparse.Namespace) -> int:
     ensure_dirs(repo)
     manifest = load_manifest(repo)
     changed = resolve_changed_files(repo, snapshot, args)
-    area_ids = selected_areas(manifest, changed_files=changed, task=args.task)
-    content = render_pack(repo, manifest, snapshot, area_ids, changed_files=changed, task=args.task, mode=args.mode)
+    matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
+    max_areas = getattr(args, "max_areas", 4) or len(matches)
+    primary = matches[:max_areas]
+    related = matches[max_areas:]
+    area_ids = [item.area_id for item in primary]
+    content = render_pack(
+        repo,
+        manifest,
+        snapshot,
+        primary,
+        related_selections=related,
+        changed_files=changed,
+        task=args.task,
+        mode=args.mode,
+        max_read_first=getattr(args, "max_read_first", 12),
+        max_contracts=getattr(args, "max_contracts", 12),
+        max_failure_modes=getattr(args, "max_failure_modes", 10),
+    )
     output = Path(args.output) if args.output else repo / PACK_PATH
     if not output.is_absolute():
         output = repo / output
@@ -1044,6 +1195,8 @@ def build_pack(args: argparse.Namespace) -> int:
     if not args.quiet:
         print(f"Context pack written to {output}")
         print("Selected areas: " + (", ".join(area_ids) if area_ids else "none"))
+        if related:
+            print("Related areas: " + ", ".join(item.area_id for item in related))
         print("")
         print("Read next:")
         print(f"- {rel_to_repo(output, repo)}")
@@ -1103,7 +1256,7 @@ def resolve_changed_files(repo: Path, snapshot: Snapshot, args: argparse.Namespa
     return []
 
 
-def update_frontmatter_status(path: Path, status: str) -> bool:
+def update_frontmatter_fields(path: Path, fields: dict[str, str]) -> bool:
     text = read_text(path)
     if not text.startswith("---\n"):
         return False
@@ -1112,22 +1265,162 @@ def update_frontmatter_status(path: Path, status: str) -> bool:
         return False
     front = text[4:end].splitlines()
     changed = False
-    found = False
-    for i, line in enumerate(front):
-        if line.startswith("status:"):
-            found = True
-            if line != f"status: {status}":
-                front[i] = f"status: {status}"
-                changed = True
-            break
-    if not found:
-        front.append(f"status: {status}")
-        changed = True
+    for key, value in fields.items():
+        found = False
+        replacement = f"{key}: {value}"
+        for i, line in enumerate(front):
+            if line.startswith(f"{key}:"):
+                found = True
+                if line != replacement:
+                    front[i] = replacement
+                    changed = True
+                break
+        if not found:
+            front.append(replacement)
+            changed = True
     if not changed:
         return False
     new_text = "---\n" + "\n".join(front) + text[end:]
     write_text_lf(path, new_text)
     return True
+
+
+def update_frontmatter_status(path: Path, status: str) -> bool:
+    return update_frontmatter_fields(path, {"status": status})
+
+
+def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    required = [CONTEXT_DIR, AREAS_DIR, HANDOFF_DIR, MANIFEST_PATH, INDEX_PATH, CURRENT_PATH]
+    for rel in required:
+        if not (repo / rel).exists():
+            errors.append(f"missing {rel}")
+
+    if (repo / MANIFEST_PATH).exists():
+        manifest = load_manifest(repo)
+        areas = manifest.get("areas") or {}
+        if not areas:
+            warnings.append("manifest has no areas")
+        for area_id, area in sorted(areas.items()):
+            doc = area_doc_path(repo, area)
+            if not doc.exists():
+                errors.append(f"area {area_id} doc missing: {rel_to_repo(doc, repo)}")
+            if not area.get("paths"):
+                warnings.append(f"area {area_id} has no path patterns")
+
+    gitignore = repo / ".gitignore"
+    if gitignore.exists():
+        text = gitignore.read_text(encoding="utf-8")
+        if ".codex/packs/" not in text:
+            warnings.append(".codex/packs/ is not ignored")
+        if ".codex/handoff/LOCAL.md" not in text:
+            warnings.append(".codex/handoff/LOCAL.md is not ignored")
+    else:
+        warnings.append(".gitignore missing")
+
+    return errors, warnings
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    errors, warnings = context_setup_issues(repo)
+
+    if not (repo / MANIFEST_PATH).exists():
+        if not args.quiet:
+            print(f"Context Pack Status for {repo}")
+            print("Context library: missing")
+            print("")
+            print("Next:")
+            print("- context-pack init")
+        return 1
+
+    manifest = load_manifest(repo)
+    matches = selected_area_matches(manifest, changed_files=snapshot.dirty_files, task=args.task)
+    max_areas = getattr(args, "max_areas", 4)
+    primary = matches[:max_areas]
+    related = matches[max_areas:]
+    stale = [
+        warning
+        for selection in matches
+        if (warning := stale_warning(repo, snapshot, selection.area_id, (manifest.get("areas") or {}).get(selection.area_id, {}), snapshot.dirty_files))
+    ]
+
+    if not args.quiet:
+        print(f"Context Pack Status for {repo}")
+        print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head}")
+        print(f"Dirty files: {len(snapshot.dirty_files)}; diff hash: {snapshot.diff_hash}")
+        print(f"Context library: {'error' if errors else 'ok'}")
+        if warnings:
+            print(f"Warnings: {len(warnings)}")
+        if errors:
+            print(f"Errors: {len(errors)}")
+        print("")
+        print("Primary areas:")
+        if primary:
+            for item in primary:
+                print(f"- {item.area_id} (score {item.score})")
+        else:
+            print("- none")
+        if related:
+            print(f"Related areas: {', '.join(item.area_id for item in related)}")
+        print("")
+        print("Stale warnings:")
+        if stale:
+            for item in unique(stale):
+                print(f"- {item}")
+        else:
+            print("- none")
+        print("")
+        print("Next:")
+        if errors:
+            print("- Fix setup errors or run `context-pack init`.")
+        elif snapshot.dirty_files:
+            print("- Run `context-pack pack --changed` before broad reading.")
+            print("- After source verification, run `context-pack mark-reviewed <area>` for updated area docs.")
+        else:
+            print("- Context is ready. Use `context-pack pack --task \"...\"` for focused work.")
+    return 1 if errors else 0
+
+
+def cmd_mark_reviewed(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    manifest = load_manifest(repo)
+    areas = manifest.get("areas") or {}
+
+    if args.all:
+        area_ids = sorted(areas)
+    elif args.areas:
+        area_ids = args.areas
+    elif not snapshot.dirty_files and not args.task:
+        if not args.quiet:
+            print("No areas selected. Pass area IDs, --task, or --all.")
+        return 1
+    else:
+        area_ids = selected_areas(manifest, changed_files=snapshot.dirty_files, task=args.task)
+
+    marked: list[str] = []
+    missing: list[str] = []
+    for area_id in area_ids:
+        area = areas.get(area_id)
+        if not area:
+            missing.append(area_id)
+            continue
+        doc = area_doc_path(repo, area)
+        if not doc.exists():
+            missing.append(area_id)
+            continue
+        if update_frontmatter_fields(doc, {"last_reviewed_head": snapshot.head, "status": "active"}):
+            marked.append(area_id)
+
+    if not args.quiet:
+        print("Marked reviewed: " + (", ".join(marked) if marked else "none changed"))
+        if missing:
+            print("Missing areas/docs: " + ", ".join(missing))
+    return 1 if missing else 0
 
 
 def cmd_refresh(args: argparse.Namespace) -> int:
@@ -1271,34 +1564,7 @@ def cmd_uninstall_git_hooks(args: argparse.Namespace) -> int:
 def cmd_doctor(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    required = [CONTEXT_DIR, AREAS_DIR, HANDOFF_DIR, MANIFEST_PATH, INDEX_PATH, CURRENT_PATH]
-    for rel in required:
-        if not (repo / rel).exists():
-            errors.append(f"missing {rel}")
-
-    manifest = load_manifest(repo)
-    areas = manifest.get("areas") or {}
-    if not areas:
-        warnings.append("manifest has no areas")
-    for area_id, area in sorted(areas.items()):
-        doc = area_doc_path(repo, area)
-        if not doc.exists():
-            errors.append(f"area {area_id} doc missing: {rel_to_repo(doc, repo)}")
-        if not area.get("paths"):
-            warnings.append(f"area {area_id} has no path patterns")
-
-    gitignore = repo / ".gitignore"
-    if gitignore.exists():
-        text = gitignore.read_text(encoding="utf-8")
-        if ".codex/packs/" not in text:
-            warnings.append(".codex/packs/ is not ignored")
-        if ".codex/handoff/LOCAL.md" not in text:
-            warnings.append(".codex/handoff/LOCAL.md is not ignored")
-    else:
-        warnings.append(".gitignore missing")
+    errors, warnings = context_setup_issues(repo)
 
     if not args.quiet:
         print(f"Context-pack doctor for {repo}")
@@ -1327,6 +1593,13 @@ def add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--quiet", action="store_true", help="Reduce command output")
 
 
+def add_pack_budget(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--max-areas", type=int, default=4, help="Maximum primary areas in the pack")
+    parser.add_argument("--max-read-first", type=int, default=12, help="Maximum Read First entries before spilling to Read Later")
+    parser.add_argument("--max-contracts", type=int, default=12, help="Maximum contract bullets in the pack")
+    parser.add_argument("--max-failure-modes", type=int, default=10, help="Maximum failure mode bullets in the pack")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="context-pack",
@@ -1351,6 +1624,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--changed", action="store_true", help="Select areas from dirty files")
     p.add_argument("--output", help="Output markdown path")
+    add_pack_budget(p)
     p.set_defaults(func=cmd_pack)
 
     p = sub.add_parser("review-pack", help="Generate a code-review context pack from dirty files")
@@ -1358,6 +1632,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--task", help="Optional review focus")
     p.add_argument("--base", help="Review committed changes against a base ref, such as main")
     p.add_argument("--output", help="Output markdown path")
+    add_pack_budget(p)
     p.set_defaults(func=cmd_review_pack)
 
     p = sub.add_parser("refresh", help="Regenerate routing docs from manifest")
@@ -1370,6 +1645,19 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p)
     p.add_argument("--strict", action="store_true", help="Treat warnings as failures")
     p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("status", help="Show context health, selected areas, and next action")
+    add_common(p)
+    p.add_argument("--task", help="Optional task to score areas against")
+    p.add_argument("--max-areas", type=int, default=4, help="Maximum primary areas to show")
+    p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("mark-reviewed", help="Mark area docs reviewed at the current HEAD")
+    add_common(p)
+    p.add_argument("areas", nargs="*", help="Area IDs to mark; defaults to changed-file selected areas")
+    p.add_argument("--task", help="Optional task to select areas when no explicit areas are provided")
+    p.add_argument("--all", action="store_true", help="Mark all area docs reviewed")
+    p.set_defaults(func=cmd_mark_reviewed)
 
     p = sub.add_parser("gc", help="Remove generated context packs")
     add_common(p)

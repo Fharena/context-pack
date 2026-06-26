@@ -111,7 +111,8 @@
         "python -m json.tool plugins/context-pack/.codex-plugin/plugin.json",
         "python -m json.tool .agents/plugins/marketplace.json",
         "python -m pip install -e .",
-        "context-pack --help"
+        "context-pack --help",
+        "context-pack status --quiet"
       ]
     },
     "overview": {

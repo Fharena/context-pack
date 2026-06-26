@@ -38,3 +38,4 @@ jobs:
           python -m pip install -e .
           context-pack --help
           python -m context_pack --help
+          context-pack status --quiet

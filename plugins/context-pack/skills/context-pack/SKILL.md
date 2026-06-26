@@ -1,11 +1,13 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use when the user asks to initialize project memory, reduce token use before reading a repo, prepare a task or debugging context pack, review changed code, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to initialize project memory, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
 
 Use this skill as the agent-facing workflow for Context Pack. The user should not need to know script paths or internal commands. Run the bundled engine yourself, read the generated pack, then continue the user's actual coding, review, or handoff task.
+
+Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
 
 ## Promise
 
@@ -31,6 +33,15 @@ When the user says something like:
 - "Continue from the project memory"
 
 do the work. Do not stop at instructions.
+
+Also use this skill without explicit naming when:
+
+- entering a repo that already has `.codex/context/manifest.json`
+- starting a task that may touch multiple files or unknown ownership
+- reviewing dirty files, a branch, or a PR
+- debugging a failure in an unfamiliar area
+- about to read broadly because the right files are unclear
+- finishing meaningful edits, tests, or review notes that another session may need
 
 Report back in user terms:
 
@@ -80,7 +91,13 @@ Do not install git hooks during init unless the user explicitly asks for automat
 
 ### Prepare A Task Or Debugging Pack
 
-Use before broad repo reading for a feature, bug, or debugging task.
+Use before broad repo reading for a feature, bug, or debugging task. If `.codex/context/manifest.json` exists and the task is non-trivial, prefer generating a pack even when the user did not explicitly ask for Context Pack.
+
+0. Optionally check health:
+
+   ```bash
+   python scripts/context_pack.py status
+   ```
 
 1. Run:
 
@@ -131,6 +148,22 @@ Then report:
 - dirty file count
 - generated pack path
 - next files/areas another agent should read
+
+If checkpointing tracked handoff files would be noisy for the user's current workflow, still report that a checkpoint is recommended and explain which files would change. Do not commit checkpoint files unless the user's requested git workflow includes them.
+
+### Check Context Health
+
+Use when deciding whether to generate a pack, when stale warnings feel noisy, or when entering an existing repo:
+
+```bash
+python scripts/context_pack.py status
+```
+
+If an area doc has been verified against current source, mark it reviewed:
+
+```bash
+python scripts/context_pack.py mark-reviewed <area-id>
+```
 
 ### Refresh Context Routing
 

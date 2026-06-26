@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -26,7 +26,7 @@ Stop paying agents to rediscover your repo.
 
 한국어로 풀면, 에이전트가 매번 repo를 다시 읽고 헤매는 비용을 줄이자는 뜻입니다.
 
-Context Pack은 repo 안에 작은 프로젝트 도서관을 만들고, git 상태를 checkpoint하고, 작업별로 필요한 문서와 파일만 모은 `.codex/packs/CONTEXT_PACK.md`를 생성합니다. 핵심은 "AI memory"가 아니라 **지금 작업에 필요한 것만 먼저 읽게 하는 context router**입니다.
+Context Pack은 repo 안에 작은 프로젝트 도서관을 만들고, git 상태를 checkpoint하고, 작업별로 필요한 문서와 파일만 모은 compact `.codex/packs/CONTEXT_PACK.md`를 생성합니다. 핵심은 "AI memory"가 아니라 **지금 작업에 필요한 것만 먼저 읽게 하는 context router**입니다.
 
 요즘 코딩 에이전트 작업은 로컬 IDE 한 곳에만 머물지 않습니다. Codex app/cloud worktree, Claude 원격 작업, Cursor, CLI, 다른 기기 사이를 오가게 됩니다. 작업 위치가 바뀌면, repo 자체가 최소한의 지도를 들고 있어야 합니다.
 
@@ -86,13 +86,14 @@ Use $context-pack to build a review context pack for this branch.
 Use $context-pack to checkpoint this work.
 ```
 
-에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다.
+에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 스스로 쓰는 흐름을 목표로 합니다.
 
 Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
 context-pack init
+context-pack status
 context-pack review-pack --base main
 ```
 
@@ -134,38 +135,44 @@ codex plugin add context-pack@context-pack
 ## 터미널 데모
 
 ```text
-$ context-pack review-pack --base main
+$ context-pack pack --changed --max-areas 3 --max-read-first 8
 Context pack written to .codex/packs/CONTEXT_PACK.md
-Selected areas: engine, installer-release, tests
+Selected areas: engine, tests, installer-release
+Related areas: skill-plugin
 
 Read next:
 - .codex/packs/CONTEXT_PACK.md
 - .codex/context/AREAS/engine.md
-- .codex/context/AREAS/installer-release.md
 - .codex/context/AREAS/tests.md
+- .codex/context/AREAS/installer-release.md
 
 $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
 
-Mode: review
+Mode: work
 
 ## Selected Areas
-- engine
-- installer-release
-- tests
+- engine (score 24): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/bundled/context_pack.py, tests/test_context_pack.py
+- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
+- installer-release (score 10): changed files matched: src/context_pack/bundled/context_pack.py
+
+## Related Areas
+- skill-plugin (score 4): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py
 
 ## Read First
 - .codex/context/AREAS/engine.md
 - plugins/context-pack/skills/context-pack/scripts/context_pack.py
+- src/context_pack/cli.py
 - tests/test_context_pack.py
+- src/context_pack/bundled/context_pack.py
+
+## Read Later
+- .codex/context/AREAS/skill-plugin.md
+- plugins/context-pack/skills/context-pack/SKILL.md
 
 ## Contracts To Check
-- The engine must remain stdlib-only.
-- Generated packs must stay under .codex/packs/.
-- Hook install must preserve unrelated hook contents.
-
-## Tests
-- tests/test_context_pack.py
+- The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
+- ... more contract(s) omitted; inspect area docs if needed
 ```
 
 목표는 source code를 대체하는 것이 아닙니다. 에이전트가 올바른 서가에서 시작하게 만드는 것입니다.
@@ -183,6 +190,7 @@ context-pack init
 작업 시작 전:
 
 ```powershell
+context-pack status
 context-pack pack --task "고치려는 버그나 작업 설명"
 ```
 
@@ -204,14 +212,22 @@ context-pack checkpoint --pack
 context-pack doctor
 ```
 
+source 확인 후 stale warning을 닫을 때:
+
+```powershell
+context-pack mark-reviewed runtime tests
+```
+
 ## 핵심 기능
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
+| `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash 기록 |
-| `pack` | 작업별 reading pack 생성 |
-| `review-pack` | dirty files 또는 `--base` 기준 코드 리뷰 팩 생성 |
+| `pack` | selected/related 영역으로 나뉜 compact 작업별 reading pack 생성 |
+| `review-pack` | dirty files 또는 `--base` 기준 compact 코드 리뷰 팩 생성 |
+| `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
 | `doctor` | context library가 정상인지 검증 |
 | `install-git-hooks` | 선택적 repo-local checkpoint 자동화 |
 
@@ -228,6 +244,14 @@ Checkpoint this work for the next session.
 이 버그 고치기 전에 context pack 만들어.
 작업 끝났으니 checkpoint 해줘.
 ```
+
+더 중요한 흐름은 암묵적 사용입니다.
+
+- repo를 넓게 읽기 전: `context-pack status` 후 `pack --task` 또는 `pack --changed`
+- 리뷰 전: base를 알면 `review-pack --base <base-ref>`
+- 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
+- 의미 있는 수정/리뷰 후: 다음 에이전트가 이어받도록 checkpoint
+- source 확인 후: `mark-reviewed <area>`로 stale warning 닫기
 
 에이전트는 보통 다음 순서로 읽으면 됩니다.
 
@@ -261,9 +285,12 @@ Python script가 맡는 일:
 - dirty file 목록
 - diff hash
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
-- area matching
-- pack 생성
+- changed-file과 task 기반 area scoring
+- selected/related 영역을 나누는 compact pack 생성
+- Read First / Read Later 분리
+- contract와 failure mode 중복 제거
 - stale warning
+- context health status와 reviewed-state 업데이트
 - hook 설치
 - doctor 검증
 
@@ -305,6 +332,8 @@ AI가 시간이 지나며 개선할 수 있는 일:
 
 선택 기능입니다. Context Pack을 쓰기 위해 꼭 필요하지는 않습니다.
 
+기본 자동화 모델은 에이전트 행동입니다. skill과 repo `AGENTS.md`가 에이전트에게 작업 시작, 리뷰, 디버깅, handoff 경계에서 Context Pack을 스스로 쓰라고 알려줍니다. git hook은 checkout, merge, commit 같은 git 경계에서만 작동하는 보조 안전망입니다.
+
 repo-local git hook을 설치하면 git 작업 경계에서 checkpoint를 조금 더 자동화할 수 있습니다.
 
 ```powershell
@@ -343,4 +372,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.1](https://github.com/Fharena/context-pack/releases/tag/v0.1.1).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.2](https://github.com/Fharena/context-pack/releases/tag/v0.1.2).

@@ -7,6 +7,8 @@ paths:
   - scripts/install_plugin.py
   - .agents/plugins/marketplace.json
   - .github/**
+  - pyproject.toml
+  - src/context_pack/**
   - assets/**
   - CHANGELOG.md
   - CONTRIBUTING.md
@@ -35,6 +37,8 @@ stale_if:
 - `README.md`
 - `README.ko.md`
 - `CHANGELOG.md`
+- `pyproject.toml`
+- `src/context_pack/cli.py`
 - `assets/demo.gif`
 - `scripts/install_skill.py`
 - `scripts/install_plugin.py`
@@ -46,6 +50,7 @@ stale_if:
 - The personal marketplace entry must include `policy.installation`, `policy.authentication`, and `category`.
 - Release checks include unit tests, plugin validation, and skill validation.
 - GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
+- Packaged CLI behavior should match the bundled skill engine.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -59,6 +64,7 @@ stale_if:
 ## Expand Scope If
 - Moving from local marketplace install to packaged release.
 - Adding npm/pip distribution.
+- Changing package metadata or CLI entry points.
 - Adding plugin-native hooks.
 
 ## Do Not Start With
