@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 8e1a022c776e
+- HEAD: 87eed3099781
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T07:51:31+09:00
+- Updated at: 2026-06-27T07:52:54+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: v0.2.11 refreshes the terminal demo GIF and makes README demo images package-safe with a GitHub raw URL, committed at `8e1a022`.
+- Product hardening for Context Pack. Latest work: v0.2.11 refreshes the terminal demo GIF, makes README demo images package-safe with a GitHub raw URL, and publishes handoff state through `87eed30`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
