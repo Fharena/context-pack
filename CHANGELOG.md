@@ -2,6 +2,18 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.3] - 2026-06-26
+
+### Changed
+
+- `context-pack checkpoint` now writes ignored local checkpoint state by default, so proactive agent end-of-work checkpoints do not dirty tracked handoff files.
+- Use `context-pack checkpoint --publish` to update tracked `.codex/handoff/CURRENT.md` and `LOG.md` for handoffs that should travel through git.
+- Updated agent guidance, README docs, and demo GIF to clarify local automatic checkpoints versus published durable handoffs.
+
+### Added
+
+- Test coverage proving default checkpoints keep a clean git worktree while `--publish` intentionally updates tracked handoff docs.
+
 ## [0.1.2] - 2026-06-26
 
 ### Added

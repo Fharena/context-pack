@@ -50,6 +50,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `python -m pip install -e .`
   - `context-pack --help`
   - `context-pack status --quiet`
+  - `context-pack checkpoint --pack --quiet does not dirty tracked files`
 
 ### overview
 - Doc: `.codex/context/AREAS/overview.md`

@@ -1,6 +1,6 @@
 {
   "name": "context-pack",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Repo-local context packs and handoff checkpoints for coding agents.",
   "author": {
     "name": "Context Pack"
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "Context Pack",
     "shortDescription": "Generate focused repo context for agents.",
-    "longDescription": "Context Pack keeps a lightweight repo-local context library, checkpoints handoff state, and generates task or review packs so coding agents can start from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
+    "longDescription": "Context Pack keeps a lightweight repo-local context library, writes ignored local checkpoints by default, and generates task or review packs so coding agents can start from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [

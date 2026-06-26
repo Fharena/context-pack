@@ -116,10 +116,10 @@ SCENES: list[list[tuple[str, str]]] = [
     [
         ("Agent finishes a meaningful work unit.", BLUE),
         ("Context Pack engine: checkpoint --pack", MUTED),
-        ("Checkpoint updated at .codex/handoff/CURRENT.md", GREEN),
+        ("Local checkpoint updated at .codex/handoff/LOCAL.md", GREEN),
         ("HEAD: cc20bba; dirty: 0 file(s); hash: clean", TEXT),
+        ("Tracked handoff stays clean unless --publish is used.", TEXT),
         ("Next agent prompt: continue from the current handoff", TEXT),
-        ("Next agent starts from the right shelf.", YELLOW),
     ],
 ]
 

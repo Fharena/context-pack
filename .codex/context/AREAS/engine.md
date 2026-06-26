@@ -30,6 +30,7 @@ stale_if:
 - Review packs must support committed branch changes via `--base`.
 - Packs should stay compact: rank areas, split Read First/Read Later, and omit overflow details with clear counts.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
+- Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
 - Hook install must preserve unrelated hook contents and be idempotent.
 - Generated packs live under `.codex/packs/` and stay ignored.
 
@@ -40,6 +41,7 @@ stale_if:
 - Stale area docs are hidden instead of surfaced as warnings.
 - Broad overview/context patterns dominate the pack instead of specific changed-file areas.
 - Contracts or failure modes repeat until the pack stops saving tokens.
+- Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
 
 ## Expand Scope If
 - Manifest schema changes.

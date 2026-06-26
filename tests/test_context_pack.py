@@ -37,9 +37,44 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue((repo / "AGENTS.md").exists())
 
             self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--quiet"]), 0)
+            self.assertTrue((repo / ".codex/handoff/LOCAL.md").exists())
             current = (repo / ".codex/handoff/CURRENT.md").read_text(encoding="utf-8")
             self.assertIn("Git repo: no", current)
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
+
+    def test_checkpoint_defaults_to_ignored_local_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack", "--quiet"]), 0)
+            status = subprocess.run(
+                ["git", "status", "--porcelain=v1", "-uall"],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertEqual(status.strip(), "")
+            self.assertTrue((repo / ".codex/handoff/LOCAL.md").exists())
+            self.assertTrue((repo / ".codex/packs/CONTEXT_PACK.md").exists())
+
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--publish", "--quiet"]), 0)
+            status = subprocess.run(
+                ["git", "status", "--porcelain=v1", "-uall"],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertIn(".codex/handoff/CURRENT.md", status)
+            self.assertIn(".codex/handoff/LOG.md", status)
 
     def test_init_inferrs_common_project_areas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

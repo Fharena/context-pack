@@ -553,6 +553,39 @@ def current_doc(snapshot: Snapshot) -> str:
 """
 
 
+def local_checkpoint_doc(snapshot: Snapshot) -> str:
+    fingerprint = render_fingerprint(snapshot)
+    return f"""# Local Checkpoint
+
+This file is machine-local and ignored by git. Use it for automatic agent work-unit checkpoints without dirtying the tracked handoff.
+
+{FINGERPRINT_START}
+{fingerprint}
+{FINGERPRINT_END}
+
+## Latest
+- Generated packs live in `.codex/packs/` and are also ignored.
+- Publish durable handoff state with `context-pack checkpoint --publish` when it should travel through git.
+
+## Local Log
+"""
+
+
+def checkpoint_entry(snapshot: Snapshot) -> str:
+    dirty = ", ".join(snapshot.dirty_files) if snapshot.dirty_files else "none"
+    return "\n".join(
+        [
+            f"\n## {snapshot.timestamp}",
+            f"- Branch: {snapshot.branch}",
+            f"- HEAD: {snapshot.head}",
+            f"- Dirty files: {dirty}",
+            f"- Dirty diff hash: {snapshot.diff_hash}",
+            "- Verification: not recorded",
+            "",
+        ]
+    )
+
+
 def agent_rules() -> str:
     return f"""{AGENT_RULES_START}
 {agent_rules_body()}
@@ -572,7 +605,7 @@ When a task or review needs orientation, generate a focused context pack first w
 
 For reviews and debugging, prefer a generated context pack from `.codex/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
-At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available so the next agent has an up-to-date fingerprint, log entry, and generated read-first pack.
+At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available. This writes an ignored local checkpoint by default so automatic agent use does not dirty tracked handoff files. Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
 """
 
 
@@ -724,7 +757,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     write_if_missing(repo / CURRENT_PATH, current_doc(snapshot), force=args.force)
     write_if_missing(repo / LOG_PATH, "# Context Pack Log\n\nAppend-only operational log.\n", force=args.force)
     write_if_missing(repo / DECISIONS_PATH, "# Decisions\n\nRecord durable direction changes only.\n", force=args.force)
-    write_if_missing(repo / LOCAL_PATH, "# Local Context\n\nMachine-local notes. This file is ignored by default.\n", force=args.force)
+    write_if_missing(repo / LOCAL_PATH, local_checkpoint_doc(snapshot), force=args.force)
 
     append_gitignore(repo)
     if not args.no_agent_doc:
@@ -752,29 +785,33 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     ensure_dirs(repo)
 
-    if not (repo / CURRENT_PATH).exists():
-        write_if_missing(repo / CURRENT_PATH, current_doc(snapshot))
+    entry = checkpoint_entry(snapshot)
+    if args.publish:
+        if not (repo / CURRENT_PATH).exists():
+            write_if_missing(repo / CURRENT_PATH, current_doc(snapshot))
 
-    current = (repo / CURRENT_PATH).read_text(encoding="utf-8")
-    current = replace_marker(current, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
-    write_text_lf(repo / CURRENT_PATH, current)
+        current = (repo / CURRENT_PATH).read_text(encoding="utf-8")
+        current = replace_marker(current, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
+        write_text_lf(repo / CURRENT_PATH, current)
 
-    if not (repo / LOG_PATH).exists():
-        write_if_missing(repo / LOG_PATH, "# Context Pack Log\n\nAppend-only operational log.\n")
-    dirty = ", ".join(snapshot.dirty_files) if snapshot.dirty_files else "none"
-    entry = "\n".join(
-        [
-            f"\n## {snapshot.timestamp}",
-            f"- Branch: {snapshot.branch}",
-            f"- HEAD: {snapshot.head}",
-            f"- Dirty files: {dirty}",
-            f"- Dirty diff hash: {snapshot.diff_hash}",
-            "- Verification: not recorded",
-            "",
-        ]
-    )
-    with (repo / LOG_PATH).open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(entry)
+        if not (repo / LOG_PATH).exists():
+            write_if_missing(repo / LOG_PATH, "# Context Pack Log\n\nAppend-only operational log.\n")
+        with (repo / LOG_PATH).open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(entry)
+        checkpoint_path = CURRENT_PATH
+        checkpoint_kind = "Published handoff"
+    else:
+        if not (repo / LOCAL_PATH).exists():
+            write_if_missing(repo / LOCAL_PATH, local_checkpoint_doc(snapshot))
+
+        local = (repo / LOCAL_PATH).read_text(encoding="utf-8")
+        local = replace_marker(local, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
+        if "## Local Log" not in local:
+            local = local.rstrip() + "\n\n## Local Log\n"
+        local = local.rstrip() + "\n" + entry.lstrip("\n")
+        write_text_lf(repo / LOCAL_PATH, local)
+        checkpoint_path = LOCAL_PATH
+        checkpoint_kind = "Local checkpoint"
 
     if args.pack:
         pack_args = argparse.Namespace(
@@ -792,10 +829,12 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         build_pack(pack_args)
 
     if not args.quiet:
-        print(f"Checkpoint updated at {CURRENT_PATH}")
+        print(f"{checkpoint_kind} updated at {normalize_path(checkpoint_path)}")
         print(f"HEAD: {snapshot.head}; dirty: {len(snapshot.dirty_files)} file(s); hash: {snapshot.diff_hash}")
         if args.pack:
-            print(f"Context pack: {PACK_PATH}")
+            print(f"Context pack: {normalize_path(PACK_PATH)}")
+        if not args.publish:
+            print("Note: local checkpoints are ignored by git. Use --publish when this handoff should be committed.")
         print('Next agent prompt: "Use $context-pack to continue from the current handoff."')
     return 0
 
@@ -1614,9 +1653,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update")
     p.set_defaults(func=cmd_init)
 
-    p = sub.add_parser("checkpoint", help="Update CURRENT.md fingerprint and append LOG.md")
+    p = sub.add_parser("checkpoint", help="Write ignored local checkpoint state, or publish tracked handoff files")
     add_common(p)
     p.add_argument("--pack", action="store_true", help="Also generate a changed-files context pack")
+    p.add_argument("--publish", action="store_true", help="Update tracked handoff files instead of ignored local checkpoint state")
     p.set_defaults(func=cmd_checkpoint)
 
     p = sub.add_parser("pack", help="Generate a task or changed-files context pack")

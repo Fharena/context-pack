@@ -43,6 +43,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `python -m pip install -e .`
   - `context-pack --help`
   - `context-pack status --quiet`
+  - `context-pack checkpoint --pack --quiet does not dirty tracked files`
 - Common failure modes:
   - Installer replaces a user's existing skill/plugin without explicit --force.
   - Marketplace entry points to the wrong relative plugin path.

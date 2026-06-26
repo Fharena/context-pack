@@ -112,7 +112,8 @@
         "python -m json.tool .agents/plugins/marketplace.json",
         "python -m pip install -e .",
         "context-pack --help",
-        "context-pack status --quiet"
+        "context-pack status --quiet",
+        "context-pack checkpoint --pack --quiet does not dirty tracked files"
       ]
     },
     "overview": {

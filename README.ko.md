@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.3"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -224,7 +224,7 @@ context-pack mark-reviewed runtime tests
 | --- | --- |
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
-| `checkpoint` | branch, HEAD, dirty files, diff hash 기록 |
+| `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
 | `pack` | selected/related 영역으로 나뉜 compact 작업별 reading pack 생성 |
 | `review-pack` | dirty files 또는 `--base` 기준 compact 코드 리뷰 팩 생성 |
 | `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
@@ -250,7 +250,8 @@ Checkpoint this work for the next session.
 - repo를 넓게 읽기 전: `context-pack status` 후 `pack --task` 또는 `pack --changed`
 - 리뷰 전: base를 알면 `review-pack --base <base-ref>`
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
-- 의미 있는 수정/리뷰 후: 다음 에이전트가 이어받도록 checkpoint
+- 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
+- handoff 자체를 git으로 공유해야 할 때: `checkpoint --publish --pack`
 - source 확인 후: `mark-reviewed <area>`로 stale warning 닫기
 
 에이전트는 보통 다음 순서로 읽으면 됩니다.
@@ -326,13 +327,15 @@ AI가 시간이 지나며 개선할 수 있는 일:
 .codex/handoff/LOCAL.md
 ```
 
-컨텍스트 도서관과 handoff는 다음 사람/에이전트에게 전달되어야 하지만, 생성된 임시 pack과 로컬 경로 정보는 repo에 남기지 않는 편이 안전합니다.
+자동 에이전트 checkpoint는 기본적으로 `.codex/handoff/LOCAL.md`와 `.codex/packs/`에 기록되므로, 일반적인 작업 종료 checkpoint는 tracked 파일을 더럽히지 않습니다. handoff 자체를 git에 남겨야 할 때만 `context-pack checkpoint --publish --pack`을 사용합니다.
+
+컨텍스트 도서관과 durable handoff는 다음 사람/에이전트에게 전달될 수 있지만, 생성된 임시 pack과 로컬 경로 정보는 repo에 남기지 않는 편이 안전합니다.
 
 ## 자동화
 
 선택 기능입니다. Context Pack을 쓰기 위해 꼭 필요하지는 않습니다.
 
-기본 자동화 모델은 에이전트 행동입니다. skill과 repo `AGENTS.md`가 에이전트에게 작업 시작, 리뷰, 디버깅, handoff 경계에서 Context Pack을 스스로 쓰라고 알려줍니다. git hook은 checkout, merge, commit 같은 git 경계에서만 작동하는 보조 안전망입니다.
+기본 자동화 모델은 에이전트 행동입니다. skill과 repo `AGENTS.md`가 에이전트에게 작업 시작, 리뷰, 디버깅, handoff 경계에서 Context Pack을 스스로 쓰라고 알려줍니다. `checkpoint`는 기본적으로 ignored local state에 쓰기 때문에 에이전트가 작업단위 끝마다 실행해도 tracked handoff 문서를 더럽히지 않습니다. git hook은 checkout, merge, commit 같은 git 경계에서만 작동하는 보조 안전망입니다.
 
 repo-local git hook을 설치하면 git 작업 경계에서 checkpoint를 조금 더 자동화할 수 있습니다.
 
@@ -372,4 +375,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.2](https://github.com/Fharena/context-pack/releases/tag/v0.1.2).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.3](https://github.com/Fharena/context-pack/releases/tag/v0.1.3).

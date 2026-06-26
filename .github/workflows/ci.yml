@@ -39,3 +39,4 @@ jobs:
           context-pack --help
           python -m context_pack --help
           context-pack status --quiet
+          python -c "import subprocess, sys; subprocess.run(['context-pack', 'checkpoint', '--pack', '--quiet'], check=True); status = subprocess.check_output(['git', 'status', '--porcelain=v1', '-uall'], text=True); sys.exit(0 if status.strip() == '' else 1)"

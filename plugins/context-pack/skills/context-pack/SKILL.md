@@ -136,7 +136,7 @@ Use when reviewing local changes, a branch, or a PR.
 
 ### Checkpoint Work
 
-Use after meaningful edits, tests, review, or when the user asks to hand off work.
+Use after meaningful edits, tests, review, or when the user asks to hand off work. This writes ignored local state by default, so proactive agent checkpoints do not dirty tracked handoff files.
 
 ```bash
 python scripts/context_pack.py checkpoint --pack
@@ -149,7 +149,13 @@ Then report:
 - generated pack path
 - next files/areas another agent should read
 
-If checkpointing tracked handoff files would be noisy for the user's current workflow, still report that a checkpoint is recommended and explain which files would change. Do not commit checkpoint files unless the user's requested git workflow includes them.
+When the handoff should be committed and shared through git, publish it explicitly:
+
+```bash
+python scripts/context_pack.py checkpoint --publish --pack
+```
+
+Do not commit tracked handoff updates unless the user's requested git workflow includes them.
 
 ### Check Context Health
 

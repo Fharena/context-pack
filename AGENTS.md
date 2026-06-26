@@ -9,6 +9,6 @@ When a task or review needs orientation, generate a focused context pack first w
 
 For reviews and debugging, prefer a generated context pack from `.codex/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
-At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available so the next agent has an up-to-date fingerprint, log entry, and generated read-first pack.
+At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available. This writes ignored local checkpoint state by default, so automatic agent checkpoints do not dirty tracked handoff files. Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
 
 <!-- context-pack:rules:end -->

@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.3"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -175,7 +175,7 @@ The point is not to replace source code. The point is to make the agent start fr
 | --- | --- |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
-| `checkpoint` | Records branch, HEAD, dirty files, and diff hash |
+| `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
 | `pack` | Builds a compact task-specific reading pack with selected and related areas |
 | `review-pack` | Builds a compact code-review pack from dirty files or `--base` |
 | `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
@@ -201,7 +201,8 @@ The more important path is implicit:
 - before broad repo reading: run `context-pack status`, then `pack --task` or `pack --changed`
 - before review: run `review-pack --base <base-ref>` when a base is known
 - during unfamiliar debugging: generate a task pack before opening many files
-- after meaningful edits or review notes: checkpoint the work so the next agent can resume
+- after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
+- when a handoff should travel through git: run `checkpoint --publish --pack`
 - after verifying changed source against area docs: run `mark-reviewed <area>` to close stale warnings
 
 After initialization, agents should read:
@@ -271,11 +272,13 @@ Ignore:
 - `.codex/context/tmp/`
 - `.codex/handoff/LOCAL.md`
 
+Automatic agent checkpoints write to `.codex/handoff/LOCAL.md` and `.codex/packs/` by default, so normal end-of-work checkpointing should not dirty tracked files. Use `context-pack checkpoint --publish --pack` when the handoff itself is part of the work you want to commit.
+
 ## Automation
 
 Optional safe git hooks. You do not need this to use Context Pack.
 
-The primary automation model is agent behavior: the installed skill and repo `AGENTS.md` tell agents to use Context Pack proactively at task, review, debugging, and handoff boundaries. Git hooks are only a mechanical backup for git boundaries such as checkout, merge, and commit.
+The primary automation model is agent behavior: the installed skill and repo `AGENTS.md` tell agents to use Context Pack proactively at task, review, debugging, and handoff boundaries. `checkpoint` writes ignored local state by default, so agents can use it at the end of a work unit without dirtying tracked handoff docs. Git hooks are only a mechanical backup for git boundaries such as checkout, merge, and commit.
 
 ```powershell
 context-pack install-git-hooks --mode safe
@@ -320,4 +323,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.2](https://github.com/Fharena/context-pack/releases/tag/v0.1.2).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.3](https://github.com/Fharena/context-pack/releases/tag/v0.1.3).
