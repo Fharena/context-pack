@@ -66,13 +66,13 @@ Context Pack makes the repo carry enough context for that handoff:
 
 ## Install
 
-Recommended for Codex:
+Fastest Codex path, from GitHub without cloning:
 
 ```bash
-pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack install-codex --activate
+npx github:Fharena/context-pack install-codex --activate
 ```
 
-If the Codex CLI is not on `PATH`, omit `--activate` and run the printed `codex plugin add ...` command later.
+This requires Node plus Python 3.11+ on `PATH`. If the Codex CLI is not on `PATH`, omit `--activate` and run the printed `codex plugin add ...` command later.
 
 Then talk to your agent:
 
@@ -90,29 +90,31 @@ If you already installed the CLI, update or install the Codex plugin with:
 context-pack install-codex --activate
 ```
 
-For non-Codex agents or direct terminal use:
+For repo setup with Claude, Cursor, other agents, or direct terminal use:
+
+```bash
+npx github:Fharena/context-pack setup
+npx github:Fharena/context-pack start
+npx github:Fharena/context-pack start --task "fix login timeout"
+npx github:Fharena/context-pack start --review --base main
+```
+
+Prefer Python tooling or want a persistent CLI?
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
 context-pack setup
-context-pack start
-context-pack start --task "fix login timeout"
-context-pack start --review --base main
 ```
-
-Prefer `npx`? Run directly from GitHub:
-
-```bash
-npx github:Fharena/context-pack setup
-```
-
-This still requires Python 3.11+ on `PATH`; the Node wrapper only avoids installing the Python package first.
 
 For a one-command trial without installing the CLI permanently:
 
 ```bash
 pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack setup
 ```
+
+The `npx` route is a thin wrapper over the same Python engine. It avoids asking Node-first users to install a Python package before they can try the tool.
+
+Examples below use `context-pack` for readability. If you are staying on the GitHub `npx` path, replace `context-pack` with `npx github:Fharena/context-pack`.
 
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
 
@@ -472,6 +474,7 @@ python -m pip install build twine
 python -m build
 python -m twine check dist/*
 npm pack --dry-run
+python scripts/validate_packaged_cli.py
 ```
 
 GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Python wheel/sdist checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12. The release workflow builds GitHub Release assets from the tag and can optionally publish to PyPI/npm after trusted publishing is configured.

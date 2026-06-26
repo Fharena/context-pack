@@ -73,13 +73,13 @@ Context Pack은 repo가 다음 정보를 들고 다니게 합니다.
 
 ## 설치
 
-Codex에서는 이 흐름을 추천합니다.
+Codex에서 가장 짧은 GitHub 직접 실행 경로입니다.
 
 ```bash
-pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack install-codex --activate
+npx github:Fharena/context-pack install-codex --activate
 ```
 
-Codex CLI가 `PATH`에 없다면 `--activate`를 빼고, 출력되는 `codex plugin add ...` 명령을 나중에 실행하면 됩니다.
+이 경로는 `PATH`에 Node와 Python 3.11+가 필요합니다. Codex CLI가 `PATH`에 없다면 `--activate`를 빼고, 출력되는 `codex plugin add ...` 명령을 나중에 실행하면 됩니다.
 
 그 다음 사람은 명령어를 외울 필요 없이 에이전트에게 이렇게 말하면 됩니다.
 
@@ -97,29 +97,31 @@ Use $context-pack to checkpoint this work.
 context-pack install-codex --activate
 ```
 
-Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
+Codex가 아니거나 터미널에서 직접 repo를 설정하고 싶다면:
+
+```bash
+npx github:Fharena/context-pack setup
+npx github:Fharena/context-pack start
+npx github:Fharena/context-pack start --task "fix login timeout"
+npx github:Fharena/context-pack start --review --base main
+```
+
+Python tooling을 선호하거나 CLI를 영구 설치하고 싶다면:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
 context-pack setup
-context-pack start
-context-pack start --task "fix login timeout"
-context-pack start --review --base main
 ```
-
-`npx`가 더 편하다면 GitHub에서 바로 실행할 수 있습니다.
-
-```bash
-npx github:Fharena/context-pack setup
-```
-
-이 경로도 `PATH`에 Python 3.11+가 필요합니다. Node wrapper는 Python 패키지를 먼저 설치하지 않게 해주는 얇은 진입점입니다.
 
 CLI를 영구 설치하지 않고 한 번 시험해보고 싶다면:
 
 ```bash
 pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack setup
 ```
+
+`npx` 경로는 같은 Python engine을 얇게 감싸는 방식입니다. Node 중심 사용자에게 Python 패키지를 먼저 설치하라고 요구하지 않기 위한 진입점입니다.
+
+아래 예시는 읽기 쉽게 `context-pack`으로 적습니다. GitHub `npx` 경로를 계속 쓴다면 `context-pack` 자리에 `npx github:Fharena/context-pack`를 붙이면 됩니다.
 
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
 
@@ -472,6 +474,7 @@ python -m pip install build twine
 python -m build
 python -m twine check dist/*
 npm pack --dry-run
+python scripts/validate_packaged_cli.py
 ```
 
 GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Python wheel/sdist check, Node/npm wrapper check를 실행합니다. Release workflow는 tag에서 GitHub Release assets를 빌드하고, Trusted Publishing 설정 후에는 PyPI/npm publish까지 선택적으로 실행할 수 있습니다.

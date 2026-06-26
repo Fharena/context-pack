@@ -852,6 +852,55 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("context-pack", proc.stdout)
         self.assertIn("setup", proc.stdout)
 
+    def test_node_wrapper_can_setup_repo(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            proc = subprocess.run(
+                [node, str(NODE_WRAPPER), "setup", "--repo", str(repo), "--quiet"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertTrue((repo / ".context-pack/manifest.json").exists())
+            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
+            self.assertIn("context-pack start", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+
+    def test_node_wrapper_can_install_codex_plugin(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not available")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "plugins" / "context-pack"
+            marketplace = root / ".agents" / "plugins" / "marketplace.json"
+            proc = subprocess.run(
+                [
+                    node,
+                    str(NODE_WRAPPER),
+                    "install-codex",
+                    "--target",
+                    str(target),
+                    "--marketplace",
+                    str(marketplace),
+                    "--quiet",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertTrue((target / ".codex-plugin/plugin.json").exists())
+            self.assertTrue((target / "skills/context-pack/SKILL.md").exists())
+            self.assertTrue((target / "skills/context-pack/scripts/context_pack.py").exists())
+            data = json.loads(marketplace.read_text(encoding="utf-8"))
+            self.assertEqual(data["plugins"][0]["name"], "context-pack")
+
     def test_node_wrapper_skips_old_python_candidates(self) -> None:
         node = shutil.which("node")
         if not node:

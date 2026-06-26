@@ -29,6 +29,7 @@ For code review, map changed files to areas, then check the listed contracts, te
 - If changed files match:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
+  - `scripts/validate_packaged_cli.py`
   - `.agents/plugins/marketplace.json`
   - `.github/**`
   - `pyproject.toml`
@@ -55,6 +56,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `context-pack --help`
   - `node bin/context-pack.js --help`
   - `npm pack --dry-run`
+  - `python scripts/validate_packaged_cli.py`
   - `context-pack setup --repo <tmp> --quiet`
   - `context-pack doctor --repo <tmp> --fix --quiet`
   - `context-pack status --quiet`
@@ -69,6 +71,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - README documents a command not covered by tests or validation.
   - Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
   - npm package metadata drifts from Python/plugin versions or omits the bundled engine.
+  - README leads with an `npx` command path that is not covered by packaged CLI smoke tests.
   - Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.
   - Registry publishing runs automatically before PyPI/npm trusted publishing has been configured.
 
@@ -124,7 +127,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Installing shared agent docs twice duplicates marker blocks.
   - Setup drifts from the init/install-agent-docs/hook commands it composes.
   - Doctor is tested only as read-only validation after adding repair behavior.
-  - Node wrapper tests are skipped or missing after changing package metadata.
+  - Node wrapper tests stop at `--help` after README starts recommending `npx` setup or install-codex paths.
 
 ## Escalate Review Scope When
 - Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.

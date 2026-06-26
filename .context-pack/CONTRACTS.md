@@ -19,6 +19,8 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.
 - Release checks must include unit tests, plugin validation, skill validation, and npm wrapper validation.
 - Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic.
+- Node/npx wrapper should be smoke-tested for first-time `setup` and packaged `install-codex`, not only `--help`.
+- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`.
 - Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.
 - PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs.
 
@@ -35,5 +37,5 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 
 ## tests
 - Tests should exercise real command flows through the engine main entrypoint.
-- Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help, dirty changed files, committed review diffs, and hook idempotency.
+- Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.

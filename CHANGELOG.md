@@ -7,10 +7,12 @@ All notable changes to Context Pack will be documented here.
 ### Added
 
 - Added a `Release` GitHub Actions workflow that builds GitHub Release assets from a tag, verifies Python/npm versions, uploads Python wheel/sdist and npm tarball assets, and can optionally publish to PyPI/npm through trusted publishing.
+- Added test coverage and a local validation script proving the Node/npx wrapper can run first-time `setup` and `install-codex`, not just `--help`.
 
 ### Changed
 
 - Updated CI to current major versions of the official checkout/setup actions and disabled implicit package-manager cache setup for the Node wrapper checks.
+- README and Korean README now lead with the shorter GitHub `npx` install path for Codex and direct repo setup, with `pipx` documented as the persistent Python CLI path.
 
 ## [0.2.2] - 2026-06-27
 

@@ -73,6 +73,8 @@
         "Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.",
         "Release checks must include unit tests, plugin validation, skill validation, and npm wrapper validation.",
         "Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic.",
+        "Node/npx wrapper should be smoke-tested for first-time `setup` and packaged `install-codex`, not only `--help`.",
+        "Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`.",
         "Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.",
         "PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs."
       ],
@@ -84,6 +86,7 @@
         "README documents a command not covered by tests or validation.",
         "Packaged CLI can start projects but cannot install the Codex skill/plugin experience.",
         "npm package metadata drifts from Python/plugin versions or omits the bundled engine.",
+        "README leads with an `npx` command path that is not covered by packaged CLI smoke tests.",
         "Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.",
         "Registry publishing runs automatically before PyPI/npm trusted publishing has been configured."
       ],
@@ -107,6 +110,7 @@
       "paths": [
         "scripts/install_skill.py",
         "scripts/install_plugin.py",
+        "scripts/validate_packaged_cli.py",
         ".agents/plugins/marketplace.json",
         ".github/**",
         "pyproject.toml",
@@ -153,7 +157,8 @@
         "docs/RELEASE.md",
         "docs/RELEASE.ko.md",
         "scripts/install_skill.py",
-        "scripts/install_plugin.py"
+        "scripts/install_plugin.py",
+        "scripts/validate_packaged_cli.py"
       ],
       "tests": [
         "python -m unittest discover -s tests -v",
@@ -165,6 +170,7 @@
         "context-pack --help",
         "node bin/context-pack.js --help",
         "npm pack --dry-run",
+        "python scripts/validate_packaged_cli.py",
         "context-pack setup --repo <tmp> --quiet",
         "context-pack doctor --repo <tmp> --fix --quiet",
         "context-pack status --quiet",
@@ -290,7 +296,7 @@
     "tests": {
       "contracts": [
         "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help, dirty changed files, committed review diffs, and hook idempotency.",
+        "Coverage should include no-git repos, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.",
         "Version sync tests should include Python package, plugin manifest, engine, and npm package metadata."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
@@ -302,7 +308,7 @@
         "Installing shared agent docs twice duplicates marker blocks.",
         "Setup drifts from the init/install-agent-docs/hook commands it composes.",
         "Doctor is tested only as read-only validation after adding repair behavior.",
-        "Node wrapper tests are skipped or missing after changing package metadata."
+        "Node wrapper tests stop at `--help` after README starts recommending `npx` setup or install-codex paths."
       ],
       "keywords": [
         "test",

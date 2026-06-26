@@ -31,9 +31,11 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `docs/RELEASE.ko.md`
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
+  - `scripts/validate_packaged_cli.py`
 - Matches:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
+  - `scripts/validate_packaged_cli.py`
   - `.agents/plugins/marketplace.json`
   - `.github/**`
   - `pyproject.toml`
@@ -60,6 +62,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `context-pack --help`
   - `node bin/context-pack.js --help`
   - `npm pack --dry-run`
+  - `python scripts/validate_packaged_cli.py`
   - `context-pack setup --repo <tmp> --quiet`
   - `context-pack doctor --repo <tmp> --fix --quiet`
   - `context-pack status --quiet`
