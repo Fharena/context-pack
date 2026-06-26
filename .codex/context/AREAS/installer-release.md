@@ -5,9 +5,14 @@ status: active
 paths:
   - scripts/install_skill.py
   - scripts/install_plugin.py
+  - .agents/plugins/marketplace.json
+  - .github/**
+  - CHANGELOG.md
+  - CONTRIBUTING.md
   - README.md
   - README.ko.md
   - LICENSE
+  - SECURITY.md
 tests:
   - python -m unittest discover -s tests -v
   - plugin validation
@@ -28,18 +33,24 @@ stale_if:
 ## Start With
 - `README.md`
 - `README.ko.md`
+- `CHANGELOG.md`
 - `scripts/install_skill.py`
 - `scripts/install_plugin.py`
+- `.agents/plugins/marketplace.json`
+- `.github/workflows/ci.yml`
 
 ## Contracts
 - Installers must not overwrite existing installs unless `--force` is explicit.
 - The personal marketplace entry must include `policy.installation`, `policy.authentication`, and `category`.
 - Release checks include unit tests, plugin validation, and skill validation.
+- GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
 - README tells users to install a plugin without telling them the Codex add command.
 - Korean README drifts from the English install or release flow.
+- CI depends on local-only validator paths from one developer machine.
+- Marketplace JSON points at a plugin path that does not exist in the repo.
 - Installer overwrites a local user customization without `--force`.
 
 ## Expand Scope If

@@ -1,0 +1,20 @@
+{
+  "interface": {
+    "displayName": "Context Pack"
+  },
+  "name": "context-pack",
+  "plugins": [
+    {
+      "category": "Productivity",
+      "name": "context-pack",
+      "policy": {
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
+      },
+      "source": {
+        "path": "./plugins/context-pack",
+        "source": "local"
+      }
+    }
+  ]
+}

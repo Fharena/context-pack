@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Validate JSON files
+        shell: bash
+        run: |
+          python -m json.tool plugins/context-pack/.codex-plugin/plugin.json >/dev/null
+          python -m json.tool .codex/context/manifest.json >/dev/null
+          python -m json.tool .agents/plugins/marketplace.json >/dev/null
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v

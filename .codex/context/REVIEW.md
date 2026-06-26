@@ -22,9 +22,14 @@ For code review, map changed files to areas, then check the listed contracts, te
 - If changed files match:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
+  - `.agents/plugins/marketplace.json`
+  - `.github/**`
+  - `CHANGELOG.md`
+  - `CONTRIBUTING.md`
   - `README.md`
   - `README.ko.md`
   - `LICENSE`
+  - `SECURITY.md`
   - `.gitignore`
 - Inspect/run tests:
   - `python -m unittest discover -s tests -v`
@@ -41,8 +46,12 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `CHANGELOG.md`
+  - `CONTRIBUTING.md`
+  - `SECURITY.md`
   - `CLAUDE.md`
   - `codex.md`
+  - `.agents/plugins/marketplace.json`
   - `.codex/context/**`
 - Common failure modes:
   - Trusting old summaries after HEAD or dirty files changed.

@@ -65,21 +65,32 @@
       "paths": [
         "scripts/install_skill.py",
         "scripts/install_plugin.py",
+        ".agents/plugins/marketplace.json",
+        ".github/**",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "README.md",
         "README.ko.md",
         "LICENSE",
+        "SECURITY.md",
         ".gitignore"
       ],
       "stale_if_paths": [
         "plugins/context-pack/.codex-plugin/plugin.json",
         "plugins/context-pack/skills/context-pack/SKILL.md",
+        ".agents/plugins/marketplace.json",
+        ".github/**",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "scripts/**",
         "README.md",
-        "README.ko.md"
+        "README.ko.md",
+        "SECURITY.md"
       ],
       "start_files": [
         "README.md",
         "README.ko.md",
+        "CHANGELOG.md",
         "scripts/install_skill.py",
         "scripts/install_plugin.py"
       ],
@@ -113,8 +124,12 @@
         "README.md",
         "README.ko.md",
         "AGENTS.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
         "CLAUDE.md",
         "codex.md",
+        ".agents/plugins/marketplace.json",
         ".codex/context/**"
       ],
       "stale_if_paths": [
@@ -122,12 +137,16 @@
         ".codex/handoff/**",
         "AGENTS.md",
         "README.md",
-        "README.ko.md"
+        "README.ko.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md"
       ],
       "start_files": [
         "README.md",
         "README.ko.md",
         "AGENTS.md",
+        "CHANGELOG.md",
         ".codex/context/INDEX.md",
         ".codex/handoff/CURRENT.md"
       ],

@@ -78,6 +78,14 @@ python scripts/install_plugin.py
 codex plugin add context-pack@personal
 ```
 
+repo-scoped Codex marketplace도 포함되어 있습니다.
+
+```text
+.agents/plugins/marketplace.json
+```
+
+clone한 repo 자체를 Codex plugin marketplace로 추가하면, 이 repo 안의 plugin을 바로 발견할 수 있습니다.
+
 ## 기본 사용 흐름
 
 처음 한 번:
@@ -228,6 +236,8 @@ python -m unittest discover -s tests -v
 python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
 python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
 ```
+
+GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test를 실행합니다.
 
 ## 한 줄 포지셔닝
 

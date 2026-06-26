@@ -22,14 +22,20 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Start with:
   - `README.md`
   - `README.ko.md`
+  - `CHANGELOG.md`
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
 - Matches:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
+  - `.agents/plugins/marketplace.json`
+  - `.github/**`
+  - `CHANGELOG.md`
+  - `CONTRIBUTING.md`
   - `README.md`
   - `README.ko.md`
   - `LICENSE`
+  - `SECURITY.md`
   - `.gitignore`
 - Tests:
   - `python -m unittest discover -s tests -v`
@@ -43,14 +49,19 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `CHANGELOG.md`
   - `.codex/context/INDEX.md`
   - `.codex/handoff/CURRENT.md`
 - Matches:
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `CHANGELOG.md`
+  - `CONTRIBUTING.md`
+  - `SECURITY.md`
   - `CLAUDE.md`
   - `codex.md`
+  - `.agents/plugins/marketplace.json`
   - `.codex/context/**`
 
 ### skill-plugin

@@ -74,6 +74,14 @@ python scripts/install_plugin.py
 
 This copies `plugins/context-pack` into `~/plugins/context-pack` and updates the personal marketplace at `~/.agents/plugins/marketplace.json`.
 
+For repo-scoped marketplace installs, this repository also includes:
+
+```text
+.agents/plugins/marketplace.json
+```
+
+After cloning, add this repository as a Codex plugin marketplace if you want Codex to discover the bundled plugin from the repo.
+
 ## Agent UX
 
 Tell the agent:
@@ -143,3 +151,5 @@ Validate the plugin:
 python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
 python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
 ```
+
+GitHub Actions runs the stdlib unit tests on Windows and Ubuntu for Python 3.11 and 3.12.
