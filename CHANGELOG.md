@@ -2,6 +2,14 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [Unreleased]
+
+### Changed
+
+- Tightened the English README onboarding flow to match the Korean README positioning.
+- Made `pack --changed` visible in the feature tables.
+- Reframed source-run commands as contributor-oriented local install options.
+
 ## [0.1.10] - 2026-06-26
 
 ### Added

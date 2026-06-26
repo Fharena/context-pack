@@ -265,7 +265,7 @@ context-pack mark-reviewed runtime tests
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
-| `pack` | selected/related 영역으로 나뉜 compact 작업별 reading pack 생성 |
+| `pack` / `pack --changed` | selected/related 영역으로 나뉜 compact 작업별 또는 changed-files reading pack 생성 |
 | `review-pack` | dirty files 또는 `--base` 기준 compact 코드 리뷰 팩 생성 |
 | `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
 | `doctor` | context library가 정상인지 검증하고, `doctor --fix`로 누락된 setup 파일 복구 |

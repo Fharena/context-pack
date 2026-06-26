@@ -14,6 +14,7 @@
 <p align="center">
   <a href="README.ko.md">한국어</a> ·
   <a href="#install">Install</a> ·
+  <a href="#basic-usage-flow">Usage</a> ·
   <a href="#terminal-demo">Terminal Demo</a> ·
   <a href="#how-it-works">How It Works</a>
 </p>
@@ -123,6 +124,8 @@ Both commands preserve existing text outside the managed Context Pack block. Use
 
 ## Local Install Options
 
+These are mostly for contributors hacking on this repository. New users should start with the `pipx`, `npx`, or `install-codex` paths above.
+
 Install from a clone as a local Codex plugin:
 
 ```powershell
@@ -212,6 +215,48 @@ Mode: work
 
 The point is not to replace source code. The point is to make the agent start from the right shelf.
 
+## Basic Usage Flow
+
+For direct terminal use:
+
+Before starting work:
+
+```powershell
+context-pack start --task "the bug or feature you are about to work on"
+```
+
+Before reviewing code:
+
+```powershell
+context-pack start --review --base main
+```
+
+When you only want a pack for current dirty or changed files:
+
+```powershell
+context-pack pack --changed
+```
+
+After meaningful work:
+
+```powershell
+context-pack checkpoint --pack
+```
+
+To validate setup:
+
+```powershell
+context-pack doctor
+```
+
+After verifying source against stale area docs:
+
+```powershell
+context-pack mark-reviewed runtime tests
+```
+
+If you installed the Codex plugin, you usually do not type these commands yourself. Ask the agent to use `$context-pack`, and the repo rules installed by `setup` tell agents to run the right command at task, review, debugging, and checkpoint boundaries.
+
 ## What It Does
 
 | Feature | What it saves |
@@ -223,7 +268,7 @@ The point is not to replace source code. The point is to make the agent start fr
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
-| `pack` | Builds a compact task-specific reading pack with selected and related areas |
+| `pack` / `pack --changed` | Builds a compact task-specific or changed-files reading pack with selected and related areas |
 | `review-pack` | Builds a compact code-review pack from dirty files or `--base` |
 | `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
 | `doctor` | Checks whether the context library is usable; `doctor --fix` repairs missing setup files |
