@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           python -m json.tool plugins/context-pack/.codex-plugin/plugin.json >/dev/null
-          python -m json.tool .codex/context/manifest.json >/dev/null
+          python -m json.tool .context-pack/manifest.json >/dev/null
           python -m json.tool .agents/plugins/marketplace.json >/dev/null
           python -m json.tool package.json >/dev/null
 
