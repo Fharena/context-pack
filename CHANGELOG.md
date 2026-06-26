@@ -4,6 +4,8 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-06-27
+
 ### Added
 
 - Added a `Release` GitHub Actions workflow that builds GitHub Release assets from a tag, verifies Python/npm versions, uploads Python wheel/sdist and npm tarball assets, and can optionally publish to PyPI/npm through trusted publishing.
