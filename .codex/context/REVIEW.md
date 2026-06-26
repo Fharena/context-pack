@@ -19,6 +19,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Pack generation creates tracked generated files.
   - `start` hides setup errors or creates noisy tracked files on first run.
   - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
+  - `install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.
   - Scope-reduction numbers are missing or imply false precision about exact token savings.
 
 ### installer-release
@@ -49,6 +50,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `context-pack start --task "agent-first CLI UX" --quiet`
   - `context-pack start --review --base HEAD~1 --quiet`
   - `context-pack install-codex --target <tmp>/plugins/context-pack --marketplace <tmp>/.agents/plugins/marketplace.json --quiet`
+  - `context-pack install-agent-docs --repo <tmp> --quiet`
   - `context-pack checkpoint --pack --quiet does not dirty tracked files`
 - Common failure modes:
   - Installer replaces a user's existing skill/plugin without explicit --force.
@@ -62,6 +64,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `.cursor/rules/**`
   - `assets/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
@@ -90,6 +93,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Trigger description is too narrow and only catches session handoff use cases.
   - Skill guidance teaches lower-level commands before the one-command start path.
   - Install/update requests are routed to old local scripts instead of `install-codex`.
+  - Claude/Cursor guidance drifts from the generated AGENTS.md rule block.
 
 ### tests
 - Doc: `.codex/context/AREAS/tests.md`
@@ -101,6 +105,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Tests import the engine in a way that differs from script execution.
   - Git behavior is tested only with dirty files and misses committed review use cases.
   - Hook tests check creation but not idempotency or uninstall.
+  - Installing shared agent docs twice duplicates marker blocks.
 
 ## Escalate Review Scope When
 - Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.

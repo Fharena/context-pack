@@ -8,6 +8,7 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.
 - `start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - `install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.
+- `install-agent-docs` must preserve existing user text and only replace the managed marker block.
 - Generated packs should show scope-reduction metrics without pretending they replace source verification.
 
 ## installer-release
@@ -23,8 +24,8 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 ## skill-plugin
 - The Codex skill must tell agents to use deterministic script commands before semantic summarization.
 - Plugin manifest must remain validation-ready and avoid unsupported fields.
-- The skill should be implicitly invokable for context setup, install/update requests, start routing, review packs, checkpointing, and token-saving repo orientation.
+- The skill should be implicitly invokable for context setup, install/update requests, shared agent-doc rules, start routing, review packs, checkpointing, and token-saving repo orientation.
 
 ## tests
 - Tests should exercise real command flows through the engine main entrypoint.
-- Coverage should include no-git repos, first-run start, install-codex, dirty changed files, committed review diffs, and hook idempotency.
+- Coverage should include no-git repos, first-run start, install-codex, install-agent-docs, dirty changed files, committed review diffs, and hook idempotency.

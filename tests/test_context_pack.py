@@ -88,6 +88,55 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue((repo / "AGENTS.md").exists())
             self.assertFalse((repo / ".codex/packs/CONTEXT_PACK.md").exists())
 
+    def test_install_agent_docs_writes_common_agent_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(self.engine.main(["install-agent-docs", "--repo", str(repo), "--quiet"]), 0)
+
+            agents = (repo / "AGENTS.md").read_text(encoding="utf-8")
+            claude = (repo / "CLAUDE.md").read_text(encoding="utf-8")
+            cursor = (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8")
+            self.assertIn("context-pack start", agents)
+            self.assertIn("context-pack start", claude)
+            self.assertIn("alwaysApply: true", cursor)
+            self.assertIn("context-pack checkpoint --pack", cursor)
+            self.assertEqual(cursor.count("context-pack:rules:start"), 1)
+
+    def test_install_agent_docs_is_idempotent_and_preserves_existing_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "CLAUDE.md").write_text("\n# Existing guidance\n\nKeep this paragraph.\n", encoding="utf-8")
+
+            args = ["install-agent-docs", "--repo", str(repo), "--target", "claude", "--quiet"]
+            self.assertEqual(self.engine.main(args), 0)
+            self.assertEqual(self.engine.main(args), 0)
+
+            text = (repo / "CLAUDE.md").read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("\n# Existing guidance"))
+            self.assertIn("# Existing guidance", text)
+            self.assertIn("Keep this paragraph.", text)
+            self.assertIn("context-pack start", text)
+            self.assertEqual(text.count("context-pack:rules:start"), 1)
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / ".cursor/rules/context-pack.mdc").exists())
+
+    def test_install_agent_docs_can_target_cursor_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(
+                self.engine.main(["install-agent-docs", "--repo", str(repo), "--target", "cursor", "--quiet"]),
+                0,
+            )
+
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / "CLAUDE.md").exists())
+            cursor = (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8")
+            self.assertTrue(cursor.startswith("---\n"))
+            self.assertIn("description: Use Context Pack", cursor)
+            self.assertIn("alwaysApply: true", cursor)
+
     def test_start_with_task_generates_work_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

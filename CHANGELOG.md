@@ -2,6 +2,17 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.7] - 2026-06-26
+
+### Added
+
+- `context-pack install-agent-docs` to install shared Context Pack rules for `AGENTS.md`, `CLAUDE.md`, and Cursor project rules.
+- Tests proving shared agent-doc installation is targetable, idempotent, and preserves existing user text outside the managed marker block.
+
+### Changed
+
+- README, Korean README, Codex skill guidance, packaged skill synthesis, and plugin metadata now position Context Pack as a multi-agent repo-rule layer instead of a Codex-only workflow.
+
 ## [0.1.6] - 2026-06-26
 
 ### Added

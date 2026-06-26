@@ -18,6 +18,7 @@ stale_if:
 ## Read When
 - Changing `context_pack.py` commands or output.
 - Debugging start, install-codex, checkpoint, pack, review-pack, status, mark-reviewed, refresh, doctor, or git hook behavior.
+- Debugging shared agent-doc installation for `AGENTS.md`, `CLAUDE.md`, or Cursor rules.
 - Adding new deterministic operations that should not spend agent tokens.
 
 ## Start With
@@ -34,6 +35,7 @@ stale_if:
 - Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - `install-codex` should refuse unsafe overwrites and work from both source checkouts and packaged CLI installs.
+- `install-agent-docs` should preserve existing user text and only replace the managed marker block.
 - Hook install must preserve unrelated hook contents and be idempotent.
 - Generated packs live under `.codex/packs/` and stay ignored.
 
@@ -47,6 +49,7 @@ stale_if:
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
 - `start` hides setup errors or creates noisy tracked files on first run.
 - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
+- `install-agent-docs` duplicates marker blocks or strips existing `AGENTS.md`, `CLAUDE.md`, or Cursor rule content.
 - Scope-reduction numbers are missing or imply false precision about exact token savings.
 
 ## Expand Scope If

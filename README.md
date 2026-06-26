@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.6"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -95,6 +95,14 @@ context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
+
+For mixed-agent repos, install shared repo rules once:
+
+```bash
+context-pack install-agent-docs
+```
+
+This creates or updates the managed Context Pack block in `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`. Existing text outside the managed block is preserved. Use `--target claude`, `--target cursor`, or repeated `--target` flags when you only want specific agent docs.
 
 ## Local Install Options
 
@@ -193,6 +201,7 @@ The point is not to replace source code. The point is to make the agent start fr
 | --- | --- |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
+| `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
@@ -225,6 +234,8 @@ The more important path is implicit:
 - when a handoff should travel through git: run `checkpoint --publish --pack`
 - after verifying changed source against area docs: run `mark-reviewed <area>` to close stale warnings
 
+For teams or personal repos that move between Codex, Claude, and Cursor, run `context-pack install-agent-docs` once so each agent sees the same proactive rules at repo entry.
+
 After initialization, agents should read:
 
 1. `.codex/handoff/CURRENT.md`
@@ -247,6 +258,8 @@ Use those files. Context Pack is not a replacement.
 
 So the agent reads the rule file for behavior, then reads Context Pack for where to look first.
 
+`context-pack install-agent-docs` is the bridge between those layers: it writes the behavior rule into the agent-native files, while the generated packs and `.codex/context/` docs keep the dynamic routing state outside any single vendor memory system.
+
 ## How It Works
 
 Context Pack is not a vector database and not a generic memory bank. It is a version-aware routing layer.
@@ -255,6 +268,7 @@ The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
 - Codex plugin installation from an installed package or source checkout
+- shared repo-rule installation for `AGENTS.md`, `CLAUDE.md`, and Cursor project rules
 - one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
 - first-run inference for common source, test, docs, and automation areas
 - changed-file and task scoring for area matching
@@ -301,7 +315,7 @@ Automatic agent checkpoints write to `.codex/handoff/LOCAL.md` and `.codex/packs
 
 Optional safe git hooks. You do not need this to use Context Pack.
 
-The primary automation model is agent behavior: the installed skill and repo `AGENTS.md` tell agents to use Context Pack proactively at task, review, debugging, and handoff boundaries. `checkpoint` writes ignored local state by default, so agents can use it at the end of a work unit without dirtying tracked handoff docs. Git hooks are only a mechanical backup for git boundaries such as checkout, merge, and commit.
+The primary automation model is agent behavior: the installed skill plus repo `AGENTS.md`, `CLAUDE.md`, or Cursor rules tell agents to use Context Pack proactively at task, review, debugging, and handoff boundaries. `checkpoint` writes ignored local state by default, so agents can use it at the end of a work unit without dirtying tracked handoff docs. Git hooks are only a mechanical backup for git boundaries such as checkout, merge, and commit.
 
 ```powershell
 context-pack install-git-hooks --mode safe
@@ -346,4 +360,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.6](https://github.com/Fharena/context-pack/releases/tag/v0.1.6).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.7](https://github.com/Fharena/context-pack/releases/tag/v0.1.7).

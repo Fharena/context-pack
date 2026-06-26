@@ -12,6 +12,7 @@ stale_if:
   - review-pack behavior changes
   - start behavior changes
   - install-codex behavior changes
+  - install-agent-docs behavior changes
   - pack format changes
 ---
 
@@ -27,13 +28,14 @@ stale_if:
 
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
-- Coverage includes no-git initialization, first-run start, install-codex, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
+- Coverage includes no-git initialization, first-run start, install-codex, install-agent-docs, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
 - Git tests configure user identity locally in temp repos.
 
 ## Common Failure Modes
 - Importing the engine differently than runtime execution.
 - Forgetting committed branch review behavior and testing only dirty files.
 - Installing hooks twice and duplicating marker blocks.
+- Installing shared agent docs twice and duplicating marker blocks.
 
 ## Expand Scope If
 - Adding a command.

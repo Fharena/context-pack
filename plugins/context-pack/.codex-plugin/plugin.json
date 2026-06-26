@@ -1,6 +1,6 @@
 {
   "name": "context-pack",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Repo-local context packs and handoff checkpoints for coding agents.",
   "author": {
     "name": "Context Pack"
@@ -11,13 +11,15 @@
     "handoff",
     "code-review",
     "agents",
-    "codex"
+    "codex",
+    "claude",
+    "cursor"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Context Pack",
     "shortDescription": "Start agents from focused repo context.",
-    "longDescription": "Context Pack keeps a lightweight repo-local context library, provides a one-command start flow, writes ignored local checkpoints by default, and generates task or review packs so coding agents can begin from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
+    "longDescription": "Context Pack keeps a lightweight repo-local context library, provides a one-command start flow, installs shared repo rules for Codex, Claude, and Cursor, writes ignored local checkpoints by default, and generates task or review packs so coding agents can begin from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [

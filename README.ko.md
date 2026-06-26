@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.6"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -103,6 +103,14 @@ context-pack start
 context-pack start --task "fix login timeout"
 context-pack start --review --base main
 ```
+
+Codex, Claude, Cursor를 섞어 쓰는 repo라면 공통 에이전트 규칙을 한 번 설치할 수 있습니다.
+
+```bash
+context-pack install-agent-docs
+```
+
+이 명령은 `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 안에 Context Pack 관리 블록을 만들거나 갱신합니다. 관리 블록 밖의 기존 문서는 보존합니다. 특정 파일만 원하면 `--target claude`, `--target cursor`처럼 지정하거나 `--target`을 여러 번 쓰면 됩니다.
 
 ## 로컬 설치 옵션
 
@@ -235,6 +243,7 @@ context-pack mark-reviewed runtime tests
 | --- | --- |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
+| `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
@@ -267,6 +276,8 @@ Checkpoint this work for the next session.
 - handoff 자체를 git으로 공유해야 할 때: `checkpoint --publish --pack`
 - source 확인 후: `mark-reviewed <area>`로 stale warning 닫기
 
+Codex, Claude, Cursor 사이를 오가는 개인/팀 repo라면 `context-pack install-agent-docs`를 한 번 실행해 각 에이전트가 같은 proactive rule을 보게 만드는 것이 좋습니다.
+
 에이전트는 보통 다음 순서로 읽으면 됩니다.
 
 1. `.codex/handoff/CURRENT.md`
@@ -289,6 +300,8 @@ Checkpoint this work for the next session.
 
 즉 에이전트는 rule file에서 “어떻게 행동할지”를 읽고, Context Pack에서 “어디부터 볼지”를 읽습니다.
 
+`context-pack install-agent-docs`는 이 두 레이어를 연결합니다. 에이전트가 원래 읽는 파일에 행동 규칙을 넣고, `.codex/context/`와 generated pack은 특정 벤더 memory에 묶이지 않는 동적 routing state로 둡니다.
+
 ## 작동 방식
 
 Context Pack은 vector DB나 일반적인 memory bank가 아닙니다. git 상태를 기준으로 stale 여부를 의심하고, 지금 작업에 필요한 파일과 문서만 고르는 라우팅 레이어입니다.
@@ -299,6 +312,7 @@ Python script가 맡는 일:
 - dirty file 목록
 - diff hash
 - 설치된 package나 source checkout에서 Codex plugin 설치
+- `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 repo rule 설치
 - 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
 - changed-file과 task 기반 area scoring
@@ -351,7 +365,7 @@ AI가 시간이 지나며 개선할 수 있는 일:
 
 선택 기능입니다. Context Pack을 쓰기 위해 꼭 필요하지는 않습니다.
 
-기본 자동화 모델은 에이전트 행동입니다. skill과 repo `AGENTS.md`가 에이전트에게 작업 시작, 리뷰, 디버깅, handoff 경계에서 Context Pack을 스스로 쓰라고 알려줍니다. `checkpoint`는 기본적으로 ignored local state에 쓰기 때문에 에이전트가 작업단위 끝마다 실행해도 tracked handoff 문서를 더럽히지 않습니다. git hook은 checkout, merge, commit 같은 git 경계에서만 작동하는 보조 안전망입니다.
+기본 자동화 모델은 에이전트 행동입니다. skill과 repo `AGENTS.md`, `CLAUDE.md`, Cursor rules가 에이전트에게 작업 시작, 리뷰, 디버깅, handoff 경계에서 Context Pack을 스스로 쓰라고 알려줍니다. `checkpoint`는 기본적으로 ignored local state에 쓰기 때문에 에이전트가 작업단위 끝마다 실행해도 tracked handoff 문서를 더럽히지 않습니다. git hook은 checkout, merge, commit 같은 git 경계에서만 작동하는 보조 안전망입니다.
 
 repo-local git hook을 설치하면 git 작업 경계에서 checkpoint를 조금 더 자동화할 수 있습니다.
 
@@ -391,4 +405,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.6](https://github.com/Fharena/context-pack/releases/tag/v0.1.6).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.7](https://github.com/Fharena/context-pack/releases/tag/v0.1.7).

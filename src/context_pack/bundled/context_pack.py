@@ -35,6 +35,12 @@ DECISIONS_PATH = HANDOFF_DIR / "DECISIONS.md"
 LOCAL_PATH = HANDOFF_DIR / "LOCAL.md"
 PACK_PATH = PACKS_DIR / "CONTEXT_PACK.md"
 AGENTS_PATH = Path("AGENTS.md")
+AGENT_DOC_TARGETS = {
+    "agents": Path("AGENTS.md"),
+    "claude": Path("CLAUDE.md"),
+    "cursor": Path(".cursor/rules/context-pack.mdc"),
+}
+DEFAULT_AGENT_DOC_TARGETS = ("agents", "claude", "cursor")
 
 FINGERPRINT_START = "<!-- context-pack:fingerprint:start -->"
 FINGERPRINT_END = "<!-- context-pack:fingerprint:end -->"
@@ -42,7 +48,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.1.6"
+CONTEXT_PACK_VERSION = "0.1.7"
 
 
 @dataclasses.dataclass
@@ -595,6 +601,21 @@ def agent_rules() -> str:
 """
 
 
+def cursor_rule_frontmatter() -> str:
+    return """\
+---
+description: Use Context Pack before broad repo reading, reviews, debugging, or handoff.
+alwaysApply: true
+---
+"""
+
+
+def agent_rules_document(kind: str) -> str:
+    if kind == "cursor":
+        return cursor_rule_frontmatter() + "\n" + agent_rules()
+    return agent_rules()
+
+
 def agent_rules_body() -> str:
     return """\
 ## Context Pack
@@ -737,6 +758,49 @@ def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md") -> None:
             text += "\n"
         text += "\n" + rules
     write_text_lf(path, text.lstrip())
+
+
+def append_agent_rules_for_kind(repo: Path, kind: str) -> Path:
+    rel_path = AGENT_DOC_TARGETS[kind]
+    path = repo / rel_path
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    if AGENT_RULES_START in text and AGENT_RULES_END in text:
+        text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body())
+    elif not text:
+        text = agent_rules_document(kind)
+    else:
+        if not text.endswith("\n"):
+            text += "\n"
+        text += "\n" + agent_rules()
+    write_text_lf(path, text)
+    return rel_path
+
+
+def resolve_agent_doc_targets(targets: list[str] | None) -> list[str]:
+    requested = targets or ["all"]
+    resolved: list[str] = []
+    for item in requested:
+        if item == "all":
+            for default in DEFAULT_AGENT_DOC_TARGETS:
+                if default not in resolved:
+                    resolved.append(default)
+            continue
+        if item not in AGENT_DOC_TARGETS:
+            raise SystemExit(f"Unknown agent doc target: {item}")
+        if item not in resolved:
+            resolved.append(item)
+    return resolved
+
+
+def cmd_install_agent_docs(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    written = [append_agent_rules_for_kind(repo, kind) for kind in resolve_agent_doc_targets(args.target)]
+    if not args.quiet:
+        print(f"Installed Context Pack agent docs in {repo}")
+        for rel_path in written:
+            print(f"- {rel_path}")
+    return 0
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -1688,7 +1752,7 @@ def packaged_skill_doc() -> str:
     return """\
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
@@ -1723,6 +1787,16 @@ Read `.codex/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing 
 
 When reporting back, include selected areas and scope-reduction numbers when present.
 
+## Install Shared Agent Docs
+
+When the user wants Context Pack to work across Codex, Claude, Cursor, or mixed-agent repos, run:
+
+```bash
+python scripts/context_pack.py install-agent-docs
+```
+
+This updates `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc` with a managed marker block. Use `--target agents`, `--target claude`, or `--target cursor` for a narrower install.
+
 ## Checkpoint Work
 
 After meaningful edits, tests, review notes, or handoff work, run:
@@ -1739,6 +1813,7 @@ This writes ignored local state by default. Use `checkpoint --publish --pack` on
 - `python scripts/context_pack.py mark-reviewed <area-id>`
 - `python scripts/context_pack.py refresh`
 - `python scripts/context_pack.py doctor`
+- `python scripts/context_pack.py install-agent-docs`
 - `python scripts/context_pack.py install-git-hooks --mode safe`
 """
 
@@ -2012,6 +2087,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-agent-doc", action="store_true", help="Do not update AGENTS.md")
     p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("install-agent-docs", help="Install Context Pack rules for Codex, Claude, Cursor, and other agents")
+    add_common(p)
+    p.add_argument(
+        "--target",
+        action="append",
+        choices=["all", *AGENT_DOC_TARGETS.keys()],
+        help="Agent docs to update: all, agents, claude, or cursor. Repeat to select multiple targets.",
+    )
+    p.set_defaults(func=cmd_install_agent_docs)
 
     p = sub.add_parser("checkpoint", help="Write ignored local checkpoint state, or publish tracked handoff files")
     add_common(p)

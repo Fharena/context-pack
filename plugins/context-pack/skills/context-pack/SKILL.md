@@ -1,6 +1,6 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
@@ -79,6 +79,16 @@ python scripts/context_pack.py install-codex --force
 ```
 
 Only add `--activate` when the user wants the command to run `codex plugin add context-pack@personal` too.
+
+### Install Shared Agent Docs
+
+Use when the user wants Context Pack to work across Codex, Claude, Cursor, or mixed-agent repos.
+
+```bash
+python scripts/context_pack.py install-agent-docs
+```
+
+This creates or updates the managed Context Pack block in `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc` while preserving user text outside the marker block. Use `--target agents`, `--target claude`, or `--target cursor` for a narrower install.
 
 ### Fast Path
 
