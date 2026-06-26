@@ -482,6 +482,9 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- Repo files considered:", pack)
             self.assertIn("- Primary areas selected:", pack)
             self.assertIn("- Read First entries:", pack)
+            self.assertIn("- Approx Read First text:", pack)
+            self.assertIn("- Approx repo text:", pack)
+            self.assertIn("- Token estimates use chars/4", pack)
             self.assertIn("- cli", pack)
 
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:

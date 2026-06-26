@@ -47,7 +47,7 @@ Report back in user terms:
 
 - what pack/checkpoint was created
 - selected areas
-- scope-reduction numbers when present
+- scope-reduction and approximate text-budget numbers when present
 - read-first files
 - stale warnings, if any
 - what you will inspect next

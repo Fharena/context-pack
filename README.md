@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -204,6 +204,9 @@ Mode: work
 - Primary areas selected: 3 of 5
 - Read First entries: 5 (~6% of repo files)
 - Changed files in scope: 0
+- Approx Read First text: ~8.2k tokens from 5 file(s) (~14% of repo text)
+- Approx repo text: ~58.7k tokens from 77 text file(s)
+- Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.
 
 ## Selected Areas
 - installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
@@ -391,7 +394,7 @@ The script handles deterministic work:
 - first-run inference for common source, test, docs, and automation areas
 - changed-file path matching and task-keyword scoring for area matching
 - compact context pack assembly with primary and related areas
-- scope-reduction metrics that show how much reading is avoided
+- scope-reduction and approximate text-budget metrics that show how much reading is avoided
 - Read First / Read Later splitting
 - contract and failure-mode deduplication
 - stale warnings
@@ -486,4 +489,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.8](https://github.com/Fharena/context-pack/releases/tag/v0.2.8).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.9](https://github.com/Fharena/context-pack/releases/tag/v0.2.9).

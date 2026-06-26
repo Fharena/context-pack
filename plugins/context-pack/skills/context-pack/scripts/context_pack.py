@@ -62,7 +62,15 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.8"
+CONTEXT_PACK_VERSION = "0.2.9"
+TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
+
+
+@dataclasses.dataclass
+class TextBudget:
+    chars: int = 0
+    files: int = 0
+    skipped: int = 0
 
 
 @dataclasses.dataclass
@@ -1597,6 +1605,67 @@ def repo_files(repo: Path) -> list[str]:
     return sorted(out)
 
 
+def readable_text_chars(path: Path) -> int | None:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if not data or len(data) > TEXT_BUDGET_MAX_FILE_BYTES or b"\0" in data:
+        return None
+    try:
+        return len(data.decode("utf-8"))
+    except UnicodeDecodeError:
+        return None
+
+
+def text_budget_for_files(repo: Path, files: Iterable[str]) -> TextBudget:
+    budget = TextBudget()
+    for rel in unique(files):
+        chars = readable_text_chars(repo / rel)
+        if chars is None:
+            budget.skipped += 1
+            continue
+        budget.files += 1
+        budget.chars += chars
+    return budget
+
+
+def files_for_read_first_entries(repo: Path, entries: Iterable[str], repo_file_list: list[str]) -> list[str]:
+    repo_file_set = set(repo_file_list)
+    out: list[str] = []
+    for raw in entries:
+        entry = normalize_path(raw)
+        if not entry:
+            continue
+        path = repo / entry
+        if any(ch in entry for ch in "*?["):
+            try:
+                matches = [rel_to_repo(item, repo) for item in repo.glob(entry) if item.is_file()]
+            except ValueError:
+                matches = []
+            out.extend(item for item in matches if item in repo_file_set)
+            continue
+        if path.is_file() and entry in repo_file_set:
+            out.append(entry)
+            continue
+        if path.is_dir():
+            prefix = entry.rstrip("/") + "/"
+            out.extend(item for item in repo_file_list if item.startswith(prefix))
+    return unique(out)
+
+
+def estimated_tokens(chars: int) -> int:
+    if chars <= 0:
+        return 0
+    return max(1, (chars + 3) // 4)
+
+
+def format_token_count(tokens: int) -> str:
+    if tokens >= 1000:
+        return f"{tokens / 1000:.1f}k"
+    return str(tokens)
+
+
 def percent(part: int, whole: int) -> int:
     if whole <= 0:
         return 0
@@ -1720,10 +1789,17 @@ def render_pack(
     read_later = unique(read_first_unique[max_read_first:] + read_later)
     contracts_visible, contracts_hidden = split_limited(contracts, max_contracts)
     failures_visible, failures_hidden = split_limited(failures, max_failure_modes)
-    repo_file_total = len(repo_files(repo))
+    repo_file_list = repo_files(repo)
+    repo_file_total = len(repo_file_list)
     read_first_total = len(read_first_visible)
     area_total = len(areas)
     read_first_ratio = percent(read_first_total, repo_file_total) if repo_file_total else 0
+    repo_budget = text_budget_for_files(repo, repo_file_list)
+    read_first_files = files_for_read_first_entries(repo, read_first_visible, repo_file_list)
+    read_first_budget = text_budget_for_files(repo, read_first_files)
+    repo_tokens = estimated_tokens(repo_budget.chars)
+    read_first_tokens = estimated_tokens(read_first_budget.chars)
+    budget_ratio = round((read_first_tokens / repo_tokens) * 100) if repo_tokens and read_first_tokens else 0
 
     def path_line(item: str) -> str:
         suffix = "" if item and (repo / item).exists() else " (missing)"
@@ -1749,6 +1825,13 @@ def render_pack(
         f"- Primary areas selected: {len(selections)} of {area_total}",
         f"- Read First entries: {read_first_total}" + (f" (~{read_first_ratio}% of repo files)" if repo_file_total else ""),
         f"- Changed files in scope: {len(changed)}",
+        (
+            f"- Approx Read First text: ~{format_token_count(read_first_tokens)} tokens "
+            f"from {read_first_budget.files} file(s)"
+            + (f" (~{budget_ratio}% of repo text)" if repo_tokens else "")
+        ),
+        f"- Approx repo text: ~{format_token_count(repo_tokens)} tokens from {repo_budget.files} text file(s)",
+        "- Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.",
         "",
         "## Selected Areas",
     ]
@@ -2403,7 +2486,7 @@ python scripts/context_pack.py start
 
 Read `.context-pack/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
 
-When reporting back, include selected areas and scope-reduction numbers when present.
+When reporting back, include selected areas plus scope-reduction and approximate text-budget numbers when present.
 
 ## Install Shared Agent Docs
 

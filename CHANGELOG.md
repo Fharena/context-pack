@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-06-27
+
+### Added
+
+- Generated context packs now include approximate Read First and repo text-budget estimates so users can see the initial context-size reduction, with an explicit chars/4 caveat.
+
 ## [0.2.8] - 2026-06-27
 
 ### Changed

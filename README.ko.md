@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.9"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -209,6 +209,9 @@ Mode: work
 - Primary areas selected: 3 of 5
 - Read First entries: 5 (~6% of repo files)
 - Changed files in scope: 0
+- Approx Read First text: ~8.2k tokens from 5 file(s) (~14% of repo text)
+- Approx repo text: ~58.7k tokens from 77 text file(s)
+- Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.
 
 ## Selected Areas
 - installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
@@ -390,7 +393,7 @@ Python script가 맡는 일:
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
 - changed-file path matching과 task keyword 기반 area scoring
 - selected/related 영역을 나누는 compact pack 생성
-- 얼마나 읽기를 줄였는지 보여주는 scope-reduction metrics
+- 얼마나 읽기를 줄였는지 보여주는 scope-reduction과 대략적인 text-budget metrics
 - Read First / Read Later 분리
 - contract와 failure mode 중복 제거
 - stale warning
@@ -486,4 +489,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.8](https://github.com/Fharena/context-pack/releases/tag/v0.2.8).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.9](https://github.com/Fharena/context-pack/releases/tag/v0.2.9).
