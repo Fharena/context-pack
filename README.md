@@ -325,6 +325,39 @@ So the agent reads the rule file for behavior, then reads Context Pack for where
 
 `context-pack install-agent-docs` is the bridge between those layers: it writes the behavior rule into the agent-native files, while the generated packs and `.codex/context/` docs keep the dynamic routing state outside any single vendor memory system.
 
+## How Context Pack Is Different
+
+Context Pack overlaps with a few familiar ideas, but it is narrower on purpose:
+
+| Alternative | Good at | Context Pack adds |
+| --- | --- | --- |
+| `AGENTS.md`, `CLAUDE.md`, editor rules | Durable behavior instructions | Version-aware routing: branch, HEAD, dirty files, stale area docs, and task/review packs |
+| Vendor memory or project knowledge | Agent-specific recall | Markdown context that travels with git across Codex, Claude, Cursor, cloud worktrees, and local machines |
+| RAG or vector databases | Semantic retrieval across large corpora | Deterministic, reviewable routing with no service, index server, embeddings, or hidden ranking state |
+| Context dumpers | Fast bundle of files | Area ownership, Read First / Read Later ordering, contracts, failure modes, and stale warnings |
+
+The bet is not "more memory." The bet is that most agent work starts better when the repo tells the agent where to look first, what may be stale, and which checks matter.
+
+## Area Selection And Monorepos
+
+Context Pack's first pass is intentionally simple and inspectable:
+
+- `setup` / `init` infer initial areas from common source, test, docs, and automation paths.
+- Changed files are matched against area path globs.
+- Task text can add keyword score to areas.
+- Packs split context into selected areas, related areas, Read First, and Read Later.
+- Stale warnings compare reviewed area docs with the current git state.
+
+That makes the tool predictable, but not magical. For a complex monorepo, the best results come from editing `.codex/context/manifest.json` and `.codex/context/AREAS/*.md` so area boundaries match how the project is really owned. If an area is too broad, split it. If a generated pack is noisy, lower `--max-areas` / `--max-read-first`, tighten path globs, and mark verified areas with `mark-reviewed`.
+
+The current scoring is a routing heuristic, not a semantic understanding engine. That is deliberate: every selected file and warning should be explainable in plain Markdown before an agent spends tokens on source code.
+
+## Current Scope
+
+Context Pack is a small, repo-local tool, not a hosted platform. It is best suited today for small to medium projects, agent-heavy personal repos, open-source repos that want AI contributor orientation, and teams moving work across local and cloud agent sessions.
+
+The public install paths currently run from GitHub through `pipx` or `npx`; registry publishing can come later once usage patterns settle. CI covers Windows and Ubuntu on Python 3.11/3.12, plus package, Codex plugin, Node wrapper, and npm tarball smoke paths.
+
 ## How It Works
 
 Context Pack is not a vector database and not a generic memory bank. It is a version-aware routing layer.
@@ -338,7 +371,7 @@ The script handles deterministic work:
 - shared repo-rule installation for `AGENTS.md`, `CLAUDE.md`, and Cursor project rules
 - one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
 - first-run inference for common source, test, docs, and automation areas
-- changed-file and task scoring for area matching
+- changed-file path matching and task-keyword scoring for area matching
 - compact context pack assembly with primary and related areas
 - scope-reduction metrics that show how much reading is avoided
 - Read First / Read Later splitting

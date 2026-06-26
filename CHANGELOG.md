@@ -9,6 +9,9 @@ All notable changes to Context Pack will be documented here.
 - Tightened the English README onboarding flow to match the Korean README positioning.
 - Made `pack --changed` visible in the feature tables.
 - Reframed source-run commands as contributor-oriented local install options.
+- Added README positioning against repo rules, vendor memory, RAG, and context dumpers.
+- Documented area selection heuristics, monorepo tuning, and current scoring limits.
+- Clarified the current project scope, GitHub-first install paths, and CI coverage.
 
 ## [0.1.10] - 2026-06-26
 

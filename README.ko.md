@@ -322,6 +322,39 @@ Codex, Claude, Cursor 사이를 오가는 개인/팀 repo라면 `context-pack in
 
 `context-pack install-agent-docs`는 이 두 레이어를 연결합니다. 에이전트가 원래 읽는 파일에 행동 규칙을 넣고, `.codex/context/`와 generated pack은 특정 벤더 memory에 묶이지 않는 동적 routing state로 둡니다.
 
+## Context Pack은 무엇이 다른가?
+
+Context Pack은 몇 가지 익숙한 아이디어와 겹치지만, 일부러 범위를 좁게 잡습니다.
+
+| 대안 | 잘하는 것 | Context Pack이 더하는 것 |
+| --- | --- | --- |
+| `AGENTS.md`, `CLAUDE.md`, editor rules | 오래 유지되는 행동 지침 | branch, HEAD, dirty files, stale area docs, task/review pack을 기준으로 한 version-aware routing |
+| vendor memory / project knowledge | 특정 에이전트 안의 recall | Codex, Claude, Cursor, cloud worktree, 로컬 머신 사이를 git과 함께 이동하는 Markdown context |
+| RAG / vector DB | 큰 corpus의 semantic retrieval | 서비스, index server, embedding, 숨은 ranking state 없이 검토 가능한 deterministic routing |
+| context dumper | 파일 묶음을 빠르게 전달 | area ownership, Read First / Read Later, contracts, failure modes, stale warning |
+
+핵심은 "더 많은 memory"가 아닙니다. repo가 에이전트에게 어디부터 봐야 하는지, 어떤 문서가 stale일 수 있는지, 어떤 체크가 중요한지를 먼저 알려주는 것입니다.
+
+## Area 선택과 모노레포
+
+Context Pack의 첫 번째 선택 로직은 일부러 단순하고 확인 가능하게 둡니다.
+
+- `setup` / `init`은 일반적인 source, test, docs, automation 경로를 보고 초기 area를 추론합니다.
+- 변경 파일은 area path glob과 매칭됩니다.
+- 작업 설명의 keyword가 area score를 올릴 수 있습니다.
+- pack은 selected areas, related areas, Read First, Read Later로 context를 나눕니다.
+- stale warning은 area doc이 검토된 git 상태와 현재 git 상태를 비교합니다.
+
+그래서 예측 가능하지만 마법은 아닙니다. 복잡한 모노레포에서는 `.codex/context/manifest.json`과 `.codex/context/AREAS/*.md`를 실제 ownership 경계에 맞게 손보는 편이 좋습니다. area가 너무 넓으면 쪼개고, pack이 시끄러우면 `--max-areas` / `--max-read-first`를 낮추거나 path glob을 조정하고, source 확인 후 `mark-reviewed`로 stale warning을 닫습니다.
+
+현재 scoring은 semantic understanding engine이 아니라 routing heuristic입니다. 이건 의도입니다. 에이전트가 소스 코드를 읽기 전에, 어떤 파일과 경고가 왜 선택됐는지 Markdown만 봐도 설명 가능해야 합니다.
+
+## 현재 범위
+
+Context Pack은 hosted platform이 아니라 작은 repo-local 도구입니다. 지금은 small-to-medium 프로젝트, 에이전트 사용이 많은 개인 repo, AI contributor가 들어오는 오픈소스 repo, 로컬/클라우드 에이전트 세션을 오가는 팀에 가장 잘 맞습니다.
+
+공개 설치 경로는 현재 GitHub를 통한 `pipx` 또는 `npx` 실행입니다. registry 배포는 실제 사용 패턴이 더 쌓인 뒤 이어갈 수 있습니다. CI는 Windows/Ubuntu, Python 3.11/3.12, package, Codex plugin, Node wrapper, npm tarball smoke path를 확인합니다.
+
 ## 작동 방식
 
 Context Pack은 vector DB나 일반적인 memory bank가 아닙니다. git 상태를 기준으로 stale 여부를 의심하고, 지금 작업에 필요한 파일과 문서만 고르는 라우팅 레이어입니다.
@@ -337,7 +370,7 @@ Python script가 맡는 일:
 - `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 repo rule 설치
 - 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
-- changed-file과 task 기반 area scoring
+- changed-file path matching과 task keyword 기반 area scoring
 - selected/related 영역을 나누는 compact pack 생성
 - 얼마나 읽기를 줄였는지 보여주는 scope-reduction metrics
 - Read First / Read Later 분리
