@@ -1,0 +1,207 @@
+{
+  "areas": {
+    "engine": {
+      "contracts": [
+        "The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.",
+        "Generated packs must stay under .codex/packs/ and remain ignored by git.",
+        "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty."
+      ],
+      "description": "Deterministic context-pack engine: git snapshot, area matching, pack generation, doctor, and git hooks.",
+      "doc": ".codex/context/AREAS/engine.md",
+      "failure_modes": [
+        "Dirty files are matched only at directory level, missing the real changed file.",
+        "Review packs ignore committed branch changes when no dirty files exist.",
+        "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
+        "Pack generation creates tracked generated files."
+      ],
+      "keywords": [
+        "engine",
+        "checkpoint",
+        "pack",
+        "review",
+        "git",
+        "hook",
+        "doctor",
+        "manifest"
+      ],
+      "paths": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "plugins/context-pack/scripts/context_pack.py"
+      ],
+      "stale_if_paths": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "plugins/context-pack/scripts/context_pack.py",
+        "tests/test_context_pack.py"
+      ],
+      "start_files": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "tests/test_context_pack.py"
+      ],
+      "tests": [
+        "tests/test_context_pack.py"
+      ]
+    },
+    "installer-release": {
+      "contracts": [
+        "Install scripts must not overwrite existing local skill/plugin installs unless --force is explicit.",
+        "Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.",
+        "Release checks must include unit tests, plugin validation, and skill validation."
+      ],
+      "description": "Install and release workflow for local skill/plugin distribution.",
+      "doc": ".codex/context/AREAS/installer-release.md",
+      "failure_modes": [
+        "Installer replaces a user's existing skill/plugin without explicit --force.",
+        "Marketplace entry points to the wrong relative plugin path.",
+        "README documents a command not covered by tests or validation."
+      ],
+      "keywords": [
+        "install",
+        "release",
+        "marketplace",
+        "skill",
+        "plugin",
+        "deploy"
+      ],
+      "paths": [
+        "scripts/install_skill.py",
+        "scripts/install_plugin.py",
+        "README.md",
+        "LICENSE",
+        ".gitignore"
+      ],
+      "stale_if_paths": [
+        "plugins/context-pack/.codex-plugin/plugin.json",
+        "plugins/context-pack/skills/context-pack/SKILL.md",
+        "scripts/**",
+        "README.md"
+      ],
+      "start_files": [
+        "README.md",
+        "scripts/install_skill.py",
+        "scripts/install_plugin.py"
+      ],
+      "tests": [
+        "python -m unittest discover -s tests -v",
+        "python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack",
+        "python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack"
+      ]
+    },
+    "overview": {
+      "contracts": [
+        "Treat context docs as routing hints, not ground truth.",
+        "Verify source code when the context fingerprint is stale."
+      ],
+      "description": "Default project orientation and safe starting point.",
+      "doc": ".codex/context/AREAS/overview.md",
+      "failure_modes": [
+        "Trusting old summaries after HEAD or dirty files changed.",
+        "Reading logs or generated packs before current source files.",
+        "Editing the wrong checkout or copied workspace."
+      ],
+      "keywords": [
+        "overview",
+        "onboarding",
+        "new session",
+        "architecture",
+        "context",
+        "review"
+      ],
+      "paths": [
+        "README.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "codex.md",
+        ".codex/context/**"
+      ],
+      "stale_if_paths": [
+        ".codex/context/**",
+        ".codex/handoff/**",
+        "AGENTS.md",
+        "README.md"
+      ],
+      "start_files": [
+        "README.md",
+        "AGENTS.md",
+        ".codex/context/INDEX.md",
+        ".codex/handoff/CURRENT.md"
+      ],
+      "tests": []
+    },
+    "skill-plugin": {
+      "contracts": [
+        "The Codex skill must tell agents to use deterministic script commands before semantic summarization.",
+        "Plugin manifest must remain validation-ready and avoid unsupported fields.",
+        "The skill should be implicitly invokable for context setup, review packs, checkpointing, and token-saving repo orientation."
+      ],
+      "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
+      "doc": ".codex/context/AREAS/skill-plugin.md",
+      "failure_modes": [
+        "Skill docs describe behavior that the script cannot perform.",
+        "Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.",
+        "Trigger description is too narrow and only catches session handoff use cases."
+      ],
+      "keywords": [
+        "skill",
+        "plugin",
+        "codex",
+        "agent",
+        "instructions",
+        "metadata"
+      ],
+      "paths": [
+        "plugins/context-pack/.codex-plugin/plugin.json",
+        "plugins/context-pack/skills/context-pack/SKILL.md",
+        "plugins/context-pack/skills/context-pack/agents/openai.yaml"
+      ],
+      "stale_if_paths": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "plugins/context-pack/.codex-plugin/plugin.json",
+        "plugins/context-pack/skills/context-pack/SKILL.md"
+      ],
+      "start_files": [
+        "plugins/context-pack/skills/context-pack/SKILL.md",
+        "plugins/context-pack/.codex-plugin/plugin.json",
+        "plugins/context-pack/skills/context-pack/agents/openai.yaml"
+      ],
+      "tests": [
+        "python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack",
+        "python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack"
+      ]
+    },
+    "tests": {
+      "contracts": [
+        "Tests should exercise real command flows through the engine main entrypoint.",
+        "Coverage should include no-git repos, dirty changed files, committed review diffs, and hook idempotency."
+      ],
+      "description": "Unit tests for the deterministic engine and release-critical flows.",
+      "doc": ".codex/context/AREAS/tests.md",
+      "failure_modes": [
+        "Tests import the engine in a way that differs from script execution.",
+        "Git behavior is tested only with dirty files and misses committed review use cases.",
+        "Hook tests check creation but not idempotency or uninstall."
+      ],
+      "keywords": [
+        "test",
+        "unittest",
+        "validation",
+        "git",
+        "review-pack"
+      ],
+      "paths": [
+        "tests/test_context_pack.py"
+      ],
+      "stale_if_paths": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "tests/test_context_pack.py"
+      ],
+      "start_files": [
+        "tests/test_context_pack.py"
+      ],
+      "tests": [
+        "python -m unittest discover -s tests -v"
+      ]
+    }
+  },
+  "generated_by": "context-pack",
+  "version": 1
+}

@@ -1,0 +1,34 @@
+{
+  "name": "context-pack",
+  "version": "0.1.0",
+  "description": "Repo-local context packs and handoff checkpoints for coding agents.",
+  "author": {
+    "name": "Context Pack"
+  },
+  "license": "MIT",
+  "keywords": [
+    "context",
+    "handoff",
+    "code-review",
+    "agents",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Context Pack",
+    "shortDescription": "Generate focused repo context for agents.",
+    "longDescription": "Context Pack keeps a lightweight repo-local context library, checkpoints handoff state, and generates task or review packs so coding agents can start from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
+    "developerName": "Context Pack",
+    "category": "Productivity",
+    "capabilities": [
+      "Write",
+      "Automation"
+    ],
+    "defaultPrompt": [
+      "Initialize context-pack in this repo.",
+      "Build a review context pack for my changes.",
+      "Checkpoint this work for the next session."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# context-pack generated/local files
+.codex/packs/
+.codex/context/tmp/
+.codex/handoff/LOCAL.md
