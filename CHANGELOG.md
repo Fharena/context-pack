@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-06-27
+
+### Changed
+
+- `context-pack setup` and `init` now preserve existing curated manifests by default; first-run area inference remains automatic, and `--infer-areas` / `--no-infer-areas` make area inference explicit when needed.
+
 ## [0.2.7] - 2026-06-27
 
 ### Changed

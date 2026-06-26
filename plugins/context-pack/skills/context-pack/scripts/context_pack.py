@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.7"
+CONTEXT_PACK_VERSION = "0.2.8"
 
 
 @dataclasses.dataclass
@@ -471,6 +471,20 @@ def merge_inferred_areas(repo: Path, manifest: dict[str, Any], layout: ContextLa
     areas = manifest["areas"]
     for area_id, area in inferred_area_candidates(repo, layout).items():
         areas.setdefault(area_id, area)
+    return manifest
+
+
+def should_infer_areas(args: argparse.Namespace, manifest_path: Path) -> bool:
+    explicit = getattr(args, "infer_areas", None)
+    if explicit is not None:
+        return bool(explicit)
+    return not manifest_path.exists()
+
+
+def setup_manifest(repo: Path, layout: ContextLayout, *, infer_areas: bool) -> dict[str, Any]:
+    manifest = load_manifest(repo, layout)
+    if infer_areas:
+        manifest = merge_inferred_areas(repo, manifest, layout)
     return manifest
 
 
@@ -989,8 +1003,14 @@ def setup_agent_doc_action(repo: Path, kind: str) -> str:
     return "append managed block"
 
 
-def setup_context_target_actions(repo: Path, layout: ContextLayout, *, force: bool) -> list[tuple[str, Path]]:
-    manifest = merge_inferred_areas(repo, load_manifest(repo, layout), layout)
+def setup_context_target_actions(
+    repo: Path,
+    layout: ContextLayout,
+    *,
+    force: bool,
+    infer_areas: bool,
+) -> list[tuple[str, Path]]:
+    manifest = setup_manifest(repo, layout, infer_areas=infer_areas)
     targets: list[tuple[str, Path]] = [
         (setup_manifest_action(repo, layout, manifest, force=force), layout.manifest_path),
         (setup_file_action(repo, layout.areas_dir / "overview.md", force=force), layout.areas_dir / "overview.md"),
@@ -1051,6 +1071,10 @@ def setup_apply_command(args: argparse.Namespace) -> str:
         parts.extend(["--repo", args.repo])
     if args.force:
         parts.append("--force")
+    if getattr(args, "infer_areas", None) is True:
+        parts.append("--infer-areas")
+    elif getattr(args, "infer_areas", None) is False:
+        parts.append("--no-infer-areas")
     if args.agent_docs != "all":
         parts.extend(["--agent-docs", args.agent_docs])
     if args.git_hooks != "off":
@@ -1074,7 +1098,8 @@ def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, 
     print("")
     print("Setup plan:")
     print("Context files:")
-    for action, rel_path in setup_context_target_actions(repo, layout, force=args.force):
+    infer_areas = should_infer_areas(args, repo / layout.manifest_path)
+    for action, rel_path in setup_context_target_actions(repo, layout, force=args.force, infer_areas=infer_areas):
         print(f"- {action} {path_text(rel_path)}")
 
     print("")
@@ -1129,6 +1154,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
         repo=str(repo),
         quiet=True,
         force=args.force,
+        infer_areas=args.infer_areas,
         no_agent_doc=True,
         agent_doc="AGENTS.md",
     )
@@ -1184,9 +1210,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     layout = resolve_layout(repo, for_write=True)
     ensure_dirs(repo, layout)
-    manifest = merge_inferred_areas(repo, load_manifest(repo, layout), layout)
-
     manifest_path = repo / layout.manifest_path
+    manifest = setup_manifest(repo, layout, infer_areas=should_infer_areas(args, manifest_path))
     if args.force or manifest_needs_write(manifest_path, manifest):
         write_json(manifest_path, manifest)
     write_if_missing(repo / layout.areas_dir / "overview.md", overview_area_doc(snapshot, layout), force=args.force)
@@ -2346,7 +2371,7 @@ The dry run writes nothing and prints the matching apply command with selected o
 python scripts/context_pack.py setup
 ```
 
-This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. First setup may infer common source/test/docs/automation areas; later setup runs preserve the existing manifest unless `--infer-areas` is explicit. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
 
 If a repo already has the legacy `.codex/context` layout and the user wants the vendor-neutral layout, run:
 
@@ -2643,6 +2668,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             quiet=True,
             dry_run=False,
             force=False,
+            infer_areas=None,
             agent_docs=args.agent_docs,
             git_hooks="off",
         )
@@ -2702,6 +2728,20 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p)
     p.add_argument("--dry-run", action="store_true", help="Preview setup changes without writing files")
     p.add_argument("--force", action="store_true", help="Overwrite existing context docs")
+    infer_group = p.add_mutually_exclusive_group()
+    infer_group.add_argument(
+        "--infer-areas",
+        dest="infer_areas",
+        action="store_true",
+        default=None,
+        help="Add missing inferred source/test/docs/automation areas even when a manifest already exists",
+    )
+    infer_group.add_argument(
+        "--no-infer-areas",
+        dest="infer_areas",
+        action="store_false",
+        help="Skip inferred area creation even on first setup",
+    )
     p.add_argument(
         "--agent-docs",
         choices=["all", "agents", "claude", "cursor", "none"],
@@ -2719,6 +2759,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("init", help="Initialize .context-pack docs in a repo")
     add_common(p)
     p.add_argument("--force", action="store_true", help="Overwrite existing context files")
+    infer_group = p.add_mutually_exclusive_group()
+    infer_group.add_argument(
+        "--infer-areas",
+        dest="infer_areas",
+        action="store_true",
+        default=None,
+        help="Add missing inferred source/test/docs/automation areas even when a manifest already exists",
+    )
+    infer_group.add_argument(
+        "--no-infer-areas",
+        dest="infer_areas",
+        action="store_false",
+        help="Skip inferred area creation even on first init",
+    )
     p.add_argument("--no-agent-doc", action="store_true", help="Do not update AGENTS.md")
     p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update")
     p.set_defaults(func=cmd_init)

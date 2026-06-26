@@ -236,6 +236,53 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("refresh managed block AGENTS.md", text)
             self.assertNotIn("update .context-pack/CURRENT.md", text)
 
+    def test_setup_rerun_preserves_curated_manifest_unless_inference_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_run():\n    pass\n", encoding="utf-8")
+            (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--dry-run"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("leave unchanged .context-pack/manifest.json", text)
+            self.assertNotIn("source.md", text)
+            self.assertNotIn("tests.md", text)
+            self.assertNotIn("docs.md", text)
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(sorted(manifest["areas"]), ["overview"])
+            self.assertFalse((repo / ".context-pack/AREAS/source.md").exists())
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["setup", "--repo", str(repo), "--dry-run", "--infer-areas"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("update .context-pack/manifest.json", text)
+            self.assertIn("create .context-pack/AREAS/source.md", text)
+            self.assertIn("create .context-pack/AREAS/tests.md", text)
+            self.assertIn("create .context-pack/AREAS/docs.md", text)
+            self.assertIn("--infer-areas", text)
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--infer-areas", "--quiet"]), 0)
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
+            self.assertIn("source", manifest["areas"])
+            self.assertIn("tests", manifest["areas"])
+            self.assertIn("docs", manifest["areas"])
+            self.assertTrue((repo / ".context-pack/AREAS/source.md").exists())
+
     def test_setup_dry_run_respects_agent_docs_and_git_hooks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

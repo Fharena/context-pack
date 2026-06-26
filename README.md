@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -121,6 +121,7 @@ Not sure what to run next? Run `context-pack` with no arguments to print the qui
 
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
 Run `setup --dry-run` first when you want to preview every file and hook without writing anything. The dry run distinguishes files it would create, update, append to, refresh, or leave unchanged, then prints the matching apply command with your selected options preserved.
+On first setup, Context Pack infers common `source`, `tests`, `docs`, and `automation` areas when those paths exist. Later setup runs preserve your existing `.context-pack/manifest.json` by default; use `setup --infer-areas` when you intentionally want to add newly inferred areas, or `setup --no-infer-areas` for an overview-only first setup.
 
 If you already have a context library and only want to refresh shared repo rules:
 
@@ -277,11 +278,11 @@ If you installed the Codex plugin, you usually do not type these commands yourse
 
 | Feature | What it saves |
 | --- | --- |
-| `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan without writing files |
+| `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan, `--infer-areas` to explicitly add newly inferred areas, or `--no-infer-areas` for overview-only setup |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
-| `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
+| `init` | Creates a repo-local context library and handoff docs; first-run area inference can be controlled with `--infer-areas` / `--no-infer-areas` |
 | `migrate` | Copies legacy `.codex/context` and `.codex/handoff` docs into `.context-pack/` |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
@@ -359,7 +360,7 @@ The bet is not "more memory." The bet is that most agent work starts better when
 
 Context Pack's first pass is intentionally simple and inspectable:
 
-- `setup` / `init` infer initial areas from common source, test, docs, and automation paths.
+- `setup` / `init` infer initial areas from common source, test, docs, and automation paths on first setup; reruns preserve curated manifests unless `--infer-areas` is explicit.
 - Changed files are matched against area path globs.
 - Task text can add keyword score to areas.
 - Packs split context into selected areas, related areas, Read First, and Read Later.
@@ -485,4 +486,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.7](https://github.com/Fharena/context-pack/releases/tag/v0.2.7).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.8](https://github.com/Fharena/context-pack/releases/tag/v0.2.8).

@@ -1,6 +1,6 @@
 {
   "name": "@fharena/context-pack",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Version-aware context packs for coding agents.",
   "license": "MIT",
   "bin": {

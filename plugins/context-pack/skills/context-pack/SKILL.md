@@ -106,7 +106,7 @@ The dry run writes nothing and prints the matching apply command with selected o
 python scripts/context_pack.py setup
 ```
 
-This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. First setup may infer common source/test/docs/automation areas; later setup runs preserve the existing manifest unless `--infer-areas` is explicit. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
 
 If a repo already has the legacy `.codex/context` layout and the user wants the vendor-neutral layout, run:
 

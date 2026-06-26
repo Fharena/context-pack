@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.7"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.8"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -128,6 +128,7 @@ pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack set
 
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
 먼저 무엇을 건드리는지 확인하고 싶다면 `setup --dry-run`을 실행하세요. 실제 파일이나 hook을 쓰지 않고 create/update/append/refresh/leave unchanged 계획을 구분해서 보여주며, 선택한 옵션을 보존한 적용 명령도 함께 출력합니다.
+첫 setup에서는 `source`, `tests`, `docs`, `automation` 같은 일반 경로가 있으면 초기 area를 추론합니다. 이후 setup 재실행은 기존 `.context-pack/manifest.json`을 기본적으로 보존합니다. 새로 생긴 경로를 area로 추가하고 싶을 때만 `setup --infer-areas`를 쓰고, 첫 설치도 overview만 만들고 싶다면 `setup --no-infer-areas`를 쓰세요.
 
 이미 context library가 있고 공통 agent rule만 갱신하고 싶다면:
 
@@ -274,7 +275,7 @@ context-pack mark-reviewed runtime tests
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
-| `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 파일을 쓰기 전에 계획만 볼 수 있음 |
+| `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 계획을 미리 보고, `--infer-areas`로 새 추론 area를 명시적으로 추가하거나 `--no-infer-areas`로 overview-only 설치 가능 |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
@@ -356,7 +357,7 @@ Context Pack은 몇 가지 익숙한 아이디어와 겹치지만, 일부러 범
 
 Context Pack의 첫 번째 선택 로직은 일부러 단순하고 확인 가능하게 둡니다.
 
-- `setup` / `init`은 일반적인 source, test, docs, automation 경로를 보고 초기 area를 추론합니다.
+- `setup` / `init`은 첫 설치 때 일반적인 source, test, docs, automation 경로를 보고 초기 area를 추론합니다. 이후 재실행은 `--infer-areas`를 명시하지 않으면 사용자가 정리한 manifest를 보존합니다.
 - 변경 파일은 area path glob과 매칭됩니다.
 - 작업 설명의 keyword가 area score를 올릴 수 있습니다.
 - pack은 selected areas, related areas, Read First, Read Later로 context를 나눕니다.
@@ -485,4 +486,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.7](https://github.com/Fharena/context-pack/releases/tag/v0.2.7).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.8](https://github.com/Fharena/context-pack/releases/tag/v0.2.8).
