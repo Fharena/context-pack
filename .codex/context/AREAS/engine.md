@@ -29,6 +29,7 @@ stale_if:
 - Dirty/untracked files must resolve to actual file paths for area matching.
 - Review packs must support committed branch changes via `--base`.
 - Packs should stay compact: rank areas, split Read First/Read Later, and omit overflow details with clear counts.
+- Packs should show scope-reduction metrics without pretending they replace source verification.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
 - Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
@@ -46,6 +47,7 @@ stale_if:
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
 - `start` hides setup errors or creates noisy tracked files on first run.
 - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
+- Scope-reduction numbers are missing or imply false precision about exact token savings.
 
 ## Expand Scope If
 - Manifest schema changes.

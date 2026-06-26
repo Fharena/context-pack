@@ -6,7 +6,8 @@
         "Generated packs must stay under .codex/packs/ and remain ignored by git.",
         "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
         "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.",
-        "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs."
+        "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.",
+        "Generated packs should show scope-reduction metrics without pretending they replace source verification."
       ],
       "description": "Deterministic context-pack engine: git snapshot, start routing, area matching, pack generation, doctor, and git hooks.",
       "doc": ".codex/context/AREAS/engine.md",
@@ -16,12 +17,15 @@
         "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
         "Pack generation creates tracked generated files.",
         "`start` hides setup errors or creates noisy tracked files on first run.",
-        "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry."
+        "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.",
+        "Scope-reduction numbers are missing or imply false precision about exact token savings."
       ],
       "keywords": [
         "engine",
         "start",
         "install-codex",
+        "scope",
+        "reduction",
         "checkpoint",
         "pack",
         "review",

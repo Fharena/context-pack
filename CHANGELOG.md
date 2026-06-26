@@ -2,6 +2,17 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.6] - 2026-06-26
+
+### Added
+
+- Generated packs now include a `Scope Reduction` section showing repo files considered, selected areas, Read First entries, and changed files in scope.
+- `context-pack start` output now shows a scope-reduction summary when a pack is generated.
+
+### Changed
+
+- README and Korean README demos now show the scope-reduction evidence users see on first run.
+
 ## [0.1.5] - 2026-06-26
 
 ### Added

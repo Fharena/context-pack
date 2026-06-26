@@ -8,6 +8,7 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.
 - `start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - `install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.
+- Generated packs should show scope-reduction metrics without pretending they replace source verification.
 
 ## installer-release
 - Install scripts must not overwrite existing local skill/plugin installs unless --force is explicit.

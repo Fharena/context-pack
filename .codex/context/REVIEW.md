@@ -19,6 +19,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Pack generation creates tracked generated files.
   - `start` hides setup errors or creates noisy tracked files on first run.
   - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
+  - Scope-reduction numbers are missing or imply false precision about exact token savings.
 
 ### installer-release
 - Doc: `.codex/context/AREAS/installer-release.md`

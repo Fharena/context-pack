@@ -117,6 +117,10 @@ class ContextPackTests(unittest.TestCase):
             )
             pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: work", pack)
+            self.assertIn("## Scope Reduction", pack)
+            self.assertIn("- Repo files considered:", pack)
+            self.assertIn("- Primary areas selected:", pack)
+            self.assertIn("- Read First entries:", pack)
             self.assertIn("- cli", pack)
 
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:

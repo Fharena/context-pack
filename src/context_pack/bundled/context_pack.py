@@ -42,7 +42,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.1.5"
+CONTEXT_PACK_VERSION = "0.1.6"
 
 
 @dataclasses.dataclass
@@ -923,6 +923,9 @@ def cmd_start(args: argparse.Namespace) -> int:
         if pack_generated:
             print(f"Generated {mode} pack for {pack_reason}: {rel_to_repo(output_path, repo)}")
             print("Selected areas: " + (", ".join(item.area_id for item in selected) if selected else "none"))
+            repo_file_total = len(repo_files(repo))
+            if repo_file_total:
+                print(f"Scope reduction: start from {len(selected)} area(s) instead of scanning {repo_file_total} repo file(s)")
             print("")
             print("Read next:")
             print(f"- {rel_to_repo(output_path, repo)}")
@@ -1098,6 +1101,36 @@ def unique(items: Iterable[str]) -> list[str]:
     return out
 
 
+def repo_files(repo: Path) -> list[str]:
+    files = git_text(repo, ["ls-files", "--cached", "--others", "--exclude-standard"])
+    if files is not None:
+        return [normalize_path(line) for line in files.splitlines() if line.strip()]
+
+    ignored_parts = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+    ignored_prefixes = {
+        ".codex/packs/",
+        ".codex/context/tmp/",
+    }
+    out: list[str] = []
+    for path in repo.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = rel_to_repo(path, repo)
+        parts = set(Path(rel).parts)
+        if parts & ignored_parts:
+            continue
+        if any(rel.startswith(prefix) for prefix in ignored_prefixes):
+            continue
+        out.append(rel)
+    return sorted(out)
+
+
+def percent(part: int, whole: int) -> int:
+    if whole <= 0:
+        return 0
+    return max(1, round((part / whole) * 100))
+
+
 def similarity(left: set[str], right: set[str]) -> float:
     if not left or not right:
         return 0.0
@@ -1213,6 +1246,10 @@ def render_pack(
     read_later = unique(read_first_unique[max_read_first:] + read_later)
     contracts_visible, contracts_hidden = split_limited(contracts, max_contracts)
     failures_visible, failures_hidden = split_limited(failures, max_failure_modes)
+    repo_file_total = len(repo_files(repo))
+    read_first_total = len(read_first_visible)
+    area_total = len(areas)
+    read_first_ratio = percent(read_first_total, repo_file_total) if repo_file_total else 0
 
     def path_line(item: str) -> str:
         suffix = "" if item and (repo / item).exists() else " (missing)"
@@ -1232,6 +1269,12 @@ def render_pack(
         f"- Branch: {snapshot.branch}",
         f"- HEAD: {snapshot.head}",
         f"- Dirty diff hash: {snapshot.diff_hash}",
+        "",
+        "## Scope Reduction",
+        f"- Repo files considered: {repo_file_total if repo_file_total else 'unknown'}",
+        f"- Primary areas selected: {len(selections)} of {area_total}",
+        f"- Read First entries: {read_first_total}" + (f" (~{read_first_ratio}% of repo files)" if repo_file_total else ""),
+        f"- Changed files in scope: {len(changed)}",
         "",
         "## Selected Areas",
     ]
@@ -1677,6 +1720,8 @@ python scripts/context_pack.py start
 ```
 
 Read `.codex/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
+
+When reporting back, include selected areas and scope-reduction numbers when present.
 
 ## Checkpoint Work
 

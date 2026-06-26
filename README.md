@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.5"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.6"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -141,6 +141,7 @@ Dirty files: 0; diff hash: clean
 
 Generated work pack for task: .codex/packs/CONTEXT_PACK.md
 Selected areas: installer-release, skill-plugin, engine
+Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
 
 Read next:
 - .codex/packs/CONTEXT_PACK.md
@@ -152,6 +153,12 @@ $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
 
 Mode: work
+
+## Scope Reduction
+- Repo files considered: 82
+- Primary areas selected: 3 of 5
+- Read First entries: 5 (~6% of repo files)
+- Changed files in scope: 0
 
 ## Selected Areas
 - installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
@@ -252,6 +259,7 @@ The script handles deterministic work:
 - first-run inference for common source, test, docs, and automation areas
 - changed-file and task scoring for area matching
 - compact context pack assembly with primary and related areas
+- scope-reduction metrics that show how much reading is avoided
 - Read First / Read Later splitting
 - contract and failure-mode deduplication
 - stale warnings
@@ -338,4 +346,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.5](https://github.com/Fharena/context-pack/releases/tag/v0.1.5).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.6](https://github.com/Fharena/context-pack/releases/tag/v0.1.6).
