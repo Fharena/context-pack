@@ -4,6 +4,8 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-06-27
+
 ### Added
 
 - Added `context-pack setup --dry-run` so first-time users can preview setup file, agent-doc, and git-hook changes without writing to the repo.
