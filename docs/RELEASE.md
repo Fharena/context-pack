@@ -1,6 +1,6 @@
 # Release Guide
 
-This project can be installed from GitHub today. Registry publishing is optional, but these checks keep the package ready for PyPI and npm.
+This project can be installed from GitHub today. Registry publishing is optional, but the release workflow keeps the package ready for PyPI and npm.
 
 ## Preflight
 
@@ -52,13 +52,51 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z --repo Fharena/context-pack --title "vX.Y.Z" --notes-file <notes.md>
 ```
 
-Wait for GitHub Actions to pass before announcing.
+The `Release` workflow runs when the GitHub release is published. It checks the tag against `pyproject.toml` and `package.json`, builds the Python wheel/sdist and npm tarball, verifies them, and uploads them as GitHub Release assets.
+
+If a release already exists or the workflow needs to be retried:
+
+```bash
+gh workflow run release.yml --repo Fharena/context-pack -f tag=vX.Y.Z
+```
+
+Wait for both `CI` and `Release` workflows to pass before announcing.
+
+## Optional Registry Automation
+
+Registry publishing is intentionally opt-in. By default the release workflow only builds and uploads GitHub Release assets.
+
+To publish on every GitHub release after trusted publishing is configured, add repository variables:
+
+```text
+PUBLISH_PYPI=true
+PUBLISH_NPM=true
+```
+
+For a one-off manual publish through GitHub Actions:
+
+```bash
+gh workflow run release.yml --repo Fharena/context-pack \
+  -f tag=vX.Y.Z \
+  -f publish_pypi=true \
+  -f publish_npm=true
+```
 
 ## PyPI
 
-First-time publish needs either a PyPI API token or Trusted Publishing configured for this repository.
+Preferred path: configure PyPI Trusted Publishing for:
 
-Manual upload after preflight:
+```text
+owner: Fharena
+repository: context-pack
+workflow: release.yml
+environment: pypi
+package: context-pack
+```
+
+The workflow uses `pypa/gh-action-pypi-publish@release/v1` with `id-token: write`, so no PyPI token is needed after the publisher is configured.
+
+Manual upload after preflight is still possible:
 
 ```bash
 python -m twine upload dist/*
@@ -73,9 +111,11 @@ context-pack --help
 
 ## npm
 
-First-time publish needs an npm account with access to the `@fharena` scope.
+Preferred path: configure npm Trusted Publishing for package `@fharena/context-pack` and this workflow. Keep the npm trusted publisher environment in sync with the workflow environment, currently `npm`.
 
-Manual publish after preflight:
+The workflow grants `id-token: write` and runs `npm publish --access public`. npm trusted publishing adds provenance automatically for supported packages.
+
+Manual publish after preflight is still possible:
 
 ```bash
 npm login
@@ -90,6 +130,6 @@ npx @fharena/context-pack --help
 
 ## Notes
 
-- Do not publish registry packages before the GitHub release tag and CI are green.
+- Do not publish registry packages before the GitHub release tag, `CI`, and `Release` are green.
 - If publishing to registries, update README install snippets to prefer the registry path and keep the GitHub path as a fallback.
 - `context-pack install-codex --activate` remains the recommended Codex path until plugin marketplace distribution is mature.

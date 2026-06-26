@@ -69,6 +69,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - README documents a command not covered by tests or validation.
   - Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
   - npm package metadata drifts from Python/plugin versions or omits the bundled engine.
+  - Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.
+  - Registry publishing runs automatically before PyPI/npm trusted publishing has been configured.
 
 ### overview
 - Doc: `.context-pack/AREAS/overview.md`

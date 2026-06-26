@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
@@ -366,7 +367,7 @@ The current scoring is a routing heuristic, not a semantic understanding engine.
 
 Context Pack is a small, repo-local tool, not a hosted platform. It is best suited today for small to medium projects, agent-heavy personal repos, open-source repos that want AI contributor orientation, and teams moving work across local and cloud agent sessions.
 
-The public install paths currently run from GitHub through `pipx` or `npx`; registry publishing can come later once usage patterns settle. CI covers Windows and Ubuntu on Python 3.11/3.12, plus package, Codex plugin, Node wrapper, and npm tarball smoke paths.
+The public install paths currently run from GitHub through `pipx` or `npx`. Registry publishing is opt-in, but the release workflow already builds and verifies Python wheel/sdist artifacts and the npm tarball, then uploads them to the GitHub Release. CI covers Windows and Ubuntu on Python 3.11/3.12, plus package, Codex plugin, Node wrapper, and npm tarball smoke paths.
 
 ## How It Works
 
@@ -473,7 +474,7 @@ python -m twine check dist/*
 npm pack --dry-run
 ```
 
-GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Python wheel/sdist checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12.
+GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Python wheel/sdist checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12. The release workflow builds GitHub Release assets from the tag and can optionally publish to PyPI/npm after trusted publishing is configured.
 
 ## Release
 

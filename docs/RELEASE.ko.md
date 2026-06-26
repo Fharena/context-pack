@@ -1,6 +1,6 @@
 # 릴리즈 가이드
 
-현재는 GitHub에서 바로 설치할 수 있습니다. PyPI/npm 배포는 선택 사항이지만, 아래 검증을 통과하면 registry에 올릴 준비가 된 상태로 볼 수 있습니다.
+현재는 GitHub에서 바로 설치할 수 있습니다. PyPI/npm 배포는 선택 사항이지만, release workflow가 GitHub Release 자산과 registry 배포 준비 상태를 같이 관리합니다.
 
 ## 사전 검증
 
@@ -52,13 +52,51 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z --repo Fharena/context-pack --title "vX.Y.Z" --notes-file <notes.md>
 ```
 
-홍보 전에 GitHub Actions가 통과했는지 확인합니다.
+GitHub Release가 publish되면 `Release` workflow가 실행됩니다. 이 workflow는 tag가 `pyproject.toml`, `package.json` 버전과 맞는지 확인하고, Python wheel/sdist와 npm tarball을 빌드/검증한 뒤 GitHub Release assets로 업로드합니다.
+
+이미 만든 release의 자산을 다시 만들거나 workflow를 재실행해야 한다면:
+
+```bash
+gh workflow run release.yml --repo Fharena/context-pack -f tag=vX.Y.Z
+```
+
+홍보 전에 `CI`와 `Release` workflow가 모두 통과했는지 확인합니다.
+
+## 선택적 Registry 자동화
+
+Registry 배포는 의도적으로 opt-in입니다. 기본 release workflow는 GitHub Release assets만 빌드하고 업로드합니다.
+
+Trusted Publishing 설정 후 GitHub release마다 자동 publish하고 싶다면 repository variables를 추가합니다.
+
+```text
+PUBLISH_PYPI=true
+PUBLISH_NPM=true
+```
+
+GitHub Actions에서 한 번만 수동 publish하고 싶다면:
+
+```bash
+gh workflow run release.yml --repo Fharena/context-pack \
+  -f tag=vX.Y.Z \
+  -f publish_pypi=true \
+  -f publish_npm=true
+```
 
 ## PyPI
 
-처음 배포하려면 PyPI API token 또는 이 repo에 대한 Trusted Publishing 설정이 필요합니다.
+추천 경로는 PyPI Trusted Publishing입니다. 설정값은 다음처럼 맞춥니다.
 
-사전 검증 후 수동 업로드:
+```text
+owner: Fharena
+repository: context-pack
+workflow: release.yml
+environment: pypi
+package: context-pack
+```
+
+workflow는 `id-token: write` 권한과 `pypa/gh-action-pypi-publish@release/v1`를 사용하므로, publisher 설정이 끝난 뒤에는 PyPI token이 필요 없습니다.
+
+사전 검증 후 수동 업로드도 가능합니다.
 
 ```bash
 python -m twine upload dist/*
@@ -73,9 +111,11 @@ context-pack --help
 
 ## npm
 
-처음 배포하려면 `@fharena` scope에 권한이 있는 npm 계정이 필요합니다.
+추천 경로는 package `@fharena/context-pack`에 npm Trusted Publishing을 설정하는 것입니다. npm trusted publisher의 environment는 workflow와 맞춰야 하며, 현재 workflow environment는 `npm`입니다.
 
-사전 검증 후 수동 배포:
+workflow는 `id-token: write` 권한을 받고 `npm publish --access public`을 실행합니다. npm Trusted Publishing이 지원되는 package에서는 provenance가 자동으로 붙습니다.
+
+사전 검증 후 수동 배포도 가능합니다.
 
 ```bash
 npm login
@@ -90,6 +130,6 @@ npx @fharena/context-pack --help
 
 ## 메모
 
-- GitHub release tag와 CI가 green이 되기 전에 registry package를 publish하지 않습니다.
+- GitHub release tag, `CI`, `Release`가 green이 되기 전에 registry package를 publish하지 않습니다.
 - registry에 배포한 뒤에는 README 설치 예시를 registry 경로 우선으로 바꾸고, GitHub 경로는 fallback으로 남깁니다.
 - plugin marketplace 배포 방식이 더 성숙하기 전까지 Codex에서는 `context-pack install-codex --activate`를 추천 경로로 유지합니다.

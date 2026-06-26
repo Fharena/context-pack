@@ -19,6 +19,8 @@ Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.
 - Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.
 - Release checks must include unit tests, plugin validation, skill validation, and npm wrapper validation.
 - Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic.
+- Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.
+- PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs.
 
 ## overview
 - Treat context docs as routing hints, not ground truth.

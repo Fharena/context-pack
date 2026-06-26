@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
@@ -363,7 +364,7 @@ Context Pack의 첫 번째 선택 로직은 일부러 단순하고 확인 가능
 
 Context Pack은 hosted platform이 아니라 작은 repo-local 도구입니다. 지금은 small-to-medium 프로젝트, 에이전트 사용이 많은 개인 repo, AI contributor가 들어오는 오픈소스 repo, 로컬/클라우드 에이전트 세션을 오가는 팀에 가장 잘 맞습니다.
 
-공개 설치 경로는 현재 GitHub를 통한 `pipx` 또는 `npx` 실행입니다. registry 배포는 실제 사용 패턴이 더 쌓인 뒤 이어갈 수 있습니다. CI는 Windows/Ubuntu, Python 3.11/3.12, package, Codex plugin, Node wrapper, npm tarball smoke path를 확인합니다.
+공개 설치 경로는 현재 GitHub를 통한 `pipx` 또는 `npx` 실행입니다. Registry 배포는 opt-in이지만, release workflow는 이미 Python wheel/sdist와 npm tarball을 빌드/검증하고 GitHub Release assets로 업로드합니다. CI는 Windows/Ubuntu, Python 3.11/3.12, package, Codex plugin, Node wrapper, npm tarball smoke path를 확인합니다.
 
 ## 작동 방식
 
@@ -473,7 +474,7 @@ python -m twine check dist/*
 npm pack --dry-run
 ```
 
-GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Python wheel/sdist check, Node/npm wrapper check를 실행합니다.
+GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Python wheel/sdist check, Node/npm wrapper check를 실행합니다. Release workflow는 tag에서 GitHub Release assets를 빌드하고, Trusted Publishing 설정 후에는 PyPI/npm publish까지 선택적으로 실행할 수 있습니다.
 
 ## 릴리즈
 

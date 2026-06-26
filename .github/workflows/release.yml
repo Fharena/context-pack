@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag and GitHub release to build from, for example v0.2.2.
+        required: true
+        type: string
+      publish_pypi:
+        description: Publish to PyPI. Requires a PyPI trusted publisher for this workflow.
+        required: false
+        default: false
+        type: boolean
+      publish_npm:
+        description: Publish to npm. Requires npm trusted publishing or matching registry auth.
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  assets:
+    name: Build and upload release assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Validate tag and package versions
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import tomllib
+
+          tag = os.environ["RELEASE_TAG"]
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          python_version = pyproject["project"]["version"]
+          npm_version = json.loads(pathlib.Path("package.json").read_text(encoding="utf-8"))["version"]
+          expected_tag = f"v{python_version}"
+          if tag != expected_tag:
+              raise SystemExit(f"release tag {tag!r} does not match pyproject version {python_version!r}")
+          if npm_version != python_version:
+              raise SystemExit(f"npm version {npm_version!r} does not match pyproject version {python_version!r}")
+          print(f"Release {tag} matches Python/npm version {python_version}")
+          PY
+
+      - name: Run release checks
+        run: |
+          python -m pip install --upgrade build twine
+          python -m unittest discover -s tests -v
+          python -m json.tool plugins/context-pack/.codex-plugin/plugin.json >/dev/null
+          python -m json.tool .context-pack/manifest.json >/dev/null
+          python -m json.tool .agents/plugins/marketplace.json >/dev/null
+          python -m json.tool package.json >/dev/null
+          node bin/context-pack.js --help
+
+      - name: Build distributions
+        run: |
+          mkdir -p npm-pack
+          python -m build
+          python -m twine check dist/*
+          npm pack --pack-destination npm-pack
+
+      - name: Upload assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG" dist/* npm-pack/*.tgz --clobber
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: assets
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_pypi) || (github.event_name == 'release' && vars.PUBLISH_PYPI == 'true') }}
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build Python distributions
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-npm:
+    name: Publish to npm
+    needs: assets
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_npm) || (github.event_name == 'release' && vars.PUBLISH_NPM == 'true') }}
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Validate npm package
+        run: npm pack --dry-run
+
+      - name: Publish package to npm
+        run: npm publish --access public
