@@ -493,6 +493,42 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- Token estimates use chars/4", pack)
             self.assertIn("- cli", pack)
 
+    def test_measure_reports_scope_without_writing_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/cli.py").write_text("def main():\n    return 0\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["cli"] = {
+                "doc": ".context-pack/AREAS/cli.md",
+                "description": "Command-line entrypoints.",
+                "paths": ["src/cli.py"],
+                "start_files": ["src/cli.py"],
+                "tests": [],
+                "keywords": ["cli", "command"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/cli.md").write_text(
+                "---\nid: cli\nlast_reviewed_head: unknown\nstatus: active\n---\n# CLI\n",
+                encoding="utf-8",
+            )
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["measure", "--repo", str(repo), "--task", "cli command bug"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Context Pack Measure", text)
+            self.assertIn("No files written.", text)
+            self.assertIn("Selected areas: cli", text)
+            self.assertIn("Scope reduction: start from", text)
+            self.assertIn("Approx text budget: Read First", text)
+            self.assertIn('context-pack start --task "cli command bug"', text)
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -994,9 +1030,11 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(plugin["name"], "context-pack")
             self.assertEqual(plugin["version"], self.engine.CONTEXT_PACK_VERSION)
             self.assertIn("previewable setup", plugin["interface"]["longDescription"])
+            self.assertIn("read-only measurement", plugin["interface"]["longDescription"])
             self.assertIn("Preview setup", plugin["interface"]["defaultPrompt"][0])
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("context-pack start", skill)
+            self.assertIn("context_pack.py measure", skill)
             self.assertIn("setup --dry-run", skill)
             openai = (target / "skills/context-pack/agents/openai.yaml").read_text(encoding="utf-8")
             self.assertIn("preview setup", openai)
@@ -1043,6 +1081,7 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Start here:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
+        self.assertIn("context-pack measure", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 
     def test_python_module_reports_version(self) -> None:
@@ -1090,6 +1129,7 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Start here:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
+        self.assertIn("context-pack measure", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 
     def test_node_wrapper_reports_version(self) -> None:

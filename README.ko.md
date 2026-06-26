@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.12"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.13"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -102,6 +102,7 @@ Codex가 아니거나 터미널에서 직접 repo를 설정하고 싶다면:
 ```bash
 npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
+npx github:Fharena/context-pack measure --task "fix login timeout"
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
 npx github:Fharena/context-pack start --review --base main
@@ -183,6 +184,21 @@ codex plugin add context-pack@context-pack
 ## 터미널 데모
 
 ```text
+$ context-pack measure --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+Context Pack Measure for /work/context-pack
+Git: yes; branch: main; HEAD: 67f7355488c
+Mode: work
+Task: improve CLI onboarding
+No files written.
+
+Selected areas: installer-release, skill-plugin, engine
+Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
+Read First entries: 5 (~6% of repo files)
+Approx text budget: Read First ~8.2k tokens from 5 file(s) (~14% of repo text); repo ~58.7k tokens from 77 text file(s)
+
+Run next:
+- context-pack start --task "improve CLI onboarding"
+
 $ context-pack start --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Start for /work/context-pack
 Git: yes; branch: main; HEAD: 67f7355488c0
@@ -248,8 +264,11 @@ Mode: work
 작업 시작 전:
 
 ```powershell
+context-pack measure --task "고치려는 버그나 작업 설명"
 context-pack start --task "고치려는 버그나 작업 설명"
 ```
+
+`measure`는 read-only입니다. `.context-pack/packs/CONTEXT_PACK.md`를 쓰지 않고 selected area, Read First 항목, 대략적인 text budget만 먼저 보여줍니다.
 
 코드 리뷰 전:
 
@@ -280,6 +299,7 @@ context-pack mark-reviewed runtime tests
 | 기능 | 줄여주는 것 |
 | --- | --- |
 | `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 계획을 미리 보고, `--infer-areas`로 새 추론 area를 명시적으로 추가하거나 `--no-infer-areas`로 overview-only 설치 가능 |
+| `measure` | read-only proof: generated pack을 쓰지 않고 selected area, scope reduction, 대략적인 text budget을 미리 보여줌 |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
@@ -490,4 +510,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.12](https://github.com/Fharena/context-pack/releases/tag/v0.2.12).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.13](https://github.com/Fharena/context-pack/releases/tag/v0.2.13).

@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.12"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.13"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -95,6 +95,7 @@ For repo setup with Claude, Cursor, other agents, or direct terminal use:
 ```bash
 npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
+npx github:Fharena/context-pack measure --task "fix login timeout"
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
 npx github:Fharena/context-pack start --review --base main
@@ -178,6 +179,21 @@ codex plugin add context-pack@context-pack
 ## Terminal Demo
 
 ```text
+$ context-pack measure --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+Context Pack Measure for /work/context-pack
+Git: yes; branch: main; HEAD: 67f7355488c
+Mode: work
+Task: improve CLI onboarding
+No files written.
+
+Selected areas: installer-release, skill-plugin, engine
+Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
+Read First entries: 5 (~6% of repo files)
+Approx text budget: Read First ~8.2k tokens from 5 file(s) (~14% of repo text); repo ~58.7k tokens from 77 text file(s)
+
+Run next:
+- context-pack start --task "improve CLI onboarding"
+
 $ context-pack start --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Start for /work/context-pack
 Git: yes; branch: main; HEAD: 67f7355488c0
@@ -243,8 +259,11 @@ For direct terminal use:
 Before starting work:
 
 ```powershell
+context-pack measure --task "the bug or feature you are about to work on"
 context-pack start --task "the bug or feature you are about to work on"
 ```
+
+`measure` is read-only. It prints selected areas, Read First entries, and the approximate text budget without writing `.context-pack/packs/CONTEXT_PACK.md`.
 
 Before reviewing code:
 
@@ -283,6 +302,7 @@ If you installed the Codex plugin, you usually do not type these commands yourse
 | Feature | What it saves |
 | --- | --- |
 | `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan, `--infer-areas` to explicitly add newly inferred areas, or `--no-infer-areas` for overview-only setup |
+| `measure` | Read-only proof: previews selected areas, scope reduction, and approximate text budget without writing a generated pack |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
@@ -490,4 +510,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.12](https://github.com/Fharena/context-pack/releases/tag/v0.2.12).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.13](https://github.com/Fharena/context-pack/releases/tag/v0.2.13).

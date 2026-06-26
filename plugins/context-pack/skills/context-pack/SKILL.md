@@ -5,7 +5,7 @@ description: Prepare focused repo context for coding agents. Use proactively whe
 
 # Context Pack
 
-Use this skill as the agent-facing workflow for Context Pack. The user should not need to know script paths or internal commands. Run the bundled engine yourself, read the generated pack, then continue the user's actual coding, review, or handoff task.
+Use this skill as the agent-facing workflow for Context Pack. The user should not need to know script paths or internal commands. Run the bundled engine yourself, read the generated pack when one is created, then continue the user's actual coding, review, or handoff task.
 
 Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
 
@@ -46,6 +46,7 @@ Also use this skill without explicit naming when:
 Report back in user terms:
 
 - what pack/checkpoint was created
+- what measurement was produced when no pack was written
 - selected areas
 - scope-reduction and approximate text-budget numbers when present
 - read-first files
@@ -135,6 +136,16 @@ python scripts/context_pack.py start
 ```
 
 Then read `.context-pack/packs/CONTEXT_PACK.md` if it was generated. If no pack was generated, follow the command's next action.
+
+### Read-Only Measurement
+
+Use when the user asks whether Context Pack will save context, wants proof before writing generated packs, or is comparing repo orientation cost.
+
+```bash
+python scripts/context_pack.py measure --task "<short task description>"
+```
+
+This writes no pack. Report the selected areas, scope reduction, approximate text budget, and suggested `start` command.
 
 ### Initialize Project Memory
 
@@ -305,6 +316,7 @@ Prefer a few high-value responsibility areas over one summary per folder.
 ## Operating Rules
 
 - Generate or consult a context pack before broad reading.
+- Use `measure` when the user wants proof or estimates before writing a generated pack.
 - Read generated packs as routing hints, not source truth.
 - Verify stale warnings against source before acting.
 - Keep `CURRENT.md` short; move durable knowledge into `AREAS/*.md`.

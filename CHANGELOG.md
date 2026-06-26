@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-06-27
+
+### Added
+
+- Added `context-pack measure`, a read-only proof command that previews selected areas, scope reduction, and approximate text budget without writing a generated pack.
+
 ## [0.2.12] - 2026-06-27
 
 ### Fixed

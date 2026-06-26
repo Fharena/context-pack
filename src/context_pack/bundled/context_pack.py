@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.12"
+CONTEXT_PACK_VERSION = "0.2.13"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -486,7 +486,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "paths": ["README.md", "README.*.md", "docs/**"],
             "start_files": ["README.md", "docs"],
             "tests": [],
-            "keywords": ["docs", "readme", "agents", "claude", "onboarding", "usage", "adoption"],
+            "keywords": ["docs", "readme", "agents", "claude", "onboarding", "usage", "adoption", "proof"],
             "contracts": [
                 "Docs should describe the current install and usage flow.",
                 "Agent guidance should be concise and actionable.",
@@ -2027,6 +2027,78 @@ def build_pack(args: argparse.Namespace) -> int:
     return 0
 
 
+def pack_scope_value(pack_markdown: str, label: str) -> str:
+    prefix = f"- {label}: "
+    for line in pack_markdown.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix) :]
+    return ""
+
+
+def cmd_measure(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    layout = resolve_layout(repo)
+    manifest = load_manifest(repo, layout)
+    args.mode = "review" if getattr(args, "review", False) or getattr(args, "base", None) else "work"
+    changed = resolve_changed_files(repo, snapshot, args)
+    matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
+    max_areas = getattr(args, "max_areas", 4) or len(matches)
+    primary = matches[:max_areas]
+    related = matches[max_areas:]
+    content = render_pack(
+        repo,
+        manifest,
+        snapshot,
+        primary,
+        layout=layout,
+        related_selections=related,
+        changed_files=changed,
+        task=args.task,
+        mode=args.mode,
+        max_read_first=getattr(args, "max_read_first", 12),
+        max_contracts=getattr(args, "max_contracts", 12),
+        max_failure_modes=getattr(args, "max_failure_modes", 10),
+    )
+    if not args.quiet:
+        repo_files_considered = pack_scope_value(content, "Repo files considered")
+        read_first_entries = pack_scope_value(content, "Read First entries")
+        changed_in_scope = pack_scope_value(content, "Changed files in scope")
+        read_first_text = pack_scope_value(content, "Approx Read First text")
+        repo_text = pack_scope_value(content, "Approx repo text")
+        print(f"Context Pack Measure for {repo}")
+        print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head[:12]}")
+        print("Mode: " + args.mode)
+        if args.task:
+            print(f"Task: {args.task}")
+        print("No files written.")
+        print("")
+        print("Selected areas: " + (", ".join(item.area_id for item in primary) if primary else "none"))
+        if related:
+            print("Related areas: " + ", ".join(item.area_id for item in related))
+        if repo_files_considered:
+            print(f"Scope reduction: start from {len(primary)} area(s) instead of scanning {repo_files_considered} repo file(s)")
+        if read_first_entries:
+            print(f"Read First entries: {read_first_entries}")
+        if changed_in_scope:
+            print(f"Changed files in scope: {changed_in_scope}")
+        if read_first_text and repo_text:
+            print(f"Approx text budget: Read First {read_first_text}; repo {repo_text}")
+        print("")
+        print("Run next:")
+        if args.mode == "review":
+            suffix = f" --base {args.base}" if getattr(args, "base", None) else ""
+            print(f"- context-pack start --review{suffix}")
+        elif args.task:
+            task = args.task.replace('"', '\\"')
+            print(f'- context-pack start --task "{task}"')
+        elif getattr(args, "changed", False):
+            print("- context-pack start --changed")
+        else:
+            print("- context-pack start --task \"<your task>\"")
+    return 0
+
+
 def cmd_pack(args: argparse.Namespace) -> int:
     args.mode = "work"
     return build_pack(args)
@@ -2483,10 +2555,10 @@ def plugin_manifest_doc() -> dict[str, Any]:
             "displayName": "Context Pack",
             "shortDescription": "Start agents from focused repo context.",
             "longDescription": (
-                "Context Pack keeps a lightweight repo-local context library, provides previewable setup and "
-                "one-command start flows, writes ignored local checkpoints by default, and generates task or review "
-                "packs so coding agents can begin from relevant files, contracts, tests, and stale warnings instead "
-                "of rereading the repository."
+                "Context Pack keeps a lightweight repo-local context library, provides previewable setup, read-only "
+                "measurement, and one-command start flows, writes ignored local checkpoints by default, and generates "
+                "task or review packs so coding agents can begin from relevant files, contracts, tests, and stale "
+                "warnings instead of rereading the repository."
             ),
             "developerName": "Context Pack",
             "category": "Productivity",
@@ -2510,7 +2582,7 @@ description: Prepare focused repo context for coding agents. Use proactively whe
 
 # Context Pack
 
-Use this skill as the agent-facing workflow for Context Pack. Run the bundled engine yourself, read the generated pack, then continue the user's coding, review, or handoff task.
+Use this skill as the agent-facing workflow for Context Pack. Run the bundled engine yourself, read the generated pack when one is created, then continue the user's coding, review, or handoff task.
 
 Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
 
@@ -2562,6 +2634,16 @@ Read `.context-pack/packs/CONTEXT_PACK.md` if generated. Treat context docs as r
 
 When reporting back, include selected areas plus scope-reduction and approximate text-budget numbers when present.
 
+## Read-Only Measurement
+
+When the user asks whether Context Pack will save context, wants proof before writing generated packs, or is comparing repo orientation cost, run:
+
+```bash
+python scripts/context_pack.py measure --task "<short task description>"
+```
+
+This writes no pack. Report the selected areas, scope reduction, approximate text budget, and the suggested `start` command.
+
 ## Install Shared Agent Docs
 
 When the user wants Context Pack to work across Codex, Claude, Cursor, or mixed-agent repos, run:
@@ -2585,6 +2667,7 @@ This writes ignored local state by default. Use `checkpoint --publish --pack` on
 ## Other Commands
 
 - `python scripts/context_pack.py status`
+- `python scripts/context_pack.py measure --task "<short task description>"`
 - `python scripts/context_pack.py doctor --fix`
 - `python scripts/context_pack.py migrate`
 - `python scripts/context_pack.py mark-reviewed <area-id>`
@@ -2971,6 +3054,15 @@ def build_parser() -> argparse.ArgumentParser:
     add_pack_budget(p)
     p.set_defaults(func=cmd_pack)
 
+    p = sub.add_parser("measure", help="Preview estimated context reduction without writing a pack")
+    add_common(p)
+    p.add_argument("--task", help="Natural language task to match against area metadata")
+    p.add_argument("--changed", action="store_true", help="Select areas from dirty files")
+    p.add_argument("--review", action="store_true", help="Measure a review pack instead of a work pack")
+    p.add_argument("--base", help="Review committed changes against a base ref, such as main")
+    add_pack_budget(p)
+    p.set_defaults(func=cmd_measure)
+
     p = sub.add_parser("review-pack", help="Generate a code-review context pack from dirty files")
     add_common(p)
     p.add_argument("--task", help="Optional review focus")
@@ -3064,6 +3156,7 @@ def print_quickstart() -> None:
     print("Start here:")
     print("  context-pack setup --dry-run")
     print("  context-pack setup")
+    print('  context-pack measure --task "fix login timeout"')
     print('  context-pack start --task "fix login timeout"')
     print("  context-pack start --review --base main")
     print("  context-pack checkpoint --pack")

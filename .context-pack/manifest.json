@@ -109,7 +109,13 @@
         "marketplace",
         "skill",
         "plugin",
-        "deploy"
+        "deploy",
+        "docs",
+        "readme",
+        "onboarding",
+        "usage",
+        "adoption",
+        "proof"
       ],
       "paths": [
         "scripts/install_skill.py",
