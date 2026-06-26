@@ -2248,15 +2248,16 @@ def plugin_manifest_doc() -> dict[str, Any]:
             "displayName": "Context Pack",
             "shortDescription": "Start agents from focused repo context.",
             "longDescription": (
-                "Context Pack keeps a lightweight repo-local context library, provides a one-command start flow, "
-                "writes ignored local checkpoints by default, and generates task or review packs so coding agents "
-                "can begin from relevant files, contracts, tests, and stale warnings instead of rereading the repository."
+                "Context Pack keeps a lightweight repo-local context library, provides previewable setup and "
+                "one-command start flows, writes ignored local checkpoints by default, and generates task or review "
+                "packs so coding agents can begin from relevant files, contracts, tests, and stale warnings instead "
+                "of rereading the repository."
             ),
             "developerName": "Context Pack",
             "category": "Productivity",
             "capabilities": ["Write", "Automation"],
             "defaultPrompt": [
-                "Start context-pack in this repo.",
+                "Preview setup, then start Context Pack in this repo.",
                 "Build a review context pack for my changes.",
                 "Checkpoint this work for the next session.",
             ],
@@ -2280,7 +2281,13 @@ Do not wait for the user to name Context Pack when the situation clearly calls f
 
 ## Set Up A Repo
 
-When Context Pack is missing or the user asks to initialize, install, configure, or start project memory, run:
+When Context Pack is missing or the user asks to initialize, install, configure, or start project memory, preview the write plan first:
+
+```bash
+python scripts/context_pack.py setup --dry-run
+```
+
+The dry run writes nothing and prints the matching apply command with selected options preserved. If the user explicitly asked you to set up the repo, run the apply command after reviewing the plan; otherwise summarize what would change before writing files.
 
 ```bash
 python scripts/context_pack.py setup
@@ -2358,7 +2365,7 @@ def packaged_openai_yaml() -> str:
 interface:
   display_name: "Context Pack"
   short_description: "Start agents from focused repo context"
-  default_prompt: "Use $context-pack to set up this repo, then start from focused context before broad reading, review, debugging, or handoff."
+  default_prompt: "Use $context-pack to preview setup, then start from focused context before broad reading, review, debugging, or handoff."
 policy:
   allow_implicit_invocation: true
 """

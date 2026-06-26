@@ -1,6 +1,6 @@
 interface:
   display_name: "Context Pack"
   short_description: "Start agents from focused repo context"
-  default_prompt: "Use $context-pack to set up this repo, then start from focused context before broad reading, review, debugging, or handoff."
+  default_prompt: "Use $context-pack to preview setup, then start from focused context before broad reading, review, debugging, or handoff."
 policy:
   allow_implicit_invocation: true

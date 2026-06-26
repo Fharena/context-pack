@@ -883,8 +883,13 @@ class ContextPackTests(unittest.TestCase):
             plugin = json.loads((target / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
             self.assertEqual(plugin["name"], "context-pack")
             self.assertEqual(plugin["version"], self.engine.CONTEXT_PACK_VERSION)
+            self.assertIn("previewable setup", plugin["interface"]["longDescription"])
+            self.assertIn("Preview setup", plugin["interface"]["defaultPrompt"][0])
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("context-pack start", skill)
+            self.assertIn("setup --dry-run", skill)
+            openai = (target / "skills/context-pack/agents/openai.yaml").read_text(encoding="utf-8")
+            self.assertIn("preview setup", openai)
             script = (target / "skills/context-pack/scripts/context_pack.py").read_text(encoding="utf-8")
             self.assertIn("CONTEXT_PACK_VERSION", script)
 

@@ -94,6 +94,14 @@ This creates or updates the managed Context Pack block in `AGENTS.md`, `CLAUDE.m
 
 Use when Context Pack is missing or the user asks to initialize, install, configure, or start project memory in a repo.
 
+For first-time setup, prefer previewing the write plan before applying it:
+
+```bash
+python scripts/context_pack.py setup --dry-run
+```
+
+The dry run writes nothing and prints the matching apply command with selected options preserved. If the user explicitly asked you to set up the repo, run the apply command after reviewing the plan; otherwise summarize what would change before writing files.
+
 ```bash
 python scripts/context_pack.py setup
 ```
@@ -137,16 +145,18 @@ Prefer `setup` unless the user specifically asked for low-level initialization o
 1. Run:
 
    ```bash
-   python scripts/context_pack.py setup
+   python scripts/context_pack.py setup --dry-run
    ```
 
-2. Run:
+2. If the user asked you to proceed with setup, run the apply command printed by the dry run.
+
+3. Run:
 
    ```bash
    python scripts/context_pack.py doctor
    ```
 
-3. If setup succeeds, summarize the created files and suggest the next natural-language prompt, such as "Build a review context pack for this branch."
+4. If setup succeeds, summarize the created files and suggest the next natural-language prompt, such as "Build a review context pack for this branch."
 
 Do not install git hooks during setup unless the user explicitly asks for automation.
 

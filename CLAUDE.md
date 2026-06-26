@@ -10,4 +10,5 @@ When a review needs orientation, prefer `context-pack start --review --base <bas
 For reviews and debugging, prefer a generated context pack from `.context-pack/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
 At the end of substantial work or after changing files, run `context-pack checkpoint --pack` when available. This writes an ignored local checkpoint by default so automatic agent use does not dirty tracked handoff files. Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
+
 <!-- context-pack:rules:end -->
