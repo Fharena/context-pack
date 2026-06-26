@@ -1,6 +1,6 @@
 ---
 id: installer-release
-last_reviewed_head: 4cd7e6c6caf4
+last_reviewed_head: 7faaa42ce2c0
 status: active
 paths:
   - scripts/install_skill.py
@@ -8,18 +8,26 @@ paths:
   - .agents/plugins/marketplace.json
   - .github/**
   - pyproject.toml
+  - package.json
+  - bin/**
   - src/context_pack/**
   - assets/**
+  - docs/**
   - CHANGELOG.md
   - CONTRIBUTING.md
   - README.md
   - README.ko.md
   - LICENSE
   - SECURITY.md
+  - .gitignore
+  - .gitattributes
 tests:
   - python -m unittest discover -s tests -v
-  - plugin validation
-  - skill validation
+  - python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
+  - python -m json.tool .agents/plugins/marketplace.json
+  - python -m build
+  - python -m twine check dist/*
+  - npm pack --dry-run
 stale_if:
   - install paths change
   - marketplace policy changes
