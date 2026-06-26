@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -16,7 +16,8 @@
   <a href="#install">Install</a> ·
   <a href="#basic-usage-flow">Usage</a> ·
   <a href="#terminal-demo">Terminal Demo</a> ·
-  <a href="#how-it-works">How It Works</a>
+  <a href="#how-it-works">How It Works</a> ·
+  <a href="docs/RELEASE.md">Release Guide</a>
 </p>
 
 <p align="center">
@@ -466,11 +467,14 @@ python -m pip install -e .
 context-pack --help
 context-pack doctor --fix --help
 node bin/context-pack.js --help
+python -m pip install build twine
+python -m build
+python -m twine check dist/*
 npm pack --dry-run
 ```
 
-GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12.
+GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Python wheel/sdist checks, and Node/npm wrapper checks on Windows and Ubuntu for Python 3.11 and 3.12.
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.2.1](https://github.com/Fharena/context-pack/releases/tag/v0.2.1).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.2](https://github.com/Fharena/context-pack/releases/tag/v0.2.2).

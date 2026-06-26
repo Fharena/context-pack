@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.2"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -15,7 +15,8 @@
   <a href="README.md">English</a> ·
   <a href="#설치">설치</a> ·
   <a href="#터미널-데모">터미널 데모</a> ·
-  <a href="#작동-방식">작동 방식</a>
+  <a href="#작동-방식">작동 방식</a> ·
+  <a href="docs/RELEASE.ko.md">릴리즈 가이드</a>
 </p>
 
 <p align="center">
@@ -466,11 +467,14 @@ python -m pip install -e .
 context-pack --help
 context-pack doctor --fix --help
 node bin/context-pack.js --help
+python -m pip install build twine
+python -m build
+python -m twine check dist/*
 npm pack --dry-run
 ```
 
-GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Node/npm wrapper check를 실행합니다.
+GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test, JSON validation, packaged CLI check, Python wheel/sdist check, Node/npm wrapper check를 실행합니다.
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.2.1](https://github.com/Fharena/context-pack/releases/tag/v0.2.1).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.2](https://github.com/Fharena/context-pack/releases/tag/v0.2.2).

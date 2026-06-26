@@ -38,6 +38,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
   - `assets/**`
+  - `docs/**`
   - `README.md`
   - `README.ko.md`
   - `LICENSE`
@@ -49,6 +50,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
   - `python -m json.tool .agents/plugins/marketplace.json`
   - `python -m pip install -e .`
+  - `python -m build`
+  - `python -m twine check dist/*`
   - `context-pack --help`
   - `node bin/context-pack.js --help`
   - `npm pack --dry-run`

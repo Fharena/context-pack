@@ -4,6 +4,17 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-27
+
+### Added
+
+- Added English and Korean release guides for GitHub, PyPI, and npm publishing.
+- CI now builds Python sdist/wheel artifacts and runs `twine check` before npm tarball validation.
+
+### Changed
+
+- Modernized Python package license metadata to SPDX-style `license = "MIT"` with explicit license files.
+
 ## [0.2.1] - 2026-06-27
 
 ### Added

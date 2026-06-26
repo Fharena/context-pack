@@ -1,6 +1,6 @@
 {
   "name": "context-pack",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Repo-local context packs and handoff checkpoints for coding agents.",
   "author": {
     "name": "Context Pack"
