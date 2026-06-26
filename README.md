@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.5"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.6"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -485,4 +485,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.5](https://github.com/Fharena/context-pack/releases/tag/v0.2.5).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.6](https://github.com/Fharena/context-pack/releases/tag/v0.2.6).

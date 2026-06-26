@@ -4,6 +4,8 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-06-27
+
 ### Changed
 
 - Agent-facing skill and plugin prompts now teach previewable setup with `setup --dry-run`, and this repository now dogfoods shared `AGENTS.md`, `CLAUDE.md`, and Cursor rules that use the `context-pack start` fast path.
