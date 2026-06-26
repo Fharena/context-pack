@@ -36,3 +36,10 @@ Append-only operational log.
 - Dirty files: .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, README.ko.md, README.md, assets/demo.gif, codex/context/AREAS/installer-release.md, scripts/generate_demo_gif.py
 - Dirty diff hash: sha256:28b7f584e43a899ee9b1ff47
 - Verification: not recorded
+
+## 2026-06-26T19:29:55+09:00
+- Branch: main
+- HEAD: acb5ff2e3c4d
+- Dirty files: EADME.ko.md, README.md, assets/demo.gif, plugins/context-pack/skills/context-pack/SKILL.md, plugins/context-pack/skills/context-pack/agents/openai.yaml, plugins/context-pack/skills/context-pack/scripts/context_pack.py, scripts/generate_demo_gif.py
+- Dirty diff hash: sha256:36455052ac420445e3d8a5d6
+- Verification: not recorded

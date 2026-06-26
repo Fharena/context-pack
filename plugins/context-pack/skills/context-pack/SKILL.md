@@ -1,118 +1,158 @@
 ---
 name: context-pack
-description: Build and maintain a repo-local context library for coding agents. Use when initializing project memory, creating task-specific context packs, preparing code review context, checkpointing handoff state, reducing token use before broad repo reading, refreshing context indexes, or continuing work across Codex, Claude, Cursor, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use when the user asks to initialize project memory, reduce token use before reading a repo, prepare a task or debugging context pack, review changed code, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
 
-Use this skill to keep a project-local context library and generate small task-specific context packs before reading broadly. Prefer deterministic script commands for factual repo state; use model judgment only for semantic summaries, contracts, failure modes, and decisions.
+Use this skill as the agent-facing workflow for Context Pack. The user should not need to know script paths or internal commands. Run the bundled engine yourself, read the generated pack, then continue the user's actual coding, review, or handoff task.
 
-## Core Principle
+## Promise
 
-Treat context docs as a routing layer, not source of truth. A context pack should answer:
+Start from the right shelf instead of rereading the repo.
 
-- What should be read first?
-- Which contracts and failure modes matter?
-- Which tests are relevant?
-- Is the context stale relative to git state?
+Context Pack keeps a repo-local context library and generates small task-specific packs:
 
-Always verify behavior in source code before editing or reviewing.
+- `.codex/context/` -> stable project index and area docs
+- `.codex/handoff/` -> current checkout/work state
+- `.codex/packs/CONTEXT_PACK.md` -> generated reading pack for this task
 
-## Bundled Engine
+Treat these docs as routing hints, not source of truth. Always verify behavior in source code before editing or reviewing.
 
-Run the stdlib-only engine from this skill folder:
+## How To Respond To Users
+
+When the user says something like:
+
+- "Use context-pack here"
+- "Initialize this repo"
+- "Prepare review context"
+- "Make a context pack for this bug"
+- "Checkpoint this work"
+- "Continue from the project memory"
+
+do the work. Do not stop at instructions.
+
+Report back in user terms:
+
+- what pack/checkpoint was created
+- selected areas
+- read-first files
+- stale warnings, if any
+- what you will inspect next
+
+## Engine Location
+
+Run from this skill folder:
 
 ```bash
 python scripts/context_pack.py <command>
 ```
 
-If used from the plugin root, the wrapper also works:
+If operating from the plugin root, the wrapper also works:
 
 ```bash
 python scripts/context_pack.py <command>
 ```
 
-## Commands
+Use the script for factual repo state. Use model judgment only for semantic summaries, contracts, failure modes, and decisions.
 
-### Initialize a repo
+## Workflows
 
-Use when the project does not have `.codex/context` yet:
+### Initialize Project Memory
+
+Use when `.codex/context/manifest.json` is missing or the user asks to set up Context Pack.
+
+1. Run:
+
+   ```bash
+   python scripts/context_pack.py init
+   ```
+
+2. Run:
+
+   ```bash
+   python scripts/context_pack.py doctor
+   ```
+
+3. If setup succeeds, summarize the created files and suggest the next natural-language prompt, such as "Build a review context pack for this branch."
+
+Do not install git hooks during init unless the user explicitly asks for automation.
+
+### Prepare A Task Or Debugging Pack
+
+Use before broad repo reading for a feature, bug, or debugging task.
+
+1. Run:
+
+   ```bash
+   python scripts/context_pack.py pack --task "<short task description>"
+   ```
+
+2. Read `.codex/packs/CONTEXT_PACK.md`.
+3. Read only the listed area docs and source files first.
+4. Continue the user's task from that focused context.
+
+If the user has already changed files and no task is clear, run:
 
 ```bash
-python scripts/context_pack.py init
+python scripts/context_pack.py pack --changed
 ```
 
-This creates:
+### Prepare Code Review Context
 
-- `.codex/context/manifest.json`
-- `.codex/context/INDEX.md`
-- `.codex/context/REVIEW.md`
-- `.codex/context/CONTRACTS.md`
-- `.codex/context/AREAS/overview.md`
-- `.codex/handoff/CURRENT.md`
-- `.codex/handoff/LOG.md`
-- `.codex/handoff/DECISIONS.md`
+Use when reviewing local changes, a branch, or a PR.
 
-It also adds local/generated ignores for `.codex/packs/`, `.codex/context/tmp/`, and `.codex/handoff/LOCAL.md`, then appends context-pack rules to `AGENTS.md` unless `--no-agent-doc` is provided.
+1. Prefer an explicit base when available:
 
-### Checkpoint after work
+   ```bash
+   python scripts/context_pack.py review-pack --base <base-ref>
+   ```
 
-Run after meaningful edits, tests, or review:
+2. If no base is known, run:
+
+   ```bash
+   python scripts/context_pack.py review-pack
+   ```
+
+3. Read `.codex/packs/CONTEXT_PACK.md`.
+4. Review changed files against the listed contracts, failure modes, and tests before widening scope.
+
+### Checkpoint Work
+
+Use after meaningful edits, tests, review, or when the user asks to hand off work.
 
 ```bash
 python scripts/context_pack.py checkpoint --pack
 ```
 
-This updates the fingerprint in `CURRENT.md`, appends `LOG.md`, and optionally generates `.codex/packs/CONTEXT_PACK.md` from changed files.
+Then report:
 
-### Build a work pack
+- current branch and HEAD
+- dirty file count
+- generated pack path
+- next files/areas another agent should read
 
-Run before broad repo reading:
+### Refresh Context Routing
 
-```bash
-python scripts/context_pack.py pack --task "serve-model startup bug"
-python scripts/context_pack.py pack --changed
-```
-
-Read `.codex/packs/CONTEXT_PACK.md` first, then inspect the listed area docs and source files.
-
-### Build a review pack
-
-Run before code review:
-
-```bash
-python scripts/context_pack.py review-pack
-python scripts/context_pack.py review-pack --base main
-```
-
-Use the generated contracts, failure modes, tests, and changed-file list to focus the review.
-Without `--base`, `review-pack` uses dirty files first, then the upstream branch when available. Use `--base` for committed branch reviews.
-
-### Refresh routing docs
-
-Run after editing `.codex/context/manifest.json`:
+Use after `.codex/context/manifest.json` or area ownership changes.
 
 ```bash
 python scripts/context_pack.py refresh
 ```
 
-Use `--mark-stale` when changed files mean selected area docs need a human/agent semantic update:
+If changed files suggest area docs are stale:
 
 ```bash
 python scripts/context_pack.py refresh --mark-stale
 ```
 
-### Validate setup
+After refresh, inspect updated `INDEX.md`, `REVIEW.md`, and `CONTRACTS.md` if relevant.
 
-Run before handoff or commit:
+### Optional Git Hook Automation
 
-```bash
-python scripts/context_pack.py doctor
-```
+Git hooks are optional. They are not required to use Context Pack.
 
-### Install git hooks
-
-Use opt-in git hooks for deterministic automation:
+Only install them if the user explicitly asks for automatic checkpointing near git work boundaries:
 
 ```bash
 python scripts/context_pack.py install-git-hooks --mode safe
@@ -120,43 +160,19 @@ python scripts/context_pack.py install-git-hooks --mode safe
 
 Safe mode installs:
 
-- `pre-commit`: run `doctor`.
-- `post-checkout`: checkpoint after branch changes.
-- `post-merge`: checkpoint after pulls/merges.
+- `pre-commit`: run `doctor`
+- `post-checkout`: checkpoint after branch changes
+- `post-merge`: checkpoint after pulls/merges
 
-Aggressive mode also checkpoints after commits:
-
-```bash
-python scripts/context_pack.py install-git-hooks --mode aggressive
-```
-
-Remove hook blocks with:
+Remove hooks with:
 
 ```bash
 python scripts/context_pack.py uninstall-git-hooks
 ```
 
-## Updating Context
-
-Use script-generated facts for:
-
-- branch, HEAD, dirty file list, diff hash
-- changed-file to area matching
-- stale warnings
-- generated pack contents
-
-Use agent judgment for:
-
-- adding or revising `AREAS/*.md`
-- recording durable contracts
-- identifying common failure modes
-- adding decisions to `DECISIONS.md`
-
-Keep `CURRENT.md` short. Move stable project knowledge into `.codex/context/AREAS/*.md`.
-
 ## Area Manifest
 
-The engine uses `.codex/context/manifest.json`. Each area can include:
+The engine uses `.codex/context/manifest.json`. Each area may include:
 
 ```json
 {
@@ -172,14 +188,14 @@ The engine uses `.codex/context/manifest.json`. Each area can include:
 }
 ```
 
-Prefer a few high-value areas over one summary per folder.
+Prefer a few high-value responsibility areas over one summary per folder.
 
 ## Operating Rules
 
-- Before broad reading, generate or consult a context pack.
-- After substantial file edits, run `checkpoint --pack`.
-- For code review, run `review-pack` before reading surrounding files.
+- Generate or consult a context pack before broad reading.
+- Read generated packs as routing hints, not source truth.
+- Verify stale warnings against source before acting.
+- Keep `CURRENT.md` short; move durable knowledge into `AREAS/*.md`.
 - Do not commit `.codex/packs/` or `.codex/handoff/LOCAL.md`.
-- Treat stale packs and stale area docs as hints only.
-- If a changed file maps to no area, inspect source and update the manifest or an area doc after the task.
+- If a changed file maps to no area, inspect source and update the manifest or area docs after the task.
 - For committed branch reviews, prefer `review-pack --base <base-ref>`.

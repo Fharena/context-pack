@@ -74,18 +74,20 @@ def draw_lines(img: Image.Image, lines: list[tuple[str, str]], *, start_y: int =
 
 SCENES: list[list[tuple[str, str]]] = [
     [
-        ("$ python plugins/context-pack/scripts/context_pack.py init", BLUE),
-        ("Initialized context-pack in ./repo", GREEN),
-        ("- Context index: .codex/context/INDEX.md", TEXT),
-        ("- Handoff: .codex/handoff/CURRENT.md", TEXT),
-        ("- Manifest: .codex/context/manifest.json", TEXT),
+        ("> Use $context-pack to initialize this repo.", BLUE),
+        ("Context Pack engine: init", MUTED),
+        ("Initialized Context Pack in ./repo", GREEN),
+        ("Created:", TEXT),
+        ("- .codex/context/INDEX.md", TEXT),
+        ("- .codex/handoff/CURRENT.md", TEXT),
     ],
     [
-        ("$ python plugins/context-pack/scripts/context_pack.py review-pack --base main", BLUE),
+        ("> Use $context-pack to review this branch against main.", BLUE),
+        ("Context Pack engine: review-pack --base main", MUTED),
         ("Context pack written to .codex/packs/CONTEXT_PACK.md", GREEN),
         ("Selected areas: engine, installer-release, tests", TEXT),
-        ("", TEXT),
-        ("No repo-wide scan needed yet.", MUTED),
+        ("Read next: .codex/context/AREAS/engine.md", TEXT),
+        ("No repo-wide scan needed yet.", YELLOW),
     ],
     [
         ("# Context Pack", YELLOW),
@@ -105,10 +107,11 @@ SCENES: list[list[tuple[str, str]]] = [
         ("- Engine stays stdlib-only.", GREEN),
     ],
     [
-        ("$ python plugins/context-pack/scripts/context_pack.py checkpoint --pack", BLUE),
+        ("> Use $context-pack to checkpoint this work.", BLUE),
+        ("Context Pack engine: checkpoint --pack", MUTED),
         ("Checkpoint updated at .codex/handoff/CURRENT.md", GREEN),
         ("HEAD: cc20bba; dirty: 0 file(s); hash: clean", TEXT),
-        ("", TEXT),
+        ("Next agent prompt: continue from the current handoff", TEXT),
         ("Next agent starts from the right shelf.", YELLOW),
     ],
 ]

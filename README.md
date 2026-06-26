@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="README.ko.md">한국어</a> ·
-  <a href="#quick-start">Quick Start</a> ·
+  <a href="#install">Install</a> ·
   <a href="#terminal-demo">Terminal Demo</a> ·
   <a href="#how-it-works">How It Works</a>
 </p>
@@ -50,29 +50,45 @@ Context Pack makes the repo carry enough context for that handoff:
 - Which notes may be stale and need source verification
 - Which generated/local files should not be trusted or committed
 
-## Quick Start
+## Install
 
-Use directly from the repo:
+Recommended for Codex:
 
-```powershell
-python plugins/context-pack/scripts/context_pack.py init
-python plugins/context-pack/scripts/context_pack.py pack --task "startup bug"
-python plugins/context-pack/scripts/context_pack.py review-pack --base main
-python plugins/context-pack/scripts/context_pack.py checkpoint --pack
-python plugins/context-pack/scripts/context_pack.py doctor
+```bash
+codex plugin marketplace add Fharena/context-pack
+codex plugin add context-pack@context-pack
 ```
 
-Install as a Codex skill:
+Then talk to your agent:
+
+```text
+Use $context-pack to initialize this repo.
+Use $context-pack to build a review context pack for this branch.
+Use $context-pack to checkpoint this work.
+```
+
+The agent runs the engine, reads the generated pack, and continues from the focused context.
+
+## Local Install Options
+
+Install from a clone as a local Codex plugin:
+
+```powershell
+python scripts/install_plugin.py
+codex plugin add context-pack@personal
+```
+
+Install only the skill:
 
 ```powershell
 python scripts/install_skill.py
 ```
 
-Install as a local Codex plugin:
+Use the deterministic engine manually, without installing anything:
 
 ```powershell
-python scripts/install_plugin.py
-codex plugin add context-pack@personal
+python plugins/context-pack/scripts/context_pack.py init
+python plugins/context-pack/scripts/context_pack.py review-pack --base main
 ```
 
 This repository also includes a repo-scoped Codex marketplace:
@@ -81,7 +97,12 @@ This repository also includes a repo-scoped Codex marketplace:
 .agents/plugins/marketplace.json
 ```
 
-After cloning, you can add this repo as a Codex plugin marketplace so Codex can discover the bundled plugin from the repo.
+After cloning, you can add this repo as a local Codex plugin marketplace so Codex can discover the bundled plugin from the repo:
+
+```bash
+codex plugin marketplace add .
+codex plugin add context-pack@context-pack
+```
 
 ## Terminal Demo
 
@@ -89,6 +110,12 @@ After cloning, you can add this repo as a Codex plugin marketplace so Codex can 
 $ python plugins/context-pack/scripts/context_pack.py review-pack --base main
 Context pack written to .codex/packs/CONTEXT_PACK.md
 Selected areas: engine, installer-release, tests
+
+Read next:
+- .codex/packs/CONTEXT_PACK.md
+- .codex/context/AREAS/engine.md
+- .codex/context/AREAS/installer-release.md
+- .codex/context/AREAS/tests.md
 
 $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
@@ -127,11 +154,15 @@ The point is not to replace source code. The point is to make the agent start fr
 | `doctor` | Checks whether the context library is usable |
 | `install-git-hooks` | Adds opt-in repo-local checkpoint automation |
 
-## Agent UX
+## Agent-First UX
 
 Tell the agent:
 
 ```text
+Use $context-pack to initialize this repo.
+Use $context-pack to make a context pack for this bug.
+Use $context-pack to review this branch against main.
+Use $context-pack to checkpoint this work.
 Initialize context-pack in this repo.
 Build a review context pack for my changes.
 Checkpoint this work for the next session.
@@ -186,7 +217,7 @@ Ignore:
 
 ## Automation
 
-Optional safe git hooks:
+Optional safe git hooks. You do not need this to use Context Pack.
 
 ```powershell
 python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode safe

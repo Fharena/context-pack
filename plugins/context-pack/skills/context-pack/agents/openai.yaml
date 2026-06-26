@@ -1,6 +1,6 @@
 interface:
   display_name: "Context Pack"
   short_description: "Build task-specific repo context packs"
-  default_prompt: "Use $context-pack to initialize project memory or build a focused context pack before reviewing code."
+  default_prompt: "Use $context-pack to prepare focused repo context before reviewing, debugging, or continuing work."
 policy:
   allow_implicit_invocation: true

@@ -549,10 +549,19 @@ def cmd_init(args: argparse.Namespace) -> int:
         append_agent_rules(repo, agent_doc=args.agent_doc)
 
     if not args.quiet:
-        print(f"Initialized context-pack in {repo}")
+        print(f"Initialized Context Pack in {repo}")
+        print("")
+        print("Created:")
         print(f"- Context index: {INDEX_PATH}")
         print(f"- Handoff: {CURRENT_PATH}")
         print(f"- Manifest: {MANIFEST_PATH}")
+        print("")
+        print("Ask your agent next:")
+        print('- "Use $context-pack to build a review context pack for this branch."')
+        print('- "Use $context-pack to make a context pack for this bug."')
+        print("")
+        print("Optional automation:")
+        print("python scripts/context_pack.py install-git-hooks --mode safe")
     return 0
 
 
@@ -599,6 +608,9 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
     if not args.quiet:
         print(f"Checkpoint updated at {CURRENT_PATH}")
         print(f"HEAD: {snapshot.head}; dirty: {len(snapshot.dirty_files)} file(s); hash: {snapshot.diff_hash}")
+        if args.pack:
+            print(f"Context pack: {PACK_PATH}")
+        print('Next agent prompt: "Use $context-pack to continue from the current handoff."')
     return 0
 
 
@@ -862,6 +874,14 @@ def build_pack(args: argparse.Namespace) -> int:
     if not args.quiet:
         print(f"Context pack written to {output}")
         print("Selected areas: " + (", ".join(area_ids) if area_ids else "none"))
+        print("")
+        print("Read next:")
+        print(f"- {rel_to_repo(output, repo)}")
+        for area_id in area_ids[:5]:
+            area = (manifest.get("areas") or {}).get(area_id, {})
+            doc = area.get("doc")
+            if doc:
+                print(f"- {doc}")
     return 0
 
 
