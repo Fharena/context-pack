@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.10"
+CONTEXT_PACK_VERSION = "0.2.11"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 
 

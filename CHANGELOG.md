@@ -4,6 +4,13 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-06-27
+
+### Changed
+
+- Refreshed the terminal demo GIF to show the current setup dry-run, setup, start, text-budget, and checkpoint flow.
+- Switched README demo images to a package-safe GitHub raw URL so registry pages do not rely on bundled relative assets.
+
 ## [0.2.10] - 2026-06-27
 
 ### Added

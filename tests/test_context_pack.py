@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "plugins" / "context-pack" / "skills" / "context-pack" / "scripts" / "context_pack.py"
 BUNDLED_ENGINE = ROOT / "src" / "context_pack" / "bundled" / "context_pack.py"
 NODE_WRAPPER = ROOT / "bin" / "context-pack.js"
+DEMO_GIF_SCRIPT = ROOT / "scripts" / "generate_demo_gif.py"
 
 
 def load_engine():
@@ -1174,6 +1175,20 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(npm_package["version"], version)
         self.assertEqual(npm_package["bin"]["context-pack"], "bin/context-pack.js")
         self.assertEqual(self.engine.CONTEXT_PACK_VERSION, version)
+
+    def test_demo_gif_script_matches_current_product_flow(self) -> None:
+        text = DEMO_GIF_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("context-pack setup --dry-run", text)
+        self.assertIn(".context-pack/manifest.json", text)
+        self.assertIn("Approx text budget", text)
+        self.assertIn("checkpoint --pack", text)
+        self.assertNotIn(".codex/", text)
+        self.assertTrue((ROOT / "assets/demo.gif").exists())
+        demo_url = "https://raw.githubusercontent.com/Fharena/context-pack/main/assets/demo.gif"
+        for readme in (ROOT / "README.md", ROOT / "README.ko.md"):
+            readme_text = readme.read_text(encoding="utf-8")
+            self.assertIn(demo_url, readme_text)
+            self.assertNotIn('src="assets/demo.gif"', readme_text)
 
 
 if __name__ == "__main__":
