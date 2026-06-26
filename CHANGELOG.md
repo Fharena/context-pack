@@ -4,6 +4,10 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- The no-argument quickstart now shows `context-pack setup --dry-run` before setup, and setup dry runs now print an apply command that preserves selected setup options.
+
 ## [0.2.4] - 2026-06-27
 
 ### Added

@@ -197,7 +197,8 @@ class ContextPackTests(unittest.TestCase):
 
     def test_setup_dry_run_does_not_write_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
+            repo = Path(tmp) / "repo with space"
+            repo.mkdir()
             output = io.StringIO()
 
             with contextlib.redirect_stdout(output):
@@ -209,7 +210,10 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("create .context-pack/manifest.json", text)
             self.assertIn("create AGENTS.md", text)
             self.assertIn("No files were written.", text)
+            self.assertIn("without `--dry-run`", text)
             self.assertIn("context-pack setup", text)
+            self.assertIn('--repo "', text)
+            self.assertIn('repo with space"', text)
             self.assertFalse((repo / ".context-pack").exists())
             self.assertFalse((repo / "AGENTS.md").exists())
             self.assertFalse((repo / "CLAUDE.md").exists())
@@ -244,6 +248,9 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn(".git/hooks/pre-commit", text)
             self.assertIn(".git/hooks/post-checkout", text)
             self.assertIn(".git/hooks/post-merge", text)
+            self.assertIn("--agent-docs none", text)
+            self.assertIn("--git-hooks safe", text)
+            self.assertNotIn("--dry-run --agent-docs", text)
             self.assertFalse((repo / ".context-pack").exists())
             self.assertFalse((repo / ".git/hooks/pre-commit").exists())
 
@@ -919,6 +926,7 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Start here:", proc.stdout)
+        self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 
@@ -965,6 +973,7 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Start here:", proc.stdout)
+        self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 

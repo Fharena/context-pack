@@ -120,7 +120,7 @@ Examples below use `context-pack` for readability. If you are staying on the Git
 Not sure what to run next? Run `context-pack` with no arguments to print the quickstart, or `context-pack --version` to confirm the installed version.
 
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
-Run `setup --dry-run` first when you want to preview every file and hook that setup would create or update without writing anything.
+Run `setup --dry-run` first when you want to preview every file and hook that setup would create or update without writing anything. The dry run prints the matching apply command with your selected options preserved.
 
 If you already have a context library and only want to refresh shared repo rules:
 

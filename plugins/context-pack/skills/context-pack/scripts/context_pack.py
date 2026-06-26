@@ -989,6 +989,26 @@ def setup_hook_targets(mode: str) -> list[str]:
     return hooks
 
 
+def command_arg(value: str) -> str:
+    safe = set("-_./:\\")
+    if value and all(ch.isalnum() or ch in safe for ch in value):
+        return value
+    return '"' + value.replace('"', '\\"') + '"'
+
+
+def setup_apply_command(args: argparse.Namespace) -> str:
+    parts = ["context-pack", "setup"]
+    if args.repo != ".":
+        parts.extend(["--repo", args.repo])
+    if args.force:
+        parts.append("--force")
+    if args.agent_docs != "all":
+        parts.extend(["--agent-docs", args.agent_docs])
+    if args.git_hooks != "off":
+        parts.extend(["--git-hooks", args.git_hooks])
+    return " ".join(command_arg(str(part)) for part in parts)
+
+
 def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, layout: ContextLayout) -> int:
     if args.quiet:
         return 0
@@ -1027,7 +1047,8 @@ def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, 
     print("")
     print("No files were written.")
     print("Next:")
-    print("- Run `context-pack setup` to apply this plan.")
+    print("- Run the same command without `--dry-run` to apply this plan:")
+    print(f"  {setup_apply_command(args)}")
     return 1 if hook_error else 0
 
 
@@ -2770,6 +2791,7 @@ def print_quickstart() -> None:
     print("Version-aware context packs for Codex, Claude, Cursor, and coding agents.")
     print("")
     print("Start here:")
+    print("  context-pack setup --dry-run")
     print("  context-pack setup")
     print('  context-pack start --task "fix login timeout"')
     print("  context-pack start --review --base main")

@@ -41,6 +41,7 @@ def main() -> int:
 
     binary = prefix / "node_modules" / ".bin" / ("context-pack.cmd" if os.name == "nt" else "context-pack")
     run_output([str(binary)], "Start here:")
+    run_output([str(binary)], "context-pack setup --dry-run")
     run_output([str(binary), "--version"], info[0]["version"])
     run([str(binary), "--help"])
 
