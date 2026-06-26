@@ -472,10 +472,15 @@ class ContextPackTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            self.assertEqual(
-                self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug", "--quiet"]),
-                0,
-            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Scope reduction: start from", text)
+            self.assertIn("Approx text budget: Read First", text)
+            self.assertIn("; repo", text)
+
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: work", pack)
             self.assertIn("## Scope Reduction", pack)

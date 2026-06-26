@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-06-27
+
+### Added
+
+- `context-pack start` now prints the generated pack's approximate text-budget summary in the terminal, so the first-run output shows context savings before opening the pack.
+
 ## [0.2.9] - 2026-06-27
 
 ### Added

@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.9"
+CONTEXT_PACK_VERSION = "0.2.10"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 
 
@@ -1403,6 +1403,9 @@ def cmd_start(args: argparse.Namespace) -> int:
             repo_file_total = len(repo_files(repo))
             if repo_file_total:
                 print(f"Scope reduction: start from {len(selected)} area(s) instead of scanning {repo_file_total} repo file(s)")
+            text_budget = pack_text_budget_summary(output_path)
+            if text_budget:
+                print(f"Approx text budget: {text_budget}")
             print("")
             print("Read next:")
             print(f"- {rel_to_repo(output_path, repo)}")
@@ -1664,6 +1667,21 @@ def format_token_count(tokens: int) -> str:
     if tokens >= 1000:
         return f"{tokens / 1000:.1f}k"
     return str(tokens)
+
+
+def pack_text_budget_summary(pack_path: Path) -> str:
+    read_first = ""
+    repo_text = ""
+    for line in read_text(pack_path).splitlines():
+        if line.startswith("- Approx Read First text: "):
+            read_first = line.split(": ", 1)[1]
+        elif line.startswith("- Approx repo text: "):
+            repo_text = line.split(": ", 1)[1]
+    if read_first and repo_text:
+        return f"Read First {read_first}; repo {repo_text}"
+    if read_first:
+        return f"Read First {read_first}"
+    return ""
 
 
 def percent(part: int, whole: int) -> int:
