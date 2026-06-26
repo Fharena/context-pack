@@ -32,6 +32,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `.github/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
+  - `assets/**`
   - `README.md`
   - `README.ko.md`
   - `LICENSE`
@@ -56,6 +57,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `assets/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
   - `SECURITY.md`

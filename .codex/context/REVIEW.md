@@ -26,6 +26,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `.github/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
+  - `assets/**`
   - `README.md`
   - `README.ko.md`
   - `LICENSE`
@@ -46,6 +47,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `README.md`
   - `README.ko.md`
   - `AGENTS.md`
+  - `assets/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
   - `SECURITY.md`

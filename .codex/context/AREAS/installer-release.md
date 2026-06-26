@@ -7,6 +7,7 @@ paths:
   - scripts/install_plugin.py
   - .agents/plugins/marketplace.json
   - .github/**
+  - assets/**
   - CHANGELOG.md
   - CONTRIBUTING.md
   - README.md
@@ -34,6 +35,7 @@ stale_if:
 - `README.md`
 - `README.ko.md`
 - `CHANGELOG.md`
+- `assets/demo.gif`
 - `scripts/install_skill.py`
 - `scripts/install_plugin.py`
 - `.agents/plugins/marketplace.json`
@@ -49,6 +51,7 @@ stale_if:
 - Marketplace path is correct but the copied plugin source is stale.
 - README tells users to install a plugin without telling them the Codex add command.
 - Korean README drifts from the English install or release flow.
+- Demo GIF no longer matches the command output or product positioning.
 - CI depends on local-only validator paths from one developer machine.
 - Marketplace JSON points at a plugin path that does not exist in the repo.
 - Installer overwrites a local user customization without `--force`.

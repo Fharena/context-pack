@@ -1,86 +1,131 @@
 # Context Pack
 
-[한국어 README](README.ko.md)
+<p align="center">
+  <strong>Version-aware context packs for Codex, Claude, Cursor, and coding agents.</strong>
+</p>
 
-Context Pack is a repo-local context library and context-pack generator for coding agents.
+<p align="center">
+  <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.0"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
+</p>
 
-It helps Codex, Claude, Cursor, and humans avoid paying the agent to rediscover the same project structure every session or review. The deterministic engine records git state, maps changed files to project areas, detects stale context, and writes a small `.codex/packs/CONTEXT_PACK.md` that tells the agent what to read first.
+<p align="center">
+  <a href="README.ko.md">한국어</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#terminal-demo">Terminal Demo</a> ·
+  <a href="#how-it-works">How It Works</a>
+</p>
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Context Pack terminal demo" width="820">
+</p>
+
+Stop paying agents to rediscover your repo.
+
+Context Pack keeps a small repo-local project library, checkpoints git state, and generates task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
+
+This gets more useful as coding agents move across local IDEs, cloud worktrees, hosted app sessions, and remote machines. When the workspace changes, the repo should carry the map.
 
 ## Why
 
-Most AI coding waste starts before coding: the agent has to rediscover which files matter, which tests cover the change, what contracts must not break, and whether old notes are stale.
+Most AI coding waste starts before coding. The agent has to rediscover which files matter, which tests cover the change, which contracts must not break, and whether old notes are stale.
 
-Context Pack turns that into a lightweight project library:
+Context Pack turns that repeated search into a small project library:
 
 - `.codex/context/` is the project index.
 - `.codex/handoff/` is the current work state.
 - `.codex/packs/CONTEXT_PACK.md` is the generated desk for the current task.
 
-## Korean Summary
+## Built For Multi-Session Agent Work
 
-Context Pack은 Codex, Claude, Cursor 같은 코딩 에이전트가 매번 repo 전체를 다시 읽지 않도록, 프로젝트 안에 작은 컨텍스트 도서관을 만드는 도구입니다.
+Modern agent work is no longer one local chat attached to one checkout. You might start in a local IDE, ask Codex to work in the app, run a cloud task, review from another machine, or hand a branch to a different agent.
 
-- `.codex/context/`: 프로젝트 영역별 인덱스와 리뷰 라우터
-- `.codex/handoff/`: 현재 작업 상태와 다음 세션용 체크포인트
-- `.codex/packs/CONTEXT_PACK.md`: 이번 작업에 필요한 파일, 계약, 테스트, 주의점만 모은 임시 컨텍스트 팩
+Context Pack makes the repo carry enough context for that handoff:
 
-핵심은 "AI memory"가 아니라, **지금 작업에 필요한 문서와 파일만 먼저 읽게 하는 version-aware context router**입니다. 자세한 한국어 설명은 [README.ko.md](README.ko.md)를 보세요.
+- Which checkout and git state was last checkpointed
+- Which areas own the changed files
+- Which contracts and tests matter for review
+- Which notes may be stale and need source verification
+- Which generated/local files should not be trusted or committed
 
-## What It Does
+## Quick Start
 
-- Initializes a repo-local context library.
-- Checkpoints branch, HEAD, dirty files, and diff hash.
-- Generates task or review context packs.
-- Maps changed files to context areas from `manifest.json`.
-- Surfaces contracts, failure modes, tests, and stale warnings.
-- Keeps generated/local files out of git by default.
+Use directly from the repo:
 
-## Install As A Codex Skill
+```powershell
+python plugins/context-pack/scripts/context_pack.py init
+python plugins/context-pack/scripts/context_pack.py pack --task "startup bug"
+python plugins/context-pack/scripts/context_pack.py review-pack --base main
+python plugins/context-pack/scripts/context_pack.py checkpoint --pack
+python plugins/context-pack/scripts/context_pack.py doctor
+```
 
-From this repository:
+Install as a Codex skill:
 
 ```powershell
 python scripts/install_skill.py
 ```
 
-This copies `plugins/context-pack/skills/context-pack` to your Codex skills directory.
-
-## Use From The Plugin Source
-
-```powershell
-python plugins/context-pack/scripts/context_pack.py init
-python plugins/context-pack/scripts/context_pack.py checkpoint --pack
-python plugins/context-pack/scripts/context_pack.py pack --task "startup bug"
-python plugins/context-pack/scripts/context_pack.py review-pack
-python plugins/context-pack/scripts/context_pack.py review-pack --base main
-python plugins/context-pack/scripts/context_pack.py doctor
-```
-
-Optional git automation:
-
-```powershell
-python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode safe
-```
-
-Safe mode installs repo-local hooks for pre-commit validation and post-checkout/post-merge checkpoints. Aggressive mode also checkpoints after commits.
-
-## Install As A Local Codex Plugin
-
-For Codex plugin development/testing:
+Install as a local Codex plugin:
 
 ```powershell
 python scripts/install_plugin.py
+codex plugin add context-pack@personal
 ```
 
-This copies `plugins/context-pack` into `~/plugins/context-pack` and updates the personal marketplace at `~/.agents/plugins/marketplace.json`.
-
-For repo-scoped marketplace installs, this repository also includes:
+This repository also includes a repo-scoped Codex marketplace:
 
 ```text
 .agents/plugins/marketplace.json
 ```
 
-After cloning, add this repository as a Codex plugin marketplace if you want Codex to discover the bundled plugin from the repo.
+After cloning, you can add this repo as a Codex plugin marketplace so Codex can discover the bundled plugin from the repo.
+
+## Terminal Demo
+
+```text
+$ python plugins/context-pack/scripts/context_pack.py review-pack --base main
+Context pack written to .codex/packs/CONTEXT_PACK.md
+Selected areas: engine, installer-release, tests
+
+$ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
+# Context Pack
+
+Mode: review
+
+## Selected Areas
+- engine
+- installer-release
+- tests
+
+## Read First
+- .codex/context/AREAS/engine.md
+- plugins/context-pack/skills/context-pack/scripts/context_pack.py
+- tests/test_context_pack.py
+
+## Contracts To Check
+- The engine must remain stdlib-only.
+- Generated packs must stay under .codex/packs/.
+- Hook install must preserve unrelated hook contents.
+
+## Tests
+- tests/test_context_pack.py
+```
+
+The point is not to replace source code. The point is to make the agent start from the right shelf.
+
+## What It Does
+
+| Feature | What it saves |
+| --- | --- |
+| `init` | Creates a repo-local context library and handoff docs |
+| `checkpoint` | Records branch, HEAD, dirty files, and diff hash |
+| `pack` | Builds a task-specific reading pack |
+| `review-pack` | Builds a code-review pack from dirty files or `--base` |
+| `doctor` | Checks whether the context library is usable |
+| `install-git-hooks` | Adds opt-in repo-local checkpoint automation |
 
 ## Agent UX
 
@@ -98,6 +143,27 @@ After initialization, agents should read:
 2. `.codex/context/INDEX.md`
 3. `.codex/packs/CONTEXT_PACK.md` when generated
 4. Relevant `.codex/context/AREAS/*.md`
+5. Actual source files
+
+## How It Works
+
+Context Pack is not a vector database and not a generic memory bank. It is a version-aware routing layer.
+
+The script handles deterministic work:
+
+- git branch, HEAD, dirty files, diff hash
+- changed-file to area matching
+- context pack assembly
+- stale warnings
+- generated file cleanup
+- optional git hook installation
+
+The agent handles semantic work:
+
+- area summaries
+- project contracts
+- common failure modes
+- durable decisions
 
 ## Git Policy
 
@@ -118,23 +184,30 @@ Ignore:
 - `.codex/context/tmp/`
 - `.codex/handoff/LOCAL.md`
 
-## Design
+## Automation
 
-Context Pack is markdown-first and RAG-later. The core product is not vector search; it is a version-aware routing index that produces the smallest useful reading set for the current task.
-
-The script handles deterministic work. The agent handles semantic work:
-
-- Write area summaries.
-- Identify project contracts.
-- Record durable decisions.
-- Improve failure-mode checklists.
-
-## Release Check
+Optional safe git hooks:
 
 ```powershell
-python -m unittest discover -s tests -v
-python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
-python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
+python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode safe
+```
+
+Safe mode installs:
+
+- `pre-commit`: run `doctor`
+- `post-checkout`: checkpoint after branch changes
+- `post-merge`: checkpoint after pulls/merges
+
+Aggressive mode also checkpoints after commits:
+
+```powershell
+python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode aggressive
+```
+
+Remove hook blocks:
+
+```powershell
+python plugins/context-pack/scripts/context_pack.py uninstall-git-hooks
 ```
 
 ## Development
@@ -145,11 +218,15 @@ Run tests:
 python -m unittest discover -s tests -v
 ```
 
-Validate the plugin:
+Validate the plugin and skill locally:
 
 ```powershell
 python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
 python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
 ```
 
-GitHub Actions runs the stdlib unit tests on Windows and Ubuntu for Python 3.11 and 3.12.
+GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu for Python 3.11 and 3.12.
+
+## Release
+
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.0](https://github.com/Fharena/context-pack/releases/tag/v0.1.0).

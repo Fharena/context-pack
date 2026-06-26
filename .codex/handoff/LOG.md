@@ -29,3 +29,10 @@ Append-only operational log.
 - Dirty files: .agents/plugins/marketplace.json, .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, .github/ISSUE_TEMPLATE/bug_report.yml, .github/ISSUE_TEMPLATE/feature_request.yml, .github/PULL_REQUEST_TEMPLATE.md, .github/workflows/ci.yml, CHANGELOG.md, CONTRIBUTING.md, README.ko.md, README.md, SECURITY.md, codex/context/AREAS/installer-release.md
 - Dirty diff hash: sha256:fcd9d4d8ad6ae203908188c4
 - Verification: not recorded
+
+## 2026-06-26T19:12:55+09:00
+- Branch: main
+- HEAD: cc20bbaf1d40
+- Dirty files: .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, README.ko.md, README.md, assets/demo.gif, codex/context/AREAS/installer-release.md, scripts/generate_demo_gif.py
+- Dirty diff hash: sha256:28b7f584e43a899ee9b1ff47
+- Verification: not recorded
