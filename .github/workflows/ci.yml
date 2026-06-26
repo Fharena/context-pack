@@ -39,4 +39,4 @@ jobs:
           context-pack --help
           python -m context_pack --help
           context-pack status --quiet
-          python -c "import subprocess, sys; subprocess.run(['context-pack', 'checkpoint', '--pack', '--quiet'], check=True); status = subprocess.check_output(['git', 'status', '--porcelain=v1', '-uall'], text=True); sys.exit(0 if status.strip() == '' else 1)"
+          python -c "import subprocess, sys; status = lambda: subprocess.check_output(['git', 'status', '--porcelain=v1', '-uall'], text=True); before = status(); subprocess.run(['context-pack', 'checkpoint', '--pack', '--quiet'], check=True); after = status(); sys.stdout.write('Before checkpoint:\n' + (before or '<clean>\n') + 'After checkpoint:\n' + (after or '<clean>\n')) if after != before else None; sys.exit(1 if after != before else 0)"
