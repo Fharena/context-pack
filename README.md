@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.3"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.4"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -74,19 +74,19 @@ Then talk to your agent:
 
 ```text
 Use $context-pack to initialize this repo.
-Use $context-pack to build a review context pack for this branch.
+Use $context-pack to start work on this bug.
 Use $context-pack to checkpoint this work.
 ```
 
-The agent runs the engine, reads the generated pack, and continues from the focused context. In a context-enabled repo, the skill is also designed for proactive use: an agent should reach for it before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool.
+The agent runs the engine, reads the generated pack, and continues from the focused context. In a context-enabled repo, the skill is also designed for proactive use: an agent should run `context-pack start` before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool.
 
 For non-Codex agents or direct terminal use:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
-context-pack init
-context-pack status
-context-pack review-pack --base main
+context-pack start
+context-pack start --task "fix login timeout"
+context-pack start --review --base main
 ```
 
 ## Local Install Options
@@ -108,7 +108,7 @@ Run from source without installing anything:
 
 ```powershell
 python plugins/context-pack/scripts/context_pack.py init
-python plugins/context-pack/scripts/context_pack.py review-pack --base main
+python plugins/context-pack/scripts/context_pack.py start --review --base main
 ```
 
 This repository also includes a repo-scoped Codex marketplace:
@@ -127,16 +127,20 @@ codex plugin add context-pack@context-pack
 ## Terminal Demo
 
 ```text
-$ context-pack pack --changed --max-areas 3 --max-read-first 8
-Context pack written to .codex/packs/CONTEXT_PACK.md
-Selected areas: engine, tests, installer-release
-Related areas: skill-plugin
+$ context-pack start --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+Context Pack Start for /work/context-pack
+Git: yes; branch: main; HEAD: 67f7355488c0
+Context library: ok
+Dirty files: 0; diff hash: clean
+
+Generated work pack for task: .codex/packs/CONTEXT_PACK.md
+Selected areas: installer-release, skill-plugin, engine
 
 Read next:
 - .codex/packs/CONTEXT_PACK.md
-- .codex/context/AREAS/engine.md
-- .codex/context/AREAS/tests.md
 - .codex/context/AREAS/installer-release.md
+- .codex/context/AREAS/skill-plugin.md
+- .codex/context/AREAS/engine.md
 
 $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
@@ -144,23 +148,24 @@ $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 Mode: work
 
 ## Selected Areas
-- engine (score 24): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/bundled/context_pack.py, tests/test_context_pack.py
-- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
-- installer-release (score 10): changed files matched: src/context_pack/bundled/context_pack.py
+- installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
+- skill-plugin (score 40): changed files matched: plugins/context-pack/.codex-plugin/plugin.json, plugins/context-pack/skills/context-pack/SKILL.md, plugins/context-pack/skills/context-pack/agents/openai.yaml (+1 more); task matched keywords: agent
+- engine (score 34): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/__init__.py, src/context_pack/bundled/context_pack.py (+1 more)
 
 ## Related Areas
-- skill-plugin (score 4): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py
+- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
 
 ## Read First
-- .codex/context/AREAS/engine.md
-- plugins/context-pack/skills/context-pack/scripts/context_pack.py
-- src/context_pack/cli.py
-- tests/test_context_pack.py
-- src/context_pack/bundled/context_pack.py
+- .codex/context/AREAS/installer-release.md
+- README.md
+- README.ko.md
+- CHANGELOG.md
+- pyproject.toml
 
 ## Read Later
 - .codex/context/AREAS/skill-plugin.md
 - plugins/context-pack/skills/context-pack/SKILL.md
+- .codex/context/AREAS/engine.md
 
 ## Contracts To Check
 - The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
@@ -173,6 +178,7 @@ The point is not to replace source code. The point is to make the agent start fr
 
 | Feature | What it saves |
 | --- | --- |
+| `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
@@ -198,8 +204,8 @@ Checkpoint this work for the next session.
 
 The more important path is implicit:
 
-- before broad repo reading: run `context-pack status`, then `pack --task` or `pack --changed`
-- before review: run `review-pack --base <base-ref>` when a base is known
+- before broad repo reading: run `context-pack start --task "..."`
+- before review: run `context-pack start --review --base <base-ref>` when a base is known
 - during unfamiliar debugging: generate a task pack before opening many files
 - after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
 - when a handoff should travel through git: run `checkpoint --publish --pack`
@@ -234,6 +240,7 @@ Context Pack is not a vector database and not a generic memory bank. It is a ver
 The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
+- one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
 - first-run inference for common source, test, docs, and automation areas
 - changed-file and task scoring for area matching
 - compact context pack assembly with primary and related areas
@@ -323,4 +330,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.3](https://github.com/Fharena/context-pack/releases/tag/v0.1.3).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.4](https://github.com/Fharena/context-pack/releases/tag/v0.1.4).

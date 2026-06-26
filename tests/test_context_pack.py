@@ -76,6 +76,125 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn(".codex/handoff/CURRENT.md", status)
             self.assertIn(".codex/handoff/LOG.md", status)
 
+    def test_start_initializes_missing_context_library(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--quiet"]), 0)
+
+            self.assertTrue((repo / ".codex/context/manifest.json").exists())
+            self.assertTrue((repo / ".codex/handoff/CURRENT.md").exists())
+            self.assertTrue((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / ".codex/packs/CONTEXT_PACK.md").exists())
+
+    def test_start_with_task_generates_work_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/cli.py").write_text("def main():\n    return 0\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".codex/context/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["cli"] = {
+                "doc": ".codex/context/AREAS/cli.md",
+                "description": "Command-line entrypoints.",
+                "paths": ["src/cli.py"],
+                "start_files": ["src/cli.py"],
+                "tests": [],
+                "keywords": ["cli", "command"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS/cli.md").write_text(
+                "---\nid: cli\nlast_reviewed_head: unknown\nstatus: active\n---\n# CLI\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug", "--quiet"]),
+                0,
+            )
+            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: work", pack)
+            self.assertIn("- cli", pack)
+
+    def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".codex/context/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".codex/context/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "tests": [],
+                "keywords": ["runtime"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--quiet"]), 0)
+            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: work", pack)
+            self.assertIn("- runtime", pack)
+            self.assertIn("src/runtime.py", pack)
+
+    def test_start_review_with_base_generates_review_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".codex/context/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".codex/context/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "tests": [],
+                "keywords": ["runtime"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".codex/context/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src/runtime.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "change runtime"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(
+                self.engine.main(["start", "--repo", str(repo), "--review", "--base", "HEAD~1", "--quiet"]),
+                0,
+            )
+            pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", pack)
+            self.assertIn("- runtime", pack)
+            self.assertIn("src/runtime.py", pack)
+
     def test_init_inferrs_common_project_areas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

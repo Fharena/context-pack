@@ -17,6 +17,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Review packs ignore committed branch changes when no dirty files exist.
   - Hook installation duplicates marker blocks or overwrites unrelated user hook logic.
   - Pack generation creates tracked generated files.
+  - `start` hides setup errors or creates noisy tracked files on first run.
 
 ### installer-release
 - Doc: `.codex/context/AREAS/installer-release.md`
@@ -43,6 +44,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `python -m pip install -e .`
   - `context-pack --help`
   - `context-pack status --quiet`
+  - `context-pack start --task "agent-first CLI UX" --quiet`
+  - `context-pack start --review --base HEAD~1 --quiet`
   - `context-pack checkpoint --pack --quiet does not dirty tracked files`
 - Common failure modes:
   - Installer replaces a user's existing skill/plugin without explicit --force.
@@ -81,6 +84,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Skill docs describe behavior that the script cannot perform.
   - Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.
   - Trigger description is too narrow and only catches session handoff use cases.
+  - Skill guidance teaches lower-level commands before the one-command start path.
 
 ### tests
 - Doc: `.codex/context/AREAS/tests.md`

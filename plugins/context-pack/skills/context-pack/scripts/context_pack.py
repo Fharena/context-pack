@@ -597,11 +597,11 @@ def agent_rules_body() -> str:
     return """\
 ## Context Pack
 
-At the start of substantial work, run `context-pack status` when available, read `.codex/handoff/CURRENT.md` and `.codex/context/INDEX.md`, then use the relevant `.codex/context/AREAS/*.md` files before broad repo reading.
+At the start of substantial work, run `context-pack start --task "<short task description>"` when available. With no clear task, run `context-pack start`. This initializes missing context docs, chooses a focused pack when possible, and prints what to read next.
 
 Use Context Pack proactively. Do not wait for the user to name it when starting a non-trivial task, debugging unfamiliar code, reviewing dirty files or a branch, entering an existing context-enabled repo, or preparing work another agent may continue.
 
-When a task or review needs orientation, generate a focused context pack first with `context-pack pack --task "..."`, `context-pack pack --changed`, or `context-pack review-pack --base <base-ref>`.
+When a review needs orientation, prefer `context-pack start --review --base <base-ref>`. When changed files are the only signal, use `context-pack start --changed`.
 
 For reviews and debugging, prefer a generated context pack from `.codex/packs/CONTEXT_PACK.md` when present. Treat context docs as routing hints, not ground truth. If HEAD, dirty files, or diff hash differ from the current repo state, verify against source code before acting.
 
@@ -836,6 +836,108 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         if not args.publish:
             print("Note: local checkpoints are ignored by git. Use --publish when this handoff should be committed.")
         print('Next agent prompt: "Use $context-pack to continue from the current handoff."')
+    return 0
+
+
+def cmd_start(args: argparse.Namespace) -> int:
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    repo = snapshot.repo_root
+    had_context = (repo / MANIFEST_PATH).exists()
+    initialized = False
+
+    if not had_context:
+        if args.no_init:
+            if not args.quiet:
+                print(f"Context Pack Start for {repo}")
+                print("Context library: missing")
+                print("")
+                print("Next:")
+                print("- Run `context-pack init` or rerun `context-pack start` without `--no-init`.")
+            return 1
+        init_args = argparse.Namespace(
+            repo=str(repo),
+            quiet=True,
+            force=False,
+            no_agent_doc=args.no_agent_doc,
+            agent_doc=args.agent_doc,
+        )
+        result = cmd_init(init_args)
+        if result != 0:
+            return result
+        initialized = True
+        snapshot = collect_snapshot(repo)
+
+    mode = "work"
+    changed = False
+    pack_reason = ""
+
+    if args.review or args.base:
+        mode = "review"
+        changed = True
+        pack_reason = "review"
+    elif args.task:
+        changed = args.changed or (bool(snapshot.dirty_files) and not initialized)
+        pack_reason = "task"
+    elif args.changed or (snapshot.dirty_files and not initialized):
+        changed = True
+        pack_reason = "changed files"
+
+    pack_generated = bool(pack_reason)
+    selected: list[AreaSelection] = []
+    output_path = Path(args.output) if args.output else repo / PACK_PATH
+    if not output_path.is_absolute():
+        output_path = repo / output_path
+
+    if pack_generated:
+        pack_args = argparse.Namespace(
+            repo=str(repo),
+            task=args.task,
+            changed=changed,
+            base=args.base,
+            output=str(output_path),
+            quiet=True,
+            mode=mode,
+            max_areas=args.max_areas,
+            max_read_first=args.max_read_first,
+            max_contracts=args.max_contracts,
+            max_failure_modes=args.max_failure_modes,
+        )
+        manifest = load_manifest(repo)
+        changed_files = resolve_changed_files(repo, snapshot, pack_args)
+        selected = selected_area_matches(manifest, changed_files=changed_files, task=args.task)[: args.max_areas]
+        result = build_pack(pack_args)
+        if result != 0:
+            return result
+
+    if not args.quiet:
+        print(f"Context Pack Start for {repo}")
+        print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head}")
+        if initialized:
+            print(f"Initialized: {normalize_path(MANIFEST_PATH)}")
+        else:
+            print("Context library: ok")
+        print(f"Dirty files: {len(snapshot.dirty_files)}; diff hash: {snapshot.diff_hash}")
+        print("")
+        if pack_generated:
+            print(f"Generated {mode} pack for {pack_reason}: {rel_to_repo(output_path, repo)}")
+            print("Selected areas: " + (", ".join(item.area_id for item in selected) if selected else "none"))
+            print("")
+            print("Read next:")
+            print(f"- {rel_to_repo(output_path, repo)}")
+            for item in selected:
+                area = (load_manifest(repo).get("areas") or {}).get(item.area_id, {})
+                doc = area.get("doc")
+                if doc:
+                    print(f"- {doc}")
+        else:
+            print("No pack generated: no task, review base, or pre-existing dirty files were found.")
+            print("")
+            print("Next:")
+            print('- `context-pack start --task "..."` for a focused work pack')
+            print("- `context-pack start --review --base main` for a review pack")
+            print("- `context-pack start --changed` if you want to force dirty-file routing")
+        print("")
+        print("End-of-work checkpoint: `context-pack checkpoint --pack`")
     return 0
 
 
@@ -1417,10 +1519,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         if errors:
             print("- Fix setup errors or run `context-pack init`.")
         elif snapshot.dirty_files:
-            print("- Run `context-pack pack --changed` before broad reading.")
+            print("- Run `context-pack start --changed` before broad reading.")
             print("- After source verification, run `context-pack mark-reviewed <area>` for updated area docs.")
         else:
-            print("- Context is ready. Use `context-pack pack --task \"...\"` for focused work.")
+            print("- Context is ready. Use `context-pack start --task \"...\"` for focused work.")
     return 1 if errors else 0
 
 
@@ -1658,6 +1760,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pack", action="store_true", help="Also generate a changed-files context pack")
     p.add_argument("--publish", action="store_true", help="Update tracked handoff files instead of ignored local checkpoint state")
     p.set_defaults(func=cmd_checkpoint)
+
+    p = sub.add_parser("start", help="Auto-initialize if needed and prepare the right context pack")
+    add_common(p)
+    p.add_argument("--task", help="Natural language task to match against area metadata")
+    p.add_argument("--review", action="store_true", help="Prepare a review pack instead of a work pack")
+    p.add_argument("--base", help="Review committed changes against a base ref, such as main")
+    p.add_argument("--changed", action="store_true", help="Include dirty files when preparing a work pack")
+    p.add_argument("--no-init", action="store_true", help="Do not initialize missing context docs")
+    p.add_argument("--no-agent-doc", action="store_true", help="When initializing, do not update AGENTS.md")
+    p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update when initializing")
+    p.add_argument("--output", help="Output markdown path")
+    add_pack_budget(p)
+    p.set_defaults(func=cmd_start)
 
     p = sub.add_parser("pack", help="Generate a task or changed-files context pack")
     add_common(p)

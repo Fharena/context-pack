@@ -1,6 +1,6 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to initialize project memory, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
 ---
 
 # Context Pack
@@ -69,9 +69,33 @@ Use the script for factual repo state. Use model judgment only for semantic summ
 
 ## Workflows
 
+### Fast Path
+
+Use this first when entering a repo or starting a non-trivial task. It initializes missing context docs, chooses a task/review/changed-files pack when enough signal exists, and prints what to read next.
+
+```bash
+python scripts/context_pack.py start --task "<short task description>"
+```
+
+For reviews:
+
+```bash
+python scripts/context_pack.py start --review --base <base-ref>
+```
+
+With no task, use:
+
+```bash
+python scripts/context_pack.py start
+```
+
+Then read `.codex/packs/CONTEXT_PACK.md` if it was generated. If no pack was generated, follow the command's next action.
+
 ### Initialize Project Memory
 
 Use when `.codex/context/manifest.json` is missing or the user asks to set up Context Pack.
+
+Prefer the fast path above unless the user specifically asked for initialization only.
 
 1. Run:
 
@@ -93,16 +117,10 @@ Do not install git hooks during init unless the user explicitly asks for automat
 
 Use before broad repo reading for a feature, bug, or debugging task. If `.codex/context/manifest.json` exists and the task is non-trivial, prefer generating a pack even when the user did not explicitly ask for Context Pack.
 
-0. Optionally check health:
-
-   ```bash
-   python scripts/context_pack.py status
-   ```
-
 1. Run:
 
    ```bash
-   python scripts/context_pack.py pack --task "<short task description>"
+   python scripts/context_pack.py start --task "<short task description>"
    ```
 
 2. Read `.codex/packs/CONTEXT_PACK.md`.
@@ -112,7 +130,7 @@ Use before broad repo reading for a feature, bug, or debugging task. If `.codex/
 If the user has already changed files and no task is clear, run:
 
 ```bash
-python scripts/context_pack.py pack --changed
+python scripts/context_pack.py start --changed
 ```
 
 ### Prepare Code Review Context
@@ -122,13 +140,13 @@ Use when reviewing local changes, a branch, or a PR.
 1. Prefer an explicit base when available:
 
    ```bash
-   python scripts/context_pack.py review-pack --base <base-ref>
+   python scripts/context_pack.py start --review --base <base-ref>
    ```
 
 2. If no base is known, run:
 
    ```bash
-   python scripts/context_pack.py review-pack
+   python scripts/context_pack.py start --review
    ```
 
 3. Read `.codex/packs/CONTEXT_PACK.md`.
@@ -237,4 +255,4 @@ Prefer a few high-value responsibility areas over one summary per folder.
 - Keep `CURRENT.md` short; move durable knowledge into `AREAS/*.md`.
 - Do not commit `.codex/packs/` or `.codex/handoff/LOCAL.md`.
 - If a changed file maps to no area, inspect source and update the manifest or area docs after the task.
-- For committed branch reviews, prefer `review-pack --base <base-ref>`.
+- For committed branch reviews, prefer `start --review --base <base-ref>`.

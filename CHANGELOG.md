@@ -2,6 +2,17 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.4] - 2026-06-26
+
+### Added
+
+- `context-pack start` as the agent-first entrypoint: auto-initialize missing context docs, prepare task packs, prepare review packs, or route dirty-file work from one command.
+- Tests for first-run `start`, task-based start packs, and changed-file start packs.
+
+### Changed
+
+- README, Korean README, Codex skill guidance, plugin metadata, and generated `AGENTS.md` rules now lead with `context-pack start` instead of requiring users or agents to pick lower-level commands first.
+
 ## [0.1.3] - 2026-06-26
 
 ### Changed

@@ -60,6 +60,7 @@ stale_if:
 - CI depends on local-only validator paths from one developer machine.
 - Marketplace JSON points at a plugin path that does not exist in the repo.
 - Installer overwrites a local user customization without `--force`.
+- README teaches lower-level commands before the one-command `start` path.
 
 ## Expand Scope If
 - Moving from local marketplace install to packaged release.

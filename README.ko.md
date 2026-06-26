@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.3"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.4"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -82,19 +82,19 @@ codex plugin add context-pack@context-pack
 
 ```text
 Use $context-pack to initialize this repo.
-Use $context-pack to build a review context pack for this branch.
+Use $context-pack to start work on this bug.
 Use $context-pack to checkpoint this work.
 ```
 
-에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 스스로 쓰는 흐름을 목표로 합니다.
+에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 `context-pack start`를 스스로 실행하는 흐름을 목표로 합니다.
 
 Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
 
 ```bash
 pipx install git+https://github.com/Fharena/context-pack.git
-context-pack init
-context-pack status
-context-pack review-pack --base main
+context-pack start
+context-pack start --task "fix login timeout"
+context-pack start --review --base main
 ```
 
 ## 로컬 설치 옵션
@@ -116,7 +116,7 @@ python scripts/install_skill.py
 
 ```powershell
 python plugins/context-pack/scripts/context_pack.py init
-python plugins/context-pack/scripts/context_pack.py review-pack --base main
+python plugins/context-pack/scripts/context_pack.py start --review --base main
 ```
 
 repo-scoped Codex marketplace도 포함되어 있습니다.
@@ -135,16 +135,20 @@ codex plugin add context-pack@context-pack
 ## 터미널 데모
 
 ```text
-$ context-pack pack --changed --max-areas 3 --max-read-first 8
-Context pack written to .codex/packs/CONTEXT_PACK.md
-Selected areas: engine, tests, installer-release
-Related areas: skill-plugin
+$ context-pack start --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+Context Pack Start for /work/context-pack
+Git: yes; branch: main; HEAD: 67f7355488c0
+Context library: ok
+Dirty files: 0; diff hash: clean
+
+Generated work pack for task: .codex/packs/CONTEXT_PACK.md
+Selected areas: installer-release, skill-plugin, engine
 
 Read next:
 - .codex/packs/CONTEXT_PACK.md
-- .codex/context/AREAS/engine.md
-- .codex/context/AREAS/tests.md
 - .codex/context/AREAS/installer-release.md
+- .codex/context/AREAS/skill-plugin.md
+- .codex/context/AREAS/engine.md
 
 $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
@@ -152,23 +156,24 @@ $ Get-Content .codex/packs/CONTEXT_PACK.md -TotalCount 40
 Mode: work
 
 ## Selected Areas
-- engine (score 24): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/bundled/context_pack.py, tests/test_context_pack.py
-- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
-- installer-release (score 10): changed files matched: src/context_pack/bundled/context_pack.py
+- installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
+- skill-plugin (score 40): changed files matched: plugins/context-pack/.codex-plugin/plugin.json, plugins/context-pack/skills/context-pack/SKILL.md, plugins/context-pack/skills/context-pack/agents/openai.yaml (+1 more); task matched keywords: agent
+- engine (score 34): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/__init__.py, src/context_pack/bundled/context_pack.py (+1 more)
 
 ## Related Areas
-- skill-plugin (score 4): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py
+- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
 
 ## Read First
-- .codex/context/AREAS/engine.md
-- plugins/context-pack/skills/context-pack/scripts/context_pack.py
-- src/context_pack/cli.py
-- tests/test_context_pack.py
-- src/context_pack/bundled/context_pack.py
+- .codex/context/AREAS/installer-release.md
+- README.md
+- README.ko.md
+- CHANGELOG.md
+- pyproject.toml
 
 ## Read Later
 - .codex/context/AREAS/skill-plugin.md
 - plugins/context-pack/skills/context-pack/SKILL.md
+- .codex/context/AREAS/engine.md
 
 ## Contracts To Check
 - The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.
@@ -181,23 +186,16 @@ Mode: work
 
 터미널에서 직접 쓸 때의 흐름입니다. Codex plugin으로 설치했다면 보통 명령어를 직접 치지 않고 `Use $context-pack ...`라고 말하면 됩니다.
 
-처음 한 번:
-
-```powershell
-context-pack init
-```
-
 작업 시작 전:
 
 ```powershell
-context-pack status
-context-pack pack --task "고치려는 버그나 작업 설명"
+context-pack start --task "고치려는 버그나 작업 설명"
 ```
 
 코드 리뷰 전:
 
 ```powershell
-context-pack review-pack --base main
+context-pack start --review --base main
 ```
 
 작업 후:
@@ -222,6 +220,7 @@ context-pack mark-reviewed runtime tests
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
+| `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
@@ -247,8 +246,8 @@ Checkpoint this work for the next session.
 
 더 중요한 흐름은 암묵적 사용입니다.
 
-- repo를 넓게 읽기 전: `context-pack status` 후 `pack --task` 또는 `pack --changed`
-- 리뷰 전: base를 알면 `review-pack --base <base-ref>`
+- repo를 넓게 읽기 전: `context-pack start --task "..."`
+- 리뷰 전: base를 알면 `context-pack start --review --base <base-ref>`
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
 - 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
 - handoff 자체를 git으로 공유해야 할 때: `checkpoint --publish --pack`
@@ -285,6 +284,7 @@ Python script가 맡는 일:
 - git 상태 수집
 - dirty file 목록
 - diff hash
+- 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
 - changed-file과 task 기반 area scoring
 - selected/related 영역을 나누는 compact pack 생성
@@ -375,4 +375,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.3](https://github.com/Fharena/context-pack/releases/tag/v0.1.3).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.4](https://github.com/Fharena/context-pack/releases/tag/v0.1.4).

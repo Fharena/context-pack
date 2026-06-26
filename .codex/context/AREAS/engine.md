@@ -17,7 +17,7 @@ stale_if:
 
 ## Read When
 - Changing `context_pack.py` commands or output.
-- Debugging checkpoint, pack, review-pack, status, mark-reviewed, refresh, doctor, or git hook behavior.
+- Debugging start, checkpoint, pack, review-pack, status, mark-reviewed, refresh, doctor, or git hook behavior.
 - Adding new deterministic operations that should not spend agent tokens.
 
 ## Start With
@@ -31,6 +31,7 @@ stale_if:
 - Packs should stay compact: rank areas, split Read First/Read Later, and omit overflow details with clear counts.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
 - Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
+- `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - Hook install must preserve unrelated hook contents and be idempotent.
 - Generated packs live under `.codex/packs/` and stay ignored.
 
@@ -42,6 +43,7 @@ stale_if:
 - Broad overview/context patterns dominate the pack instead of specific changed-file areas.
 - Contracts or failure modes repeat until the pack stops saving tokens.
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
+- `start` hides setup errors or creates noisy tracked files on first run.
 
 ## Expand Scope If
 - Manifest schema changes.

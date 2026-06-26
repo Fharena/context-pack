@@ -4,18 +4,21 @@
       "contracts": [
         "The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.",
         "Generated packs must stay under .codex/packs/ and remain ignored by git.",
-        "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty."
+        "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
+        "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior."
       ],
-      "description": "Deterministic context-pack engine: git snapshot, area matching, pack generation, doctor, and git hooks.",
+      "description": "Deterministic context-pack engine: git snapshot, start routing, area matching, pack generation, doctor, and git hooks.",
       "doc": ".codex/context/AREAS/engine.md",
       "failure_modes": [
         "Dirty files are matched only at directory level, missing the real changed file.",
         "Review packs ignore committed branch changes when no dirty files exist.",
         "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
-        "Pack generation creates tracked generated files."
+        "Pack generation creates tracked generated files.",
+        "`start` hides setup errors or creates noisy tracked files on first run."
       ],
       "keywords": [
         "engine",
+        "start",
         "checkpoint",
         "pack",
         "review",
@@ -113,6 +116,8 @@
         "python -m pip install -e .",
         "context-pack --help",
         "context-pack status --quiet",
+        "context-pack start --task \"agent-first CLI UX\" --quiet",
+        "context-pack start --review --base HEAD~1 --quiet",
         "context-pack checkpoint --pack --quiet does not dirty tracked files"
       ]
     },
@@ -173,20 +178,22 @@
       "contracts": [
         "The Codex skill must tell agents to use deterministic script commands before semantic summarization.",
         "Plugin manifest must remain validation-ready and avoid unsupported fields.",
-        "The skill should be implicitly invokable for context setup, review packs, checkpointing, and token-saving repo orientation."
+        "The skill should be implicitly invokable for context setup, start routing, review packs, checkpointing, and token-saving repo orientation."
       ],
       "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
       "doc": ".codex/context/AREAS/skill-plugin.md",
       "failure_modes": [
         "Skill docs describe behavior that the script cannot perform.",
         "Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.",
-        "Trigger description is too narrow and only catches session handoff use cases."
+        "Trigger description is too narrow and only catches session handoff use cases.",
+        "Skill guidance teaches lower-level commands before the one-command start path."
       ],
       "keywords": [
         "skill",
         "plugin",
         "codex",
         "agent",
+        "start",
         "instructions",
         "metadata"
       ],
@@ -213,7 +220,7 @@
     "tests": {
       "contracts": [
         "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, dirty changed files, committed review diffs, and hook idempotency."
+        "Coverage should include no-git repos, first-run start, dirty changed files, committed review diffs, and hook idempotency."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
       "doc": ".codex/context/AREAS/tests.md",
@@ -227,6 +234,7 @@
         "unittest",
         "validation",
         "git",
+        "start",
         "review-pack"
       ],
       "paths": [
