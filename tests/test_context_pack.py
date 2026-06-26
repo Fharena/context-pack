@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "plugins" / "context-pack" / "skills" / "context-pack" / "scripts" / "context_pack.py"
+BUNDLED_ENGINE = ROOT / "src" / "context_pack" / "bundled" / "context_pack.py"
 
 
 def load_engine():
@@ -38,6 +40,25 @@ class ContextPackTests(unittest.TestCase):
             current = (repo / ".codex/handoff/CURRENT.md").read_text(encoding="utf-8")
             self.assertIn("Git repo: no", current)
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
+
+    def test_init_inferrs_common_project_areas(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "docs").mkdir()
+            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_run():\n    pass\n", encoding="utf-8")
+            (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest = json.loads((repo / ".codex/context/manifest.json").read_text(encoding="utf-8"))
+            self.assertIn("source", manifest["areas"])
+            self.assertIn("tests", manifest["areas"])
+            self.assertIn("docs", manifest["areas"])
+            self.assertTrue((repo / ".codex/context/AREAS/source.md").exists())
+            self.assertTrue((repo / ".codex/context/AREAS/tests.md").exists())
+            self.assertTrue((repo / ".codex/context/AREAS/docs.md").exists())
 
     def test_changed_file_selects_area_and_generates_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -101,6 +122,22 @@ class ContextPackTests(unittest.TestCase):
             pack = (repo / ".codex/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- cli", pack)
 
+    def test_first_modified_status_file_keeps_first_character(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            (repo / "README.md").write_text("# Demo\n\nChanged.\n", encoding="utf-8")
+
+            snapshot = self.engine.collect_snapshot(repo)
+            self.assertIn("README.md", snapshot.dirty_files)
+            self.assertNotIn("EADME.md", snapshot.dirty_files)
+
     def test_review_pack_can_use_base_ref_for_committed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -154,6 +191,24 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(self.engine.main(["uninstall-git-hooks", "--repo", str(repo), "--quiet"]), 0)
             text = hook.read_text(encoding="utf-8")
             self.assertNotIn("# context-pack:start", text)
+
+    def test_packaged_cli_engine_stays_in_sync(self) -> None:
+        self.assertEqual(ENGINE.read_text(encoding="utf-8"), BUNDLED_ENGINE.read_text(encoding="utf-8"))
+
+    def test_python_module_cli_runs(self) -> None:
+        env = os.environ.copy()
+        src = str(ROOT / "src")
+        env["PYTHONPATH"] = src + os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else src
+        proc = subprocess.run(
+            [sys.executable, "-m", "context_pack", "--help"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("context-pack", proc.stdout)
 
 
 if __name__ == "__main__":

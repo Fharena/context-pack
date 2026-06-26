@@ -9,6 +9,7 @@ For code review, map changed files to areas, then check the listed contracts, te
 - If changed files match:
   - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
   - `plugins/context-pack/scripts/context_pack.py`
+  - `src/context_pack/**`
 - Inspect/run tests:
   - `tests/test_context_pack.py`
 - Common failure modes:
@@ -24,6 +25,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `scripts/install_plugin.py`
   - `.agents/plugins/marketplace.json`
   - `.github/**`
+  - `pyproject.toml`
+  - `src/context_pack/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
   - `assets/**`
@@ -32,10 +35,13 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `LICENSE`
   - `SECURITY.md`
   - `.gitignore`
+  - `.gitattributes`
 - Inspect/run tests:
   - `python -m unittest discover -s tests -v`
-  - `python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack`
-  - `python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack`
+  - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
+  - `python -m json.tool .agents/plugins/marketplace.json`
+  - `python -m pip install -e .`
+  - `context-pack --help`
 - Common failure modes:
   - Installer replaces a user's existing skill/plugin without explicit --force.
   - Marketplace entry points to the wrong relative plugin path.
@@ -67,8 +73,8 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `plugins/context-pack/skills/context-pack/SKILL.md`
   - `plugins/context-pack/skills/context-pack/agents/openai.yaml`
 - Inspect/run tests:
-  - `python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack`
-  - `python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack`
+  - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
+  - `python -m unittest discover -s tests -v`
 - Common failure modes:
   - Skill docs describe behavior that the script cannot perform.
   - Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.

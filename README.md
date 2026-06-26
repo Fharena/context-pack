@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.0"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -27,6 +27,17 @@ Stop paying agents to rediscover your repo.
 Context Pack keeps a small repo-local project library, checkpoints git state, and generates task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
 
 This gets more useful as coding agents move across local IDEs, cloud worktrees, hosted app sessions, and remote machines. When the workspace changes, the repo should carry the map.
+
+## Who It Is For
+
+Use Context Pack when you:
+
+- move work between Codex, Claude, Cursor, cloud worktrees, local IDEs, or remote machines
+- review branches where an agent should start from the risky files instead of the whole repo
+- maintain a project where future AI contributors need a small, current map
+- want markdown context that travels with git instead of living inside one vendor's memory system
+
+Skip it for tiny throwaway repos, one-off prompts, or projects where a single short `AGENTS.md` is already enough.
 
 ## Why
 
@@ -69,6 +80,14 @@ Use $context-pack to checkpoint this work.
 
 The agent runs the engine, reads the generated pack, and continues from the focused context.
 
+For non-Codex agents or direct terminal use:
+
+```bash
+pipx install git+https://github.com/Fharena/context-pack.git
+context-pack init
+context-pack review-pack --base main
+```
+
 ## Local Install Options
 
 Install from a clone as a local Codex plugin:
@@ -84,7 +103,7 @@ Install only the skill:
 python scripts/install_skill.py
 ```
 
-Use the deterministic engine manually, without installing anything:
+Run from source without installing anything:
 
 ```powershell
 python plugins/context-pack/scripts/context_pack.py init
@@ -107,7 +126,7 @@ codex plugin add context-pack@context-pack
 ## Terminal Demo
 
 ```text
-$ python plugins/context-pack/scripts/context_pack.py review-pack --base main
+$ context-pack review-pack --base main
 Context pack written to .codex/packs/CONTEXT_PACK.md
 Selected areas: engine, installer-release, tests
 
@@ -147,7 +166,7 @@ The point is not to replace source code. The point is to make the agent start fr
 
 | Feature | What it saves |
 | --- | --- |
-| `init` | Creates a repo-local context library and handoff docs |
+| `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash |
 | `pack` | Builds a task-specific reading pack |
 | `review-pack` | Builds a code-review pack from dirty files or `--base` |
@@ -176,6 +195,20 @@ After initialization, agents should read:
 4. Relevant `.codex/context/AREAS/*.md`
 5. Actual source files
 
+## Why Not Just AGENTS.md Or CLAUDE.md?
+
+Use those files. Context Pack is not a replacement.
+
+`AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, and similar files are durable instruction layers: coding style, commands, policies, and project rules. Context Pack is the routing layer beside them:
+
+- It snapshots branch, HEAD, dirty files, and diff hash.
+- It maps changed files or a task prompt to the relevant area docs.
+- It generates a temporary read-first pack for the current task or review.
+- It warns when summaries may be stale.
+- It keeps generated/local context out of git while tracking durable project memory.
+
+So the agent reads the rule file for behavior, then reads Context Pack for where to look first.
+
 ## How It Works
 
 Context Pack is not a vector database and not a generic memory bank. It is a version-aware routing layer.
@@ -183,18 +216,21 @@ Context Pack is not a vector database and not a generic memory bank. It is a ver
 The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
+- first-run inference for common source, test, docs, and automation areas
 - changed-file to area matching
 - context pack assembly
 - stale warnings
 - generated file cleanup
 - optional git hook installation
 
-The agent handles semantic work:
+The agent can then improve semantic context over time:
 
 - area summaries
 - project contracts
 - common failure modes
 - durable decisions
+
+You do not need to hand-write a full taxonomy to start. `init` creates useful defaults from the files already in the repo; semantic refinement is the compounding layer.
 
 ## Git Policy
 
@@ -220,7 +256,7 @@ Ignore:
 Optional safe git hooks. You do not need this to use Context Pack.
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode safe
+context-pack install-git-hooks --mode safe
 ```
 
 Safe mode installs:
@@ -232,13 +268,13 @@ Safe mode installs:
 Aggressive mode also checkpoints after commits:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode aggressive
+context-pack install-git-hooks --mode aggressive
 ```
 
 Remove hook blocks:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py uninstall-git-hooks
+context-pack uninstall-git-hooks
 ```
 
 ## Development
@@ -249,15 +285,17 @@ Run tests:
 python -m unittest discover -s tests -v
 ```
 
-Validate the plugin and skill locally:
+Validate public metadata and CLI packaging:
 
 ```powershell
-python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
-python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
+python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
+python -m json.tool .agents/plugins/marketplace.json
+python -m pip install -e .
+context-pack --help
 ```
 
 GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu for Python 3.11 and 3.12.
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.0](https://github.com/Fharena/context-pack/releases/tag/v0.1.0).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.1](https://github.com/Fharena/context-pack/releases/tag/v0.1.1).

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "context-pack"
+version = "0.1.1"
+description = "Version-aware context packs for coding agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Context Pack contributors" }
+]
+keywords = [
+  "ai-agents",
+  "codex",
+  "context-engineering",
+  "code-review",
+  "claude",
+  "cursor"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Quality Assurance"
+]
+
+[project.urls]
+Homepage = "https://github.com/Fharena/context-pack"
+Repository = "https://github.com/Fharena/context-pack"
+Issues = "https://github.com/Fharena/context-pack/issues"
+Changelog = "https://github.com/Fharena/context-pack/blob/main/CHANGELOG.md"
+
+[project.scripts]
+context-pack = "context_pack.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

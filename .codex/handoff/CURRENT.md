@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: acb5ff2e3c4d
-- Dirty files: EADME.ko.md, README.md, assets/demo.gif, plugins/context-pack/skills/context-pack/SKILL.md, plugins/context-pack/skills/context-pack/agents/openai.yaml, plugins/context-pack/skills/context-pack/scripts/context_pack.py, scripts/generate_demo_gif.py
-- Dirty diff hash: sha256:36455052ac420445e3d8a5d6
-- Updated at: 2026-06-26T19:29:55+09:00
+- HEAD: e523c1d86513
+- Dirty files: .codex/context/CONTRACTS.md, .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, .codex/handoff/CURRENT.md, .codex/handoff/LOG.md, .gitattributes, .github/workflows/ci.yml, .gitignore, AGENTS.md, CHANGELOG.md, README.ko.md, README.md, plugins/context-pack/.codex-plugin/plugin.json, plugins/context-pack/skills/context-pack/scripts/context_pack.py, pyproject.toml, src/context_pack/__init__.py, src/context_pack/__main__.py, src/context_pack/bundled/__init__.py, src/context_pack/bundled/context_pack.py, src/context_pack/cli.py, tests/test_context_pack.py
+- Dirty diff hash: sha256:beaa6762adc624a420352247
+- Updated at: 2026-06-26T19:47:43+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Keep this short. Move details into `.codex/context/AREAS/*.md`.

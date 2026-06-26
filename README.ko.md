@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.0"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.1"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -29,6 +29,17 @@ Stop paying agents to rediscover your repo.
 Context Pack은 repo 안에 작은 프로젝트 도서관을 만들고, git 상태를 checkpoint하고, 작업별로 필요한 문서와 파일만 모은 `.codex/packs/CONTEXT_PACK.md`를 생성합니다. 핵심은 "AI memory"가 아니라 **지금 작업에 필요한 것만 먼저 읽게 하는 context router**입니다.
 
 요즘 코딩 에이전트 작업은 로컬 IDE 한 곳에만 머물지 않습니다. Codex app/cloud worktree, Claude 원격 작업, Cursor, CLI, 다른 기기 사이를 오가게 됩니다. 작업 위치가 바뀌면, repo 자체가 최소한의 지도를 들고 있어야 합니다.
+
+## 누구에게 맞는가
+
+Context Pack은 이런 사람에게 맞습니다.
+
+- Codex, Claude, Cursor, cloud worktree, 로컬 IDE, 원격 머신 사이를 오가며 작업하는 사람
+- 코드 리뷰 때 에이전트가 repo 전체가 아니라 위험한 파일부터 보게 만들고 싶은 사람
+- 미래의 AI contributor가 작은 최신 지도를 들고 시작하길 원하는 maintainer
+- 한 벤더의 memory 기능이 아니라 git에 같이 실리는 markdown context를 원하는 사람
+
+아주 작은 throwaway repo, 한 번짜리 프롬프트, 짧은 `AGENTS.md` 하나로 충분한 프로젝트에는 과합니다.
 
 ## 왜 필요한가
 
@@ -77,6 +88,14 @@ Use $context-pack to checkpoint this work.
 
 에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다.
 
+Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
+
+```bash
+pipx install git+https://github.com/Fharena/context-pack.git
+context-pack init
+context-pack review-pack --base main
+```
+
 ## 로컬 설치 옵션
 
 clone한 repo에서 Codex plugin으로 설치:
@@ -92,7 +111,7 @@ Codex skill만 설치:
 python scripts/install_skill.py
 ```
 
-아무것도 설치하지 않고 deterministic engine만 직접 실행:
+아무것도 설치하지 않고 source에서 직접 실행:
 
 ```powershell
 python plugins/context-pack/scripts/context_pack.py init
@@ -115,7 +134,7 @@ codex plugin add context-pack@context-pack
 ## 터미널 데모
 
 ```text
-$ python plugins/context-pack/scripts/context_pack.py review-pack --base main
+$ context-pack review-pack --base main
 Context pack written to .codex/packs/CONTEXT_PACK.md
 Selected areas: engine, installer-release, tests
 
@@ -153,41 +172,43 @@ Mode: review
 
 ## 기본 사용 흐름
 
+터미널에서 직접 쓸 때의 흐름입니다. Codex plugin으로 설치했다면 보통 명령어를 직접 치지 않고 `Use $context-pack ...`라고 말하면 됩니다.
+
 처음 한 번:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py init
+context-pack init
 ```
 
 작업 시작 전:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py pack --task "고치려는 버그나 작업 설명"
+context-pack pack --task "고치려는 버그나 작업 설명"
 ```
 
 코드 리뷰 전:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py review-pack --base main
+context-pack review-pack --base main
 ```
 
 작업 후:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py checkpoint --pack
+context-pack checkpoint --pack
 ```
 
 상태 검증:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py doctor
+context-pack doctor
 ```
 
 ## 핵심 기능
 
 | 기능 | 줄여주는 것 |
 | --- | --- |
-| `init` | repo-local context library와 handoff 문서 생성 |
+| `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash 기록 |
 | `pack` | 작업별 reading pack 생성 |
 | `review-pack` | dirty files 또는 `--base` 기준 코드 리뷰 팩 생성 |
@@ -216,6 +237,20 @@ Checkpoint this work for the next session.
 4. 관련 `.codex/context/AREAS/*.md`
 5. 실제 코드 파일
 
+## AGENTS.md나 CLAUDE.md만 쓰면 안 되나?
+
+써야 합니다. Context Pack은 그것들을 대체하지 않습니다.
+
+`AGENTS.md`, `CLAUDE.md`, `.cursor/rules` 같은 파일은 오래 유지되는 instruction layer입니다. 코딩 스타일, 명령어, 정책, 프로젝트 규칙을 담기 좋습니다. Context Pack은 그 옆의 routing layer입니다.
+
+- branch, HEAD, dirty files, diff hash를 기록합니다.
+- 변경 파일이나 작업 설명을 관련 영역 문서로 매핑합니다.
+- 이번 작업/리뷰에 필요한 임시 read-first pack을 만듭니다.
+- 요약 문서가 stale일 수 있으면 경고합니다.
+- durable context는 git에 남기고 generated/local context는 ignore합니다.
+
+즉 에이전트는 rule file에서 “어떻게 행동할지”를 읽고, Context Pack에서 “어디부터 볼지”를 읽습니다.
+
 ## 작동 방식
 
 Context Pack은 vector DB나 일반적인 memory bank가 아닙니다. git 상태를 기준으로 stale 여부를 의심하고, 지금 작업에 필요한 파일과 문서만 고르는 라우팅 레이어입니다.
@@ -225,18 +260,21 @@ Python script가 맡는 일:
 - git 상태 수집
 - dirty file 목록
 - diff hash
+- 첫 init 시 source/test/docs/automation 영역 자동 추론
 - area matching
 - pack 생성
 - stale warning
 - hook 설치
 - doctor 검증
 
-AI가 맡는 일:
+AI가 시간이 지나며 개선할 수 있는 일:
 
 - area 요약 개선
 - 프로젝트 계약 정리
 - common failure modes 작성
 - 중요한 결정 기록
+
+처음부터 사람이 taxonomy를 다 손으로 만들 필요는 없습니다. `init`은 repo 안의 파일 구조를 보고 쓸만한 기본 영역을 만들고, 의미 있는 refinement는 실제 작업을 하면서 쌓는 구조입니다.
 
 ## Git 정책
 
@@ -270,7 +308,7 @@ AI가 맡는 일:
 repo-local git hook을 설치하면 git 작업 경계에서 checkpoint를 조금 더 자동화할 수 있습니다.
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode safe
+context-pack install-git-hooks --mode safe
 ```
 
 safe mode:
@@ -282,25 +320,27 @@ safe mode:
 aggressive mode는 commit 이후 checkpoint도 추가합니다.
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-git-hooks --mode aggressive
+context-pack install-git-hooks --mode aggressive
 ```
 
 제거:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py uninstall-git-hooks
+context-pack uninstall-git-hooks
 ```
 
 ## 검증
 
 ```powershell
 python -m unittest discover -s tests -v
-python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack
-python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack
+python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
+python -m json.tool .agents/plugins/marketplace.json
+python -m pip install -e .
+context-pack --help
 ```
 
 GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib unit test와 JSON validation을 실행합니다.
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.0](https://github.com/Fharena/context-pack/releases/tag/v0.1.0).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.1](https://github.com/Fharena/context-pack/releases/tag/v0.1.1).

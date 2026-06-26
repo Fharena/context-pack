@@ -9,10 +9,12 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Read when: Deterministic context-pack engine: git snapshot, area matching, pack generation, doctor, and git hooks.
 - Start with:
   - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
+  - `src/context_pack/cli.py`
   - `tests/test_context_pack.py`
 - Matches:
   - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
   - `plugins/context-pack/scripts/context_pack.py`
+  - `src/context_pack/**`
 - Tests:
   - `tests/test_context_pack.py`
 
@@ -30,6 +32,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `scripts/install_plugin.py`
   - `.agents/plugins/marketplace.json`
   - `.github/**`
+  - `pyproject.toml`
+  - `src/context_pack/**`
   - `CHANGELOG.md`
   - `CONTRIBUTING.md`
   - `assets/**`
@@ -38,10 +42,13 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `LICENSE`
   - `SECURITY.md`
   - `.gitignore`
+  - `.gitattributes`
 - Tests:
   - `python -m unittest discover -s tests -v`
-  - `python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack`
-  - `python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack`
+  - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
+  - `python -m json.tool .agents/plugins/marketplace.json`
+  - `python -m pip install -e .`
+  - `context-pack --help`
 
 ### overview
 - Doc: `.codex/context/AREAS/overview.md`
@@ -78,8 +85,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `plugins/context-pack/skills/context-pack/SKILL.md`
   - `plugins/context-pack/skills/context-pack/agents/openai.yaml`
 - Tests:
-  - `python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack`
-  - `python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack`
+  - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
+  - `python -m unittest discover -s tests -v`
 
 ### tests
 - Doc: `.codex/context/AREAS/tests.md`

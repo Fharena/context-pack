@@ -26,15 +26,18 @@
       ],
       "paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
-        "plugins/context-pack/scripts/context_pack.py"
+        "plugins/context-pack/scripts/context_pack.py",
+        "src/context_pack/**"
       ],
       "stale_if_paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "plugins/context-pack/scripts/context_pack.py",
+        "src/context_pack/**",
         "tests/test_context_pack.py"
       ],
       "start_files": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "src/context_pack/cli.py",
         "tests/test_context_pack.py"
       ],
       "tests": [
@@ -67,6 +70,8 @@
         "scripts/install_plugin.py",
         ".agents/plugins/marketplace.json",
         ".github/**",
+        "pyproject.toml",
+        "src/context_pack/**",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
         "assets/**",
@@ -74,20 +79,25 @@
         "README.ko.md",
         "LICENSE",
         "SECURITY.md",
-        ".gitignore"
+        ".gitignore",
+        ".gitattributes"
       ],
       "stale_if_paths": [
         "plugins/context-pack/.codex-plugin/plugin.json",
         "plugins/context-pack/skills/context-pack/SKILL.md",
         ".agents/plugins/marketplace.json",
         ".github/**",
+        "pyproject.toml",
+        "src/context_pack/**",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
         "assets/**",
         "scripts/**",
         "README.md",
         "README.ko.md",
-        "SECURITY.md"
+        "SECURITY.md",
+        ".gitignore",
+        ".gitattributes"
       ],
       "start_files": [
         "README.md",
@@ -98,8 +108,10 @@
       ],
       "tests": [
         "python -m unittest discover -s tests -v",
-        "python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack",
-        "python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack"
+        "python -m json.tool plugins/context-pack/.codex-plugin/plugin.json",
+        "python -m json.tool .agents/plugins/marketplace.json",
+        "python -m pip install -e .",
+        "context-pack --help"
       ]
     },
     "overview": {
@@ -192,8 +204,8 @@
         "plugins/context-pack/skills/context-pack/agents/openai.yaml"
       ],
       "tests": [
-        "python C:/Users/99yoo/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/context-pack",
-        "python C:/Users/99yoo/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/context-pack/skills/context-pack"
+        "python -m json.tool plugins/context-pack/.codex-plugin/plugin.json",
+        "python -m unittest discover -s tests -v"
       ]
     },
     "tests": {
