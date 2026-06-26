@@ -69,6 +69,16 @@ Use the script for factual repo state. Use model judgment only for semantic summ
 
 ## Workflows
 
+### Install Or Update Codex Plugin
+
+Use when the user asks to install, update, or activate Context Pack for Codex from a clone or packaged CLI.
+
+```bash
+python scripts/context_pack.py install-codex --force
+```
+
+Only add `--activate` when the user wants the command to run `codex plugin add context-pack@personal` too.
+
 ### Fast Path
 
 Use this first when entering a repo or starting a non-trivial task. It initializes missing context docs, chooses a task/review/changed-files pack when enough signal exists, and prints what to read next.

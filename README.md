@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.4"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.5"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -66,9 +66,10 @@ Context Pack makes the repo carry enough context for that handoff:
 Recommended for Codex:
 
 ```bash
-codex plugin marketplace add Fharena/context-pack
-codex plugin add context-pack@context-pack
+pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack install-codex --activate
 ```
+
+If the Codex CLI is not on `PATH`, omit `--activate` and run the printed `codex plugin add ...` command later.
 
 Then talk to your agent:
 
@@ -79,6 +80,12 @@ Use $context-pack to checkpoint this work.
 ```
 
 The agent runs the engine, reads the generated pack, and continues from the focused context. In a context-enabled repo, the skill is also designed for proactive use: an agent should run `context-pack start` before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool.
+
+If you already installed the CLI, update or install the Codex plugin with:
+
+```bash
+context-pack install-codex --activate
+```
 
 For non-Codex agents or direct terminal use:
 
@@ -94,8 +101,7 @@ context-pack start --review --base main
 Install from a clone as a local Codex plugin:
 
 ```powershell
-python scripts/install_plugin.py
-codex plugin add context-pack@personal
+python plugins/context-pack/scripts/context_pack.py install-codex --force --activate
 ```
 
 Install only the skill:
@@ -179,6 +185,7 @@ The point is not to replace source code. The point is to make the agent start fr
 | Feature | What it saves |
 | --- | --- |
 | `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
+| `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `init` | Creates a repo-local context library, handoff docs, and inferred source/test/doc areas |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
@@ -240,6 +247,7 @@ Context Pack is not a vector database and not a generic memory bank. It is a ver
 The script handles deterministic work:
 
 - git branch, HEAD, dirty files, diff hash
+- Codex plugin installation from an installed package or source checkout
 - one-command `start` routing for first-run init, task packs, review packs, and dirty-file packs
 - first-run inference for common source, test, docs, and automation areas
 - changed-file and task scoring for area matching
@@ -330,4 +338,4 @@ GitHub Actions runs stdlib unit tests and JSON validation on Windows and Ubuntu 
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.4](https://github.com/Fharena/context-pack/releases/tag/v0.1.4).
+See [CHANGELOG.md](CHANGELOG.md). Current release: [v0.1.5](https://github.com/Fharena/context-pack/releases/tag/v0.1.5).

@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -458,6 +459,99 @@ class ContextPackTests(unittest.TestCase):
             text = hook.read_text(encoding="utf-8")
             self.assertNotIn("# context-pack:start", text)
 
+    def test_install_codex_copies_plugin_and_updates_marketplace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "plugins" / "context-pack"
+            marketplace = root / ".agents" / "plugins" / "marketplace.json"
+
+            self.assertEqual(
+                self.engine.main(
+                    [
+                        "install-codex",
+                        "--target",
+                        str(target),
+                        "--marketplace",
+                        str(marketplace),
+                        "--quiet",
+                    ]
+                ),
+                0,
+            )
+            self.assertTrue((target / ".codex-plugin/plugin.json").exists())
+            self.assertTrue((target / "skills/context-pack/SKILL.md").exists())
+            self.assertTrue((target / "skills/context-pack/scripts/context_pack.py").exists())
+            data = json.loads(marketplace.read_text(encoding="utf-8"))
+            self.assertEqual(data["name"], "personal")
+            self.assertEqual(data["plugins"][0]["name"], "context-pack")
+            self.assertEqual(data["plugins"][0]["source"]["path"], "./plugins/context-pack")
+
+            with self.assertRaises(SystemExit):
+                self.engine.main(
+                    [
+                        "install-codex",
+                        "--target",
+                        str(target),
+                        "--marketplace",
+                        str(marketplace),
+                        "--quiet",
+                    ]
+                )
+            self.assertEqual(
+                self.engine.main(
+                    [
+                        "install-codex",
+                        "--target",
+                        str(target),
+                        "--marketplace",
+                        str(marketplace),
+                        "--force",
+                        "--quiet",
+                    ]
+                ),
+                0,
+            )
+
+    def test_install_codex_can_synthesize_plugin_without_source_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            isolated_engine = root / "isolated_context_pack.py"
+            isolated_engine.write_text(ENGINE.read_text(encoding="utf-8"), encoding="utf-8")
+            target = root / "plugins" / "context-pack"
+            marketplace = root / ".agents" / "plugins" / "marketplace.json"
+            old_file = self.engine.__file__
+            self.engine.__file__ = str(isolated_engine)
+            try:
+                self.assertEqual(
+                    self.engine.main(
+                        [
+                            "install-codex",
+                            "--target",
+                            str(target),
+                            "--marketplace",
+                            str(marketplace),
+                            "--quiet",
+                        ]
+                    ),
+                    0,
+                )
+            finally:
+                self.engine.__file__ = old_file
+
+            plugin = json.loads((target / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+            self.assertEqual(plugin["name"], "context-pack")
+            self.assertEqual(plugin["version"], self.engine.CONTEXT_PACK_VERSION)
+            skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("context-pack start", skill)
+            script = (target / "skills/context-pack/scripts/context_pack.py").read_text(encoding="utf-8")
+            self.assertIn("CONTEXT_PACK_VERSION", script)
+
+    def test_install_codex_refuses_to_overwrite_source_plugin(self) -> None:
+        source_plugin = ROOT / "plugins" / "context-pack"
+        with self.assertRaises(SystemExit):
+            self.engine.main(["install-codex", "--target", str(source_plugin), "--force", "--quiet"])
+        self.assertTrue((source_plugin / ".codex-plugin/plugin.json").exists())
+
     def test_packaged_cli_engine_stays_in_sync(self) -> None:
         self.assertEqual(ENGINE.read_text(encoding="utf-8"), BUNDLED_ENGINE.read_text(encoding="utf-8"))
 
@@ -475,6 +569,17 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("context-pack", proc.stdout)
+
+    def test_public_versions_stay_in_sync(self) -> None:
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        package_init: dict[str, str] = {}
+        exec((ROOT / "src/context_pack/__init__.py").read_text(encoding="utf-8"), package_init)
+        plugin = json.loads((ROOT / "plugins/context-pack/.codex-plugin/plugin.json").read_text(encoding="utf-8"))
+
+        version = pyproject["project"]["version"]
+        self.assertEqual(package_init["__version__"], version)
+        self.assertEqual(plugin["version"], version)
+        self.assertEqual(self.engine.CONTEXT_PACK_VERSION, version)
 
 
 if __name__ == "__main__":

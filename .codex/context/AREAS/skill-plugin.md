@@ -31,7 +31,7 @@ stale_if:
 - The skill should tell agents to use `context-pack start` proactively before broad reading, review, unfamiliar debugging, and handoff.
 - The manifest must remain validation-ready.
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
-- Trigger language must cover start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
+- Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
 
 ## Common Failure Modes
 - Skill docs drift from engine commands.
@@ -39,6 +39,7 @@ stale_if:
 - Product copy narrows the value to session handoff only.
 - Default prompt makes Context Pack feel manual-only instead of agent-first.
 - Skill guidance teaches lower-level commands before the one-command start path.
+- Install/update requests are routed to old local scripts instead of `install-codex`.
 
 ## Expand Scope If
 - New commands are added.

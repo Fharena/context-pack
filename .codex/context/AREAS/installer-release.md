@@ -47,6 +47,7 @@ stale_if:
 
 ## Contracts
 - Installers must not overwrite existing installs unless `--force` is explicit.
+- Codex plugin install must work from a package install without requiring a repo clone.
 - The personal marketplace entry must include `policy.installation`, `policy.authentication`, and `category`.
 - Release checks include unit tests, plugin validation, and skill validation.
 - GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
@@ -55,6 +56,7 @@ stale_if:
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
 - README tells users to install a plugin without telling them the Codex add command.
+- Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
 - Korean README drifts from the English install or release flow.
 - Demo GIF no longer matches the command output or product positioning.
 - CI depends on local-only validator paths from one developer machine.

@@ -2,6 +2,18 @@
 
 All notable changes to Context Pack will be documented here.
 
+## [0.1.5] - 2026-06-26
+
+### Added
+
+- `context-pack install-codex` installs the Codex plugin and personal marketplace entry from either a source checkout or an installed package.
+- `install-codex --activate` can run `codex plugin add context-pack@personal` after installation.
+- Packaged install fallback can synthesize a valid plugin from the bundled engine when the source plugin tree is not present.
+
+### Changed
+
+- README and Korean README now lead with a clone-free Codex install path using `pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack install-codex --activate`.
+
 ## [0.1.4] - 2026-06-26
 
 ### Added

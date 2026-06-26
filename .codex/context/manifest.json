@@ -5,7 +5,8 @@
         "The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.",
         "Generated packs must stay under .codex/packs/ and remain ignored by git.",
         "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
-        "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior."
+        "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.",
+        "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs."
       ],
       "description": "Deterministic context-pack engine: git snapshot, start routing, area matching, pack generation, doctor, and git hooks.",
       "doc": ".codex/context/AREAS/engine.md",
@@ -14,11 +15,13 @@
         "Review packs ignore committed branch changes when no dirty files exist.",
         "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
         "Pack generation creates tracked generated files.",
-        "`start` hides setup errors or creates noisy tracked files on first run."
+        "`start` hides setup errors or creates noisy tracked files on first run.",
+        "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry."
       ],
       "keywords": [
         "engine",
         "start",
+        "install-codex",
         "checkpoint",
         "pack",
         "review",
@@ -50,6 +53,7 @@
     "installer-release": {
       "contracts": [
         "Install scripts must not overwrite existing local skill/plugin installs unless --force is explicit.",
+        "Codex plugin install must work from a package install without requiring a repo clone.",
         "Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.",
         "Release checks must include unit tests, plugin validation, and skill validation."
       ],
@@ -58,10 +62,12 @@
       "failure_modes": [
         "Installer replaces a user's existing skill/plugin without explicit --force.",
         "Marketplace entry points to the wrong relative plugin path.",
-        "README documents a command not covered by tests or validation."
+        "README documents a command not covered by tests or validation.",
+        "Packaged CLI can start projects but cannot install the Codex skill/plugin experience."
       ],
       "keywords": [
         "install",
+        "install-codex",
         "release",
         "marketplace",
         "skill",
@@ -118,6 +124,7 @@
         "context-pack status --quiet",
         "context-pack start --task \"agent-first CLI UX\" --quiet",
         "context-pack start --review --base HEAD~1 --quiet",
+        "context-pack install-codex --target <tmp>/plugins/context-pack --marketplace <tmp>/.agents/plugins/marketplace.json --quiet",
         "context-pack checkpoint --pack --quiet does not dirty tracked files"
       ]
     },
@@ -178,7 +185,7 @@
       "contracts": [
         "The Codex skill must tell agents to use deterministic script commands before semantic summarization.",
         "Plugin manifest must remain validation-ready and avoid unsupported fields.",
-        "The skill should be implicitly invokable for context setup, start routing, review packs, checkpointing, and token-saving repo orientation."
+        "The skill should be implicitly invokable for context setup, install/update requests, start routing, review packs, checkpointing, and token-saving repo orientation."
       ],
       "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
       "doc": ".codex/context/AREAS/skill-plugin.md",
@@ -186,7 +193,8 @@
         "Skill docs describe behavior that the script cannot perform.",
         "Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.",
         "Trigger description is too narrow and only catches session handoff use cases.",
-        "Skill guidance teaches lower-level commands before the one-command start path."
+        "Skill guidance teaches lower-level commands before the one-command start path.",
+        "Install/update requests are routed to old local scripts instead of `install-codex`."
       ],
       "keywords": [
         "skill",
@@ -194,6 +202,7 @@
         "codex",
         "agent",
         "start",
+        "install",
         "instructions",
         "metadata"
       ],
@@ -220,7 +229,7 @@
     "tests": {
       "contracts": [
         "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, first-run start, dirty changed files, committed review diffs, and hook idempotency."
+        "Coverage should include no-git repos, first-run start, install-codex, dirty changed files, committed review diffs, and hook idempotency."
       ],
       "description": "Unit tests for the deterministic engine and release-critical flows.",
       "doc": ".codex/context/AREAS/tests.md",

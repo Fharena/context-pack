@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.4"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.1.5"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -74,9 +74,10 @@ Context Pack은 repo가 다음 정보를 들고 다니게 합니다.
 Codex에서는 이 흐름을 추천합니다.
 
 ```bash
-codex plugin marketplace add Fharena/context-pack
-codex plugin add context-pack@context-pack
+pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack install-codex --activate
 ```
+
+Codex CLI가 `PATH`에 없다면 `--activate`를 빼고, 출력되는 `codex plugin add ...` 명령을 나중에 실행하면 됩니다.
 
 그 다음 사람은 명령어를 외울 필요 없이 에이전트에게 이렇게 말하면 됩니다.
 
@@ -87,6 +88,12 @@ Use $context-pack to checkpoint this work.
 ```
 
 에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 `context-pack start`를 스스로 실행하는 흐름을 목표로 합니다.
+
+이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
+
+```bash
+context-pack install-codex --activate
+```
 
 Codex가 아니거나 터미널에서 직접 쓰고 싶다면:
 
@@ -102,8 +109,7 @@ context-pack start --review --base main
 clone한 repo에서 Codex plugin으로 설치:
 
 ```powershell
-python scripts/install_plugin.py
-codex plugin add context-pack@personal
+python plugins/context-pack/scripts/context_pack.py install-codex --force --activate
 ```
 
 Codex skill만 설치:
@@ -221,6 +227,7 @@ context-pack mark-reviewed runtime tests
 | 기능 | 줄여주는 것 |
 | --- | --- |
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
+| `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
@@ -284,6 +291,7 @@ Python script가 맡는 일:
 - git 상태 수집
 - dirty file 목록
 - diff hash
+- 설치된 package나 source checkout에서 Codex plugin 설치
 - 첫 진입용 `start`: 필요한 경우 init하고 task/review/changed-files pack 선택
 - 첫 init 시 source/test/docs/automation 영역 자동 추론
 - changed-file과 task 기반 area scoring
@@ -375,4 +383,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.4](https://github.com/Fharena/context-pack/releases/tag/v0.1.4).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)를 보세요. 현재 릴리즈: [v0.1.5](https://github.com/Fharena/context-pack/releases/tag/v0.1.5).

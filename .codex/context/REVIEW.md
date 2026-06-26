@@ -18,6 +18,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Hook installation duplicates marker blocks or overwrites unrelated user hook logic.
   - Pack generation creates tracked generated files.
   - `start` hides setup errors or creates noisy tracked files on first run.
+  - `install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.
 
 ### installer-release
 - Doc: `.codex/context/AREAS/installer-release.md`
@@ -46,11 +47,13 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `context-pack status --quiet`
   - `context-pack start --task "agent-first CLI UX" --quiet`
   - `context-pack start --review --base HEAD~1 --quiet`
+  - `context-pack install-codex --target <tmp>/plugins/context-pack --marketplace <tmp>/.agents/plugins/marketplace.json --quiet`
   - `context-pack checkpoint --pack --quiet does not dirty tracked files`
 - Common failure modes:
   - Installer replaces a user's existing skill/plugin without explicit --force.
   - Marketplace entry points to the wrong relative plugin path.
   - README documents a command not covered by tests or validation.
+  - Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
 
 ### overview
 - Doc: `.codex/context/AREAS/overview.md`
@@ -85,6 +88,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.
   - Trigger description is too narrow and only catches session handoff use cases.
   - Skill guidance teaches lower-level commands before the one-command start path.
+  - Install/update requests are routed to old local scripts instead of `install-codex`.
 
 ### tests
 - Doc: `.codex/context/AREAS/tests.md`

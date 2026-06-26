@@ -42,6 +42,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
+CONTEXT_PACK_VERSION = "0.1.5"
 
 
 @dataclasses.dataclass
@@ -381,6 +382,7 @@ def load_manifest(repo: Path) -> dict[str, Any]:
 
 
 def write_text_lf(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8", newline="\n")
 
 
@@ -1609,6 +1611,217 @@ def cmd_gc(args: argparse.Namespace) -> int:
     return 0
 
 
+def plugin_manifest_doc() -> dict[str, Any]:
+    return {
+        "name": "context-pack",
+        "version": CONTEXT_PACK_VERSION,
+        "description": "Repo-local context packs and handoff checkpoints for coding agents.",
+        "author": {"name": "Context Pack"},
+        "license": "MIT",
+        "keywords": ["context", "handoff", "code-review", "agents", "codex"],
+        "skills": "./skills/",
+        "interface": {
+            "displayName": "Context Pack",
+            "shortDescription": "Start agents from focused repo context.",
+            "longDescription": (
+                "Context Pack keeps a lightweight repo-local context library, provides a one-command start flow, "
+                "writes ignored local checkpoints by default, and generates task or review packs so coding agents "
+                "can begin from relevant files, contracts, tests, and stale warnings instead of rereading the repository."
+            ),
+            "developerName": "Context Pack",
+            "category": "Productivity",
+            "capabilities": ["Write", "Automation"],
+            "defaultPrompt": [
+                "Start context-pack in this repo.",
+                "Build a review context pack for my changes.",
+                "Checkpoint this work for the next session.",
+            ],
+            "brandColor": "#2563EB",
+        },
+    }
+
+
+def packaged_skill_doc() -> str:
+    return """\
+---
+name: context-pack
+description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to start project memory, initialize context docs, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+---
+
+# Context Pack
+
+Use this skill as the agent-facing workflow for Context Pack. Run the bundled engine yourself, read the generated pack, then continue the user's coding, review, or handoff task.
+
+Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
+
+## Fast Path
+
+Run this first when entering a repo or starting non-trivial work:
+
+```bash
+python scripts/context_pack.py start --task "<short task description>"
+```
+
+CLI equivalent: `context-pack start --task "<short task description>"`.
+
+For reviews:
+
+```bash
+python scripts/context_pack.py start --review --base <base-ref>
+```
+
+With no task:
+
+```bash
+python scripts/context_pack.py start
+```
+
+Read `.codex/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
+
+## Checkpoint Work
+
+After meaningful edits, tests, review notes, or handoff work, run:
+
+```bash
+python scripts/context_pack.py checkpoint --pack
+```
+
+This writes ignored local state by default. Use `checkpoint --publish --pack` only when tracked handoff docs should travel through git.
+
+## Other Commands
+
+- `python scripts/context_pack.py status`
+- `python scripts/context_pack.py mark-reviewed <area-id>`
+- `python scripts/context_pack.py refresh`
+- `python scripts/context_pack.py doctor`
+- `python scripts/context_pack.py install-git-hooks --mode safe`
+"""
+
+
+def packaged_openai_yaml() -> str:
+    return """\
+interface:
+  display_name: "Context Pack"
+  short_description: "Start agents from focused repo context"
+  default_prompt: "Use $context-pack to start from focused repo context before broad reading, review, debugging, or handoff."
+policy:
+  allow_implicit_invocation: true
+"""
+
+
+def plugin_wrapper_script() -> str:
+    return """\
+#!/usr/bin/env python3
+\"\"\"Wrapper for the bundled context-pack engine.\"\"\"
+
+from __future__ import annotations
+
+import runpy
+from pathlib import Path
+
+
+ENGINE = Path(__file__).resolve().parents[1] / "skills" / "context-pack" / "scripts" / "context_pack.py"
+
+
+if __name__ == "__main__":
+    runpy.run_path(str(ENGINE), run_name="__main__")
+"""
+
+
+def find_plugin_source() -> Path | None:
+    script = Path(__file__).resolve()
+    for parent in script.parents:
+        if (parent / ".codex-plugin" / "plugin.json").exists() and (parent / "skills" / "context-pack" / "SKILL.md").exists():
+            return parent
+    return None
+
+
+def copy_or_synthesize_plugin(target: Path, *, force: bool) -> str:
+    source = find_plugin_source()
+    if source and source.resolve() == target.resolve():
+        raise SystemExit(f"Refusing to install over the source plugin directory: {target}")
+    if target.exists():
+        if not force:
+            raise SystemExit(f"Target already exists: {target}. Use --force to replace it.")
+        shutil.rmtree(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if source and source.resolve() != target.resolve():
+        shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        return "copied"
+
+    write_json(target / ".codex-plugin" / "plugin.json", plugin_manifest_doc())
+    skill_dir = target / "skills" / "context-pack"
+    write_text_lf(skill_dir / "SKILL.md", packaged_skill_doc())
+    write_text_lf(skill_dir / "agents" / "openai.yaml", packaged_openai_yaml())
+    write_text_lf(skill_dir / "scripts" / "context_pack.py", Path(__file__).read_text(encoding="utf-8"))
+    write_text_lf(target / "scripts" / "context_pack.py", plugin_wrapper_script())
+    return "synthesized"
+
+
+def load_marketplace(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "name": "personal",
+            "interface": {"displayName": "Personal"},
+            "plugins": [],
+        }
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path} must contain a JSON object")
+    return data
+
+
+def update_marketplace(path: Path, plugin_name: str) -> str:
+    data = load_marketplace(path)
+    marketplace_name = str(data.setdefault("name", "personal"))
+    data.setdefault("interface", {"displayName": "Personal"})
+    data.setdefault("plugins", [])
+    entry = {
+        "name": plugin_name,
+        "source": {"source": "local", "path": f"./plugins/{plugin_name}"},
+        "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+        "category": "Productivity",
+    }
+    plugins = data["plugins"]
+    if not isinstance(plugins, list):
+        raise SystemExit(f"{path} field 'plugins' must be a list")
+    for idx, existing in enumerate(plugins):
+        if isinstance(existing, dict) and existing.get("name") == plugin_name:
+            plugins[idx] = entry
+            break
+    else:
+        plugins.append(entry)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(path, data)
+    return marketplace_name
+
+
+def cmd_install_codex(args: argparse.Namespace) -> int:
+    target = Path(args.target).expanduser().resolve()
+    marketplace = Path(args.marketplace).expanduser().resolve()
+    mode = copy_or_synthesize_plugin(target, force=args.force)
+    marketplace_name = update_marketplace(marketplace, "context-pack")
+
+    activated = False
+    if args.activate:
+        codex = shutil.which(args.codex_command)
+        if not codex:
+            raise SystemExit(f"Installed plugin, but could not find `{args.codex_command}` to activate it.")
+        proc = run([codex, "plugin", "add", f"context-pack@{marketplace_name}"], cwd=target.parent)
+        if proc.returncode != 0:
+            raise SystemExit((proc.stderr or proc.stdout or "codex plugin add failed").strip())
+        activated = True
+
+    if not args.quiet:
+        print(f"Installed Codex plugin to {target} ({mode})")
+        print(f"Updated marketplace {marketplace}")
+        if activated:
+            print(f"Activated with: codex plugin add context-pack@{marketplace_name}")
+        else:
+            print(f"Activate in Codex with: codex plugin add context-pack@{marketplace_name}")
+    return 0
+
+
 def hook_block(engine: Path, hook_name: str, mode: str) -> str:
     engine_posix = normalize_path(engine)
     if hook_name == "pre-commit":
@@ -1822,6 +2035,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("snapshot", help="Print current repo fingerprint as JSON")
     add_common(p)
     p.set_defaults(func=cmd_snapshot)
+
+    p = sub.add_parser("install-codex", help="Install the Codex plugin into the personal marketplace")
+    p.add_argument("--target", type=Path, default=Path.home() / "plugins" / "context-pack", help="Plugin target directory")
+    p.add_argument(
+        "--marketplace",
+        type=Path,
+        default=Path.home() / ".agents" / "plugins" / "marketplace.json",
+        help="Personal marketplace.json path",
+    )
+    p.add_argument("--force", action="store_true", help="Replace an existing plugin target")
+    p.add_argument("--activate", action="store_true", help="Run `codex plugin add context-pack@<marketplace>` after installing")
+    p.add_argument("--codex-command", default="codex", help="Codex CLI executable to use with --activate")
+    p.add_argument("--quiet", action="store_true", help="Reduce command output")
+    p.set_defaults(func=cmd_install_codex)
 
     p = sub.add_parser("install-git-hooks", help="Install repo-local git hooks for automatic checkpoints")
     add_common(p)

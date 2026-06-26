@@ -38,5 +38,6 @@ jobs:
           python -m pip install -e .
           context-pack --help
           python -m context_pack --help
+          python -c "import json, pathlib, subprocess, tempfile; root = pathlib.Path(tempfile.mkdtemp()); target = root / 'plugins' / 'context-pack'; marketplace = root / '.agents' / 'plugins' / 'marketplace.json'; subprocess.run(['context-pack', 'install-codex', '--target', str(target), '--marketplace', str(marketplace), '--quiet'], check=True); assert (target / '.codex-plugin' / 'plugin.json').exists(); assert (target / 'skills' / 'context-pack' / 'SKILL.md').exists(); data = json.loads(marketplace.read_text(encoding='utf-8')); assert data['plugins'][0]['name'] == 'context-pack'"
           context-pack status --quiet
           python -c "import subprocess, sys; status = lambda: subprocess.check_output(['git', 'status', '--porcelain=v1', '-uall'], text=True); before = status(); subprocess.run(['context-pack', 'checkpoint', '--pack', '--quiet'], check=True); after = status(); sys.stdout.write('Before checkpoint:\n' + (before or '<clean>\n') + 'After checkpoint:\n' + (after or '<clean>\n')) if after != before else None; sys.exit(1 if after != before else 0)"

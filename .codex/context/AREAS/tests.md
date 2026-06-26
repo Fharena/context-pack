@@ -8,9 +8,10 @@ tests:
   - python -m unittest discover -s tests -v
 stale_if:
   - engine commands change
-- hook behavior changes
-- review-pack behavior changes
-- start behavior changes
+  - hook behavior changes
+  - review-pack behavior changes
+  - start behavior changes
+  - install-codex behavior changes
 ---
 
 # Tests
@@ -25,7 +26,7 @@ stale_if:
 
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
-- Coverage includes no-git initialization, first-run start, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
+- Coverage includes no-git initialization, first-run start, install-codex, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
 - Git tests configure user identity locally in temp repos.
 
 ## Common Failure Modes
