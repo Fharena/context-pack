@@ -587,6 +587,47 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("README.md", snapshot.dirty_files)
             self.assertNotIn("EADME.md", snapshot.dirty_files)
 
+    def test_status_warns_when_shared_handoff_fingerprint_is_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "add context"], cwd=repo, check=True, capture_output=True)
+
+            status_proc = subprocess.run(
+                [sys.executable, str(ENGINE), "status", "--repo", str(repo)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(status_proc.returncode, 0, status_proc.stderr)
+            self.assertIn("Health warnings:", status_proc.stdout)
+            self.assertIn(".context-pack/CURRENT.md fingerprint is stale", status_proc.stdout)
+            self.assertIn("material files changed since handoff HEAD", status_proc.stdout)
+
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--publish", "--quiet"]), 0)
+            subprocess.run(["git", "add", ".context-pack/CURRENT.md", ".context-pack/LOG.md"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "publish handoff"], cwd=repo, check=True, capture_output=True)
+
+            fresh_proc = subprocess.run(
+                [sys.executable, str(ENGINE), "status", "--repo", str(repo)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(fresh_proc.returncode, 0, fresh_proc.stderr)
+            self.assertIn("Health warnings:\n- none", fresh_proc.stdout)
+            self.assertNotIn("fingerprint is stale", fresh_proc.stdout)
+
     def test_status_and_mark_reviewed_manage_area_health(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

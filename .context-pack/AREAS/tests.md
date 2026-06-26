@@ -31,6 +31,7 @@ stale_if:
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
 - Coverage includes no-git initialization, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
+- Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
 - Git tests configure user identity locally in temp repos.
 
@@ -40,6 +41,7 @@ stale_if:
 - Installing hooks twice and duplicating marker blocks.
 - Installing shared agent docs twice and duplicating marker blocks.
 - Letting setup drift from the init/install-agent-docs/hook commands it composes.
+- Adding handoff health warnings that become impossible to clear after committing tracked handoff docs.
 - Testing doctor only as read-only validation after adding repair behavior.
 - Node wrapper tests are skipped or missing after changing package metadata.
 

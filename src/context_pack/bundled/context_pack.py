@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.0"
+CONTEXT_PACK_VERSION = "0.2.1"
 
 
 @dataclasses.dataclass
@@ -536,6 +536,19 @@ def marker_content(block: str, start: str, end: str) -> str:
         after_start = after_start[1:]
     before_end = after_start.rsplit(end, 1)[0]
     return before_end.strip("\n")
+
+
+def marker_fields(markdown: str, start: str, end: str) -> dict[str, str]:
+    if start not in markdown or end not in markdown:
+        return {}
+    fields: dict[str, str] = {}
+    for line in marker_content(markdown, start, end).splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("- ") or ":" not in stripped:
+            continue
+        key, value = stripped[2:].split(":", 1)
+        fields[key.strip()] = value.strip()
+    return fields
 
 
 def render_fingerprint(snapshot: Snapshot) -> str:
@@ -1746,9 +1759,66 @@ def update_frontmatter_status(path: Path, status: str) -> bool:
     return update_frontmatter_fields(path, {"status": status})
 
 
-def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
+def committed_files_between(repo: Path, base: str, head: str = "HEAD") -> list[str] | None:
+    if not base or base in {"unknown", "not-a-git-repo"}:
+        return []
+    output = git_text(repo, ["diff", "--name-only", "--diff-filter=ACMRTUXB", f"{base}..{head}"])
+    if output is None:
+        return None
+    return [normalize_path(line) for line in output.splitlines() if line.strip()]
+
+
+def is_handoff_only_path(path: str, layout: ContextLayout) -> bool:
+    path = normalize_path(path)
+    return path in {
+        path_text(layout.current_path),
+        path_text(layout.log_path),
+        path_text(LEGACY_CURRENT_PATH),
+        path_text(LEGACY_LOG_PATH),
+    }
+
+
+def handoff_fingerprint_warning(repo: Path, snapshot: Snapshot, layout: ContextLayout) -> str | None:
+    path = repo / layout.current_path
+    if not path.exists():
+        return None
+    fields = marker_fields(read_text(path), FINGERPRINT_START, FINGERPRINT_END)
+    if not fields:
+        return f"{path_text(layout.current_path)} has no fingerprint; run `context-pack checkpoint --publish` if this handoff should be shared"
+
+    problems: list[str] = []
+    branch = fields.get("Branch")
+    if snapshot.is_git and branch and branch not in {"unknown", snapshot.branch}:
+        problems.append(f"branch {branch} != {snapshot.branch}")
+
+    diff_hash = fields.get("Dirty diff hash")
+    if diff_hash and diff_hash != snapshot.diff_hash:
+        problems.append(f"diff hash {diff_hash} != {snapshot.diff_hash}")
+
+    recorded_head = fields.get("HEAD")
+    if snapshot.is_git and recorded_head and recorded_head not in {"unknown", snapshot.head}:
+        changed_since = committed_files_between(repo, recorded_head)
+        if changed_since is None:
+            problems.append(f"recorded HEAD {recorded_head} is not comparable to {snapshot.head}")
+        else:
+            material = [path for path in changed_since if not is_handoff_only_path(path, layout)]
+            if material:
+                shown = ", ".join(material[:3])
+                more = len(material) - 3
+                problems.append(
+                    f"material files changed since handoff HEAD {recorded_head}: {shown}"
+                    + (f" (+{more} more)" if more > 0 else "")
+                )
+
+    if not problems:
+        return None
+    return f"{path_text(layout.current_path)} fingerprint is stale ({'; '.join(problems)}); run `context-pack checkpoint --publish` when the shared handoff should move"
+
+
+def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
+    snapshot = snapshot or collect_snapshot(repo)
     layout = resolve_layout(repo)
 
     required = [layout.context_dir, layout.areas_dir, layout.handoff_dir, layout.manifest_path, layout.index_path, layout.current_path]
@@ -1787,6 +1857,9 @@ def context_setup_issues(repo: Path) -> tuple[list[str], list[str]]:
     elif layout_exists(repo, LEGACY_LAYOUT):
         warnings.append("legacy .codex context files are still present after .context-pack setup")
 
+    if not errors and (warning := handoff_fingerprint_warning(repo, snapshot, layout)):
+        warnings.append(warning)
+
     return errors, warnings
 
 
@@ -1794,7 +1867,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = resolve_layout(repo)
-    errors, warnings = context_setup_issues(repo)
+    errors, warnings = context_setup_issues(repo, snapshot)
 
     if not (repo / layout.manifest_path).exists():
         if not args.quiet:
@@ -1834,6 +1907,13 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("- none")
         if related:
             print(f"Related areas: {', '.join(item.area_id for item in related)}")
+        print("")
+        print("Health warnings:")
+        if warnings:
+            for item in warnings:
+                print(f"- {item}")
+        else:
+            print("- none")
         print("")
         print("Stale warnings:")
         if stale:
@@ -2379,7 +2459,7 @@ def cmd_uninstall_git_hooks(args: argparse.Namespace) -> int:
 def cmd_doctor(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    errors, warnings = context_setup_issues(repo)
+    errors, warnings = context_setup_issues(repo, snapshot)
 
     if args.fix:
         if not args.quiet:
@@ -2393,7 +2473,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         )
         result = cmd_setup(setup_args)
         snapshot = collect_snapshot(repo)
-        errors, warnings = context_setup_issues(repo)
+        errors, warnings = context_setup_issues(repo, snapshot)
         if result != 0 and errors:
             if not args.quiet:
                 print("Repair incomplete.")

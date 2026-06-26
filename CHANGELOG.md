@@ -4,6 +4,16 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-27
+
+### Added
+
+- `status` and `doctor --strict` now detect stale shared `.context-pack/CURRENT.md` fingerprints when the recorded branch, dirty diff hash, or material committed files no longer match the current checkout.
+
+### Fixed
+
+- Avoids noisy handoff stale warnings after a handoff-only publish commit, so tracked `CURRENT.md` can be committed without creating an endless stale loop.
+
 ## [0.2.0] - 2026-06-27
 
 ### Changed

@@ -32,6 +32,7 @@ stale_if:
 - Packs should stay compact: rank areas, split Read First/Read Later, and omit overflow details with clear counts.
 - Packs should show scope-reduction metrics without pretending they replace source verification.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
+- `status` and `doctor --strict` should surface stale shared `CURRENT.md` fingerprints without treating handoff-only publish commits as stale forever.
 - Default checkpoints should write ignored local state; tracked handoff updates require `--publish`.
 - `setup` should stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `doctor --fix` should repair missing setup files through the same safe setup path and must not install git hooks.
@@ -46,6 +47,7 @@ stale_if:
 - `review-pack` sees no dirty files and misses committed review scope.
 - Existing hook files get overwritten instead of marker blocks being inserted.
 - Stale area docs are hidden instead of surfaced as warnings.
+- Shared `CURRENT.md` points at old work while `status` reports the context library as healthy.
 - Broad overview/context patterns dominate the pack instead of specific changed-file areas.
 - Contracts or failure modes repeat until the pack stops saving tokens.
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
