@@ -23,6 +23,7 @@ For code review, map changed files to areas, then check the listed contracts, te
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
   - `README.md`
+  - `README.ko.md`
   - `LICENSE`
   - `.gitignore`
 - Inspect/run tests:
@@ -38,6 +39,7 @@ For code review, map changed files to areas, then check the listed contracts, te
 - Doc: `.codex/context/AREAS/overview.md`
 - If changed files match:
   - `README.md`
+  - `README.ko.md`
   - `AGENTS.md`
   - `CLAUDE.md`
   - `codex.md`

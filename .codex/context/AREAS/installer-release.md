@@ -6,6 +6,7 @@ paths:
   - scripts/install_skill.py
   - scripts/install_plugin.py
   - README.md
+  - README.ko.md
   - LICENSE
 tests:
   - python -m unittest discover -s tests -v
@@ -26,6 +27,7 @@ stale_if:
 
 ## Start With
 - `README.md`
+- `README.ko.md`
 - `scripts/install_skill.py`
 - `scripts/install_plugin.py`
 
@@ -37,6 +39,7 @@ stale_if:
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
 - README tells users to install a plugin without telling them the Codex add command.
+- Korean README drifts from the English install or release flow.
 - Installer overwrites a local user customization without `--force`.
 
 ## Expand Scope If

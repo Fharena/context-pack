@@ -15,3 +15,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: not recorded
+
+## 2026-06-26T18:53:44+09:00
+- Branch: master
+- HEAD: dbf69d88d699
+- Dirty files: .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, README.ko.md, README.md, codex/context/AREAS/installer-release.md
+- Dirty diff hash: sha256:e9a50d96dd27073cff8b4482
+- Verification: not recorded

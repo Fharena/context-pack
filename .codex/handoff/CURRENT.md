@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: master
-- HEAD: 4cd7e6c6caf4
-- Dirty files: none
-- Dirty diff hash: clean
-- Updated at: 2026-06-26T18:47:00+09:00
+- HEAD: dbf69d88d699
+- Dirty files: .codex/context/INDEX.md, .codex/context/REVIEW.md, .codex/context/manifest.json, README.ko.md, README.md, codex/context/AREAS/installer-release.md
+- Dirty diff hash: sha256:e9a50d96dd27073cff8b4482
+- Updated at: 2026-06-26T18:53:44+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Keep this short. Move details into `.codex/context/AREAS/*.md`.

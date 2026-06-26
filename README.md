@@ -1,5 +1,7 @@
 # Context Pack
 
+[한국어 README](README.ko.md)
+
 Context Pack is a repo-local context library and context-pack generator for coding agents.
 
 It helps Codex, Claude, Cursor, and humans avoid paying the agent to rediscover the same project structure every session or review. The deterministic engine records git state, maps changed files to project areas, detects stale context, and writes a small `.codex/packs/CONTEXT_PACK.md` that tells the agent what to read first.
@@ -13,6 +15,16 @@ Context Pack turns that into a lightweight project library:
 - `.codex/context/` is the project index.
 - `.codex/handoff/` is the current work state.
 - `.codex/packs/CONTEXT_PACK.md` is the generated desk for the current task.
+
+## Korean Summary
+
+Context Pack은 Codex, Claude, Cursor 같은 코딩 에이전트가 매번 repo 전체를 다시 읽지 않도록, 프로젝트 안에 작은 컨텍스트 도서관을 만드는 도구입니다.
+
+- `.codex/context/`: 프로젝트 영역별 인덱스와 리뷰 라우터
+- `.codex/handoff/`: 현재 작업 상태와 다음 세션용 체크포인트
+- `.codex/packs/CONTEXT_PACK.md`: 이번 작업에 필요한 파일, 계약, 테스트, 주의점만 모은 임시 컨텍스트 팩
+
+핵심은 "AI memory"가 아니라, **지금 작업에 필요한 문서와 파일만 먼저 읽게 하는 version-aware context router**입니다. 자세한 한국어 설명은 [README.ko.md](README.ko.md)를 보세요.
 
 ## What It Does
 

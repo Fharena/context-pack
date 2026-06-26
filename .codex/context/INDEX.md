@@ -21,12 +21,14 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Read when: Install and release workflow for local skill/plugin distribution.
 - Start with:
   - `README.md`
+  - `README.ko.md`
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
 - Matches:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
   - `README.md`
+  - `README.ko.md`
   - `LICENSE`
   - `.gitignore`
 - Tests:
@@ -39,11 +41,13 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Read when: Default project orientation and safe starting point.
 - Start with:
   - `README.md`
+  - `README.ko.md`
   - `AGENTS.md`
   - `.codex/context/INDEX.md`
   - `.codex/handoff/CURRENT.md`
 - Matches:
   - `README.md`
+  - `README.ko.md`
   - `AGENTS.md`
   - `CLAUDE.md`
   - `codex.md`
