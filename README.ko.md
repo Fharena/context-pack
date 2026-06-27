@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.13"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.14"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -100,9 +100,9 @@ context-pack install-codex --activate
 Codex가 아니거나 터미널에서 직접 repo를 설정하고 싶다면:
 
 ```bash
+npx github:Fharena/context-pack measure --task "fix login timeout"
 npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
-npx github:Fharena/context-pack measure --task "fix login timeout"
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
 npx github:Fharena/context-pack start --review --base main
@@ -127,6 +127,7 @@ pipx run --spec git+https://github.com/Fharena/context-pack.git context-pack set
 
 다음에 뭘 실행할지 모르겠다면 인자 없이 `context-pack`만 실행해 quickstart를 볼 수 있습니다. 설치 버전은 `context-pack --version`으로 확인합니다.
 
+`measure`는 setup 전에 실행할 수 있습니다. `.context-pack/`가 없으면 source/test/docs/automation 영역을 메모리에서만 추론하고 아무 파일도 쓰지 않으므로, repo를 바꾸기 전에 예상 context 절감을 먼저 볼 수 있습니다.
 `setup`은 repo context library, handoff 문서, `.gitignore` 항목, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/context-pack.mdc` 공통 agent rule을 한 번에 만듭니다.
 먼저 무엇을 건드리는지 확인하고 싶다면 `setup --dry-run`을 실행하세요. 실제 파일이나 hook을 쓰지 않고 create/update/append/refresh/leave unchanged 계획을 구분해서 보여주며, 선택한 옵션을 보존한 적용 명령도 함께 출력합니다.
 첫 setup에서는 `source`, `tests`, `docs`, `automation` 같은 일반 경로가 있으면 초기 area를 추론합니다. 이후 setup 재실행은 기존 `.context-pack/manifest.json`을 기본적으로 보존합니다. 새로 생긴 경로를 area로 추가하고 싶을 때만 `setup --infer-areas`를 쓰고, 첫 설치도 overview만 만들고 싶다면 `setup --no-infer-areas`를 쓰세요.
@@ -187,6 +188,7 @@ codex plugin add context-pack@context-pack
 $ context-pack measure --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Measure for /work/context-pack
 Git: yes; branch: main; HEAD: 67f7355488c
+Context library: ok
 Mode: work
 Task: improve CLI onboarding
 No files written.
@@ -510,4 +512,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.13](https://github.com/Fharena/context-pack/releases/tag/v0.2.13).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.14](https://github.com/Fharena/context-pack/releases/tag/v0.2.14).

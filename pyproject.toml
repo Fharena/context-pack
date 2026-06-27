@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "context-pack"
-version = "0.2.13"
+version = "0.2.14"
 description = "Version-aware context packs for coding agents."
 readme = "README.md"
 requires-python = ">=3.11"

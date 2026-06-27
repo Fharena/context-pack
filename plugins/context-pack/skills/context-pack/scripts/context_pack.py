@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.13"
+CONTEXT_PACK_VERSION = "0.2.14"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -1743,7 +1743,7 @@ def pack_text_budget_summary(pack_path: Path) -> str:
 def percent(part: int, whole: int) -> int:
     if whole <= 0:
         return 0
-    return max(1, round((part / whole) * 100))
+    return min(100, max(1, round((part / whole) * 100)))
 
 
 def similarity(left: set[str], right: set[str]) -> float:
@@ -2039,7 +2039,10 @@ def cmd_measure(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = resolve_layout(repo)
+    has_context_library = (repo / layout.manifest_path).exists()
     manifest = load_manifest(repo, layout)
+    if not has_context_library:
+        manifest = merge_inferred_areas(repo, manifest, layout)
     args.mode = "review" if getattr(args, "review", False) or getattr(args, "base", None) else "work"
     changed = resolve_changed_files(repo, snapshot, args)
     matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
@@ -2068,6 +2071,10 @@ def cmd_measure(args: argparse.Namespace) -> int:
         repo_text = pack_scope_value(content, "Approx repo text")
         print(f"Context Pack Measure for {repo}")
         print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head[:12]}")
+        if has_context_library:
+            print("Context library: ok")
+        else:
+            print("Context library: not installed; using inferred areas for measurement")
         print("Mode: " + args.mode)
         if args.task:
             print(f"Task: {args.task}")
@@ -3154,9 +3161,9 @@ def print_quickstart() -> None:
     print("Version-aware context packs for Codex, Claude, Cursor, and coding agents.")
     print("")
     print("Start here:")
+    print('  context-pack measure --task "fix login timeout"')
     print("  context-pack setup --dry-run")
     print("  context-pack setup")
-    print('  context-pack measure --task "fix login timeout"')
     print('  context-pack start --task "fix login timeout"')
     print("  context-pack start --review --base main")
     print("  context-pack checkpoint --pack")

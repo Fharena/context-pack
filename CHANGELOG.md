@@ -4,6 +4,16 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-06-27
+
+### Changed
+
+- `context-pack measure` now infers source/test/docs/automation areas in memory when a repo has not been set up yet, so users can preview context savings before writing `.context-pack/` files.
+
+### Fixed
+
+- Scope-reduction file percentages are now capped at 100% for tiny repos where Read First entries include directories or missing pre-setup docs.
+
 ## [0.2.13] - 2026-06-27
 
 ### Added
