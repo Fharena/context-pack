@@ -1320,6 +1320,10 @@ class ContextPackTests(unittest.TestCase):
     def test_demo_gif_script_matches_current_product_flow(self) -> None:
         text = DEMO_GIF_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("context-pack setup --dry-run", text)
+        self.assertIn("context-pack measure --task", text)
+        self.assertIn("fix login timeout", text)
+        self.assertIn("Why selected", text)
+        self.assertIn("starter code areas", text)
         self.assertIn(".context-pack/manifest.json", text)
         self.assertIn("Approx text budget", text)
         self.assertIn("checkpoint --pack", text)

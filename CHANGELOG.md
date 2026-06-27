@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-06-27
+
+### Changed
+
+- Refreshed the README demo GIF to show the current first-run flow: read-only `measure`, explainable source/tests routing, setup dry-run, generated packs, and clean local checkpoints.
+
 ## [0.2.16] - 2026-06-27
 
 ### Changed
