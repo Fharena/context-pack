@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 88a775d793db26dc4f310e4a88703f9cb0eb2046
+- HEAD: cd201ecdc60b440b676a0178e9504011bbee1864
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T10:50:14+09:00
+- Updated at: 2026-06-27T10:52:15+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Product hardening for Context Pack. Latest work: v0.2.17 refreshes the README demo GIF to show read-only measure, explainable source/tests routing, setup dry-run, generated packs, and clean local checkpoints, committed at `88a775d`.

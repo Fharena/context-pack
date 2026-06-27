@@ -292,3 +292,11 @@ Append-only operational log.
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (51 passed); `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist\context_pack-0.2.17*`
 - Notes: v0.2.17 refreshes `assets/demo.gif` and its generator so the README visual proof matches the current first-run product flow.
+
+## 2026-06-27T10:52:15+09:00
+- Branch: main
+- HEAD: cd201ecdc60b440b676a0178e9504011bbee1864
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: same as 2026-06-27T10:50:14+09:00
+- Notes: handoff fingerprint advanced to the published v0.2.17 context review commit.
