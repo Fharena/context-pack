@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: c9351306733834b52613b6c80f810d5b9a413b0a
+- HEAD: 89d2239936f5d91c345070bdfc0a1d6f20cc105a
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T09:14:24+09:00
+- Updated at: 2026-06-27T09:15:57+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Product hardening for Context Pack. Latest work: v0.2.14 makes pre-setup `context-pack measure` infer areas in memory, caps tiny-repo scope ratios, and commits the product change at `c935130`.
