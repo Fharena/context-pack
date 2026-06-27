@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.15"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.16"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -180,38 +180,49 @@ codex plugin add context-pack@context-pack
 ## Terminal Demo
 
 ```text
-$ context-pack measure --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+$ context-pack measure --task "improve agent CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Measure for /work/context-pack
 Git: yes; branch: main; HEAD: 67f7355488c
 Context library: ok
 Mode: work
-Task: improve CLI onboarding
+Task: improve agent CLI onboarding
 No files written.
 
-Selected areas: installer-release, skill-plugin, engine
-Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
-Read First entries: 5 (~6% of repo files)
-Approx text budget: Read First ~8.2k tokens from 5 file(s) (~14% of repo text); repo ~58.7k tokens from 77 text file(s)
+Selected areas: installer-release, engine, skill-plugin
+Why selected:
+- installer-release: task matched keywords: cli, onboarding
+- engine: task matched keywords: agent
+- skill-plugin: task matched keywords: agent
+Related areas: overview
+Why related:
+- overview: task matched keywords: onboarding
+Scope reduction: start from 3 area(s) instead of scanning 50 repo file(s)
+Read First entries: 8 (~16% of repo files)
+Approx text budget: Read First ~17.0k tokens from 8 file(s) (~14% of repo text); repo ~117.8k tokens from 49 text file(s)
 
 Run next:
-- context-pack start --task "improve CLI onboarding"
+- context-pack start --task "improve agent CLI onboarding"
 
-$ context-pack start --task "improve CLI onboarding" --max-areas 3 --max-read-first 8
+$ context-pack start --task "improve agent CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Start for /work/context-pack
 Git: yes; branch: main; HEAD: 67f7355488c0
 Context library: ok
 Dirty files: 0; diff hash: clean
 
 Generated work pack for task: .context-pack/packs/CONTEXT_PACK.md
-Selected areas: installer-release, skill-plugin, engine
-Scope reduction: start from 3 area(s) instead of scanning 82 repo file(s)
-Approx text budget: Read First ~8.2k tokens from 5 file(s) (~14% of repo text); repo ~58.7k tokens from 77 text file(s)
+Selected areas: installer-release, engine, skill-plugin
+Why selected:
+- installer-release: task matched keywords: cli, onboarding
+- engine: task matched keywords: agent
+- skill-plugin: task matched keywords: agent
+Scope reduction: start from 3 area(s) instead of scanning 50 repo file(s)
+Approx text budget: Read First ~17.0k tokens from 8 file(s) (~14% of repo text); repo ~117.8k tokens from 49 text file(s)
 
 Read next:
 - .context-pack/packs/CONTEXT_PACK.md
 - .context-pack/AREAS/installer-release.md
-- .context-pack/AREAS/skill-plugin.md
 - .context-pack/AREAS/engine.md
+- .context-pack/AREAS/skill-plugin.md
 
 $ Get-Content .context-pack/packs/CONTEXT_PACK.md -TotalCount 40
 # Context Pack
@@ -219,21 +230,21 @@ $ Get-Content .context-pack/packs/CONTEXT_PACK.md -TotalCount 40
 Mode: work
 
 ## Scope Reduction
-- Repo files considered: 82
+- Repo files considered: 50
 - Primary areas selected: 3 of 5
-- Read First entries: 5 (~6% of repo files)
+- Read First entries: 8 (~16% of repo files)
 - Changed files in scope: 0
-- Approx Read First text: ~8.2k tokens from 5 file(s) (~14% of repo text)
-- Approx repo text: ~58.7k tokens from 77 text file(s)
+- Approx Read First text: ~17.0k tokens from 8 file(s) (~14% of repo text)
+- Approx repo text: ~117.8k tokens from 49 text file(s)
 - Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.
 
 ## Selected Areas
-- installer-release (score 68): changed files matched: CHANGELOG.md, README.ko.md, README.md (+5 more)
-- skill-plugin (score 40): changed files matched: plugins/context-pack/.codex-plugin/plugin.json, plugins/context-pack/skills/context-pack/SKILL.md, plugins/context-pack/skills/context-pack/agents/openai.yaml (+1 more); task matched keywords: agent
-- engine (score 34): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, src/context_pack/__init__.py, src/context_pack/bundled/context_pack.py (+1 more)
+- installer-release (score 12): task matched keywords: cli, onboarding
+- engine (score 6): task matched keywords: agent
+- skill-plugin (score 6): task matched keywords: agent
 
 ## Related Areas
-- tests (score 14): changed files matched: plugins/context-pack/skills/context-pack/scripts/context_pack.py, tests/test_context_pack.py
+- overview (score 3): task matched keywords: onboarding
 
 ## Read First
 - .context-pack/AREAS/installer-release.md
@@ -512,4 +523,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.15](https://github.com/Fharena/context-pack/releases/tag/v0.2.15).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.16](https://github.com/Fharena/context-pack/releases/tag/v0.2.16).

@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.15"
+CONTEXT_PACK_VERSION = "0.2.16"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -1472,6 +1472,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         if pack_generated:
             print(f"Generated {mode} pack for {pack_reason}: {rel_to_repo(output_path, repo)}")
             print("Selected areas: " + (", ".join(item.area_id for item in selected) if selected else "none"))
+            print_selection_reasons("Why selected:", selected)
             repo_file_total = len(repo_files(repo))
             if repo_file_total:
                 print(f"Scope reduction: start from {len(selected)} area(s) instead of scanning {repo_file_total} repo file(s)")
@@ -1612,6 +1613,18 @@ def selected_areas(
     task: str | None,
 ) -> list[str]:
     return [item.area_id for item in selected_area_matches(manifest, changed_files=changed_files, task=task)]
+
+
+def selection_reason(item: AreaSelection) -> str:
+    return "; ".join(item.reasons) if item.reasons else "selected by context-pack"
+
+
+def print_selection_reasons(title: str, selections: list[AreaSelection]) -> None:
+    if not selections:
+        return
+    print(title)
+    for item in selections:
+        print(f"- {item.area_id}: {selection_reason(item)}")
 
 
 def read_text(path: Path) -> str:
@@ -2108,8 +2121,10 @@ def cmd_measure(args: argparse.Namespace) -> int:
         print("No files written.")
         print("")
         print("Selected areas: " + (", ".join(item.area_id for item in primary) if primary else "none"))
+        print_selection_reasons("Why selected:", primary)
         if related:
             print("Related areas: " + ", ".join(item.area_id for item in related))
+            print_selection_reasons("Why related:", related)
         if repo_files_considered:
             print(f"Scope reduction: start from {len(primary)} area(s) instead of scanning {repo_files_considered} repo file(s)")
         if read_first_entries:

@@ -524,6 +524,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Context Pack Measure", text)
             self.assertIn("No files written.", text)
             self.assertIn("Selected areas: cli", text)
+            self.assertIn("Why selected:", text)
+            self.assertIn("- cli: task matched keywords: cli, command", text)
             self.assertIn("Scope reduction: start from", text)
             self.assertIn("Approx text budget: Read First", text)
             self.assertIn('context-pack start --task "cli command bug"', text)
@@ -565,6 +567,9 @@ class ContextPackTests(unittest.TestCase):
             text = output.getvalue()
             self.assertIn("Context library: not installed; using inferred areas for measurement", text)
             self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("Why selected:", text)
+            self.assertIn("- source: starter code area for unclassified task", text)
+            self.assertIn("- tests: starter code area for unclassified task", text)
             self.assertFalse((repo / ".context-pack").exists())
 
     def test_start_first_run_routes_unclassified_code_task_to_source_and_tests(self) -> None:
@@ -575,8 +580,15 @@ class ContextPackTests(unittest.TestCase):
             (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
             (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
 
-            self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout", "--quiet"]), 0)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout"]), 0)
 
+            text = output.getvalue()
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("Why selected:", text)
+            self.assertIn("- source: starter code area for unclassified task", text)
+            self.assertIn("- tests: starter code area for unclassified task", text)
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- source (score 2): starter code area for unclassified task", pack)
             self.assertIn("- tests (score 2): starter code area for unclassified task", pack)

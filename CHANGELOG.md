@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-06-27
+
+### Changed
+
+- `context-pack measure` and `context-pack start` now print why each selected or related area was chosen, making first-run routing easier to inspect before an agent reads files.
+
 ## [0.2.15] - 2026-06-27
 
 ### Changed
