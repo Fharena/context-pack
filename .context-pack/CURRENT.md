@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 89d2239936f5d91c345070bdfc0a1d6f20cc105a
+- HEAD: 47823b3d317063080abddf3f42b41b05a44c6955
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T09:15:57+09:00
+- Updated at: 2026-06-27T09:55:53+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: v0.2.14 makes pre-setup `context-pack measure` infer areas in memory, caps tiny-repo scope ratios, and commits the product change at `c935130`.
+- Product hardening for Context Pack. Latest work: v0.2.15 routes generic first-run code tasks like `fix login timeout` to inferred `source` and `tests` areas instead of overview-only context, committed at `47823b3`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,8 +18,8 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `main`, tag `v0.2.14`, and create/watch the GitHub Release.
-2. Next product iteration: improve first-run proof further with a benchmark fixture or shorter homepage proof section.
+1. Push `main`, tag `v0.2.15`, and create/watch the GitHub Release.
+2. Next product iteration: improve homepage proof with a small reproducible benchmark fixture or shorter before/after section.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -28,10 +28,10 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (49 passed)
+- `python -m unittest discover -s tests -v` (51 passed)
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
 - `python scripts/validate_packaged_cli.py`
 - `npm pack --dry-run`
 - `python -m build`
-- `python -m twine check dist\context_pack-0.2.14*`
+- `python -m twine check dist\context_pack-0.2.15*`
