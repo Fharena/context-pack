@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 1e05f77758a8ee1d163d6888b102d20b185fa67d
+- HEAD: 9e7b30c13c7ff3f8c710ede1501563bcf5d67c53
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T10:24:11+09:00
+- Updated at: 2026-06-27T10:25:49+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Product hardening for Context Pack. Latest work: v0.2.16 makes `measure` and `start` explain why selected and related areas were chosen, committed at `1e05f77`.
