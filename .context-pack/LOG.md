@@ -236,3 +236,11 @@ Append-only operational log.
 - Dirty diff hash: clean
 - Verification: same as 2026-06-27T08:50:07+09:00
 - Notes: handoff fingerprint advanced to the published context-pack area review commit.
+
+## 2026-06-27T09:14:24+09:00
+- Branch: main
+- HEAD: c9351306733834b52613b6c80f810d5b9a413b0a
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (49 passed); `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist\context_pack-0.2.14*`
+- Notes: v0.2.14 adds read-only pre-setup measurement via inferred in-memory areas and caps tiny-repo scope percentages at 100%.
