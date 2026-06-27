@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 47823b3d317063080abddf3f42b41b05a44c6955
+- HEAD: e129af6c9b53280050c0c7e3037255a7d0e28f02
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T09:55:53+09:00
+- Updated at: 2026-06-27T09:57:42+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Product hardening for Context Pack. Latest work: v0.2.15 routes generic first-run code tasks like `fix login timeout` to inferred `source` and `tests` areas instead of overview-only context, committed at `47823b3`.
