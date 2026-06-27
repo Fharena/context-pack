@@ -268,3 +268,11 @@ Append-only operational log.
 - Dirty diff hash: clean
 - Verification: same as 2026-06-27T09:55:53+09:00
 - Notes: handoff fingerprint advanced to the published v0.2.15 context review commit.
+
+## 2026-06-27T10:24:11+09:00
+- Branch: main
+- HEAD: 1e05f77758a8ee1d163d6888b102d20b185fa67d
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (51 passed); `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python scripts/validate_packaged_cli.py`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist\context_pack-0.2.16*`
+- Notes: v0.2.16 makes terminal proof explain selected/related area reasons so routing is inspectable before an agent reads source.

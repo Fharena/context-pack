@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: e129af6c9b53280050c0c7e3037255a7d0e28f02
+- HEAD: 1e05f77758a8ee1d163d6888b102d20b185fa67d
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-27T09:57:42+09:00
+- Updated at: 2026-06-27T10:24:11+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: v0.2.15 routes generic first-run code tasks like `fix login timeout` to inferred `source` and `tests` areas instead of overview-only context, committed at `47823b3`.
+- Product hardening for Context Pack. Latest work: v0.2.16 makes `measure` and `start` explain why selected and related areas were chosen, committed at `1e05f77`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,8 +18,8 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `main`, tag `v0.2.15`, and create/watch the GitHub Release.
-2. Next product iteration: improve homepage proof with a small reproducible benchmark fixture or shorter before/after section.
+1. Push `main`, tag `v0.2.16`, and create/watch the GitHub Release.
+2. Next product iteration: improve first-run docs with a reproducible copy/paste benchmark fixture or registry publishing readiness.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -34,4 +34,4 @@
 - `python scripts/validate_packaged_cli.py`
 - `npm pack --dry-run`
 - `python -m build`
-- `python -m twine check dist\context_pack-0.2.15*`
+- `python -m twine check dist\context_pack-0.2.16*`
