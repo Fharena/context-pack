@@ -25,7 +25,7 @@
   <img src="https://raw.githubusercontent.com/Fharena/context-pack/main/assets/demo.gif" alt="Context Pack terminal demo" width="820">
 </p>
 
-Stop paying agents to rediscover your repo.
+Give coding agents a map before they start reading your repo.
 
 Context Pack keeps a small repo-local project library, checkpoints git state, and generates compact task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
 
@@ -74,15 +74,15 @@ npx github:Fharena/context-pack install-codex --activate
 
 This requires Node plus Python 3.11+ on `PATH`. If the Codex CLI is not on `PATH`, omit `--activate` and run the printed `codex plugin add ...` command later.
 
-Then talk to your agent:
+Then keep talking normally:
 
 ```text
-Use $context-pack to set up this repo.
-Use $context-pack to start work on this bug.
-Use $context-pack to checkpoint this work.
+Can you fix the login timeout?
+Review this branch against main.
+I am done for now; leave this easy to resume later.
 ```
 
-The agent runs the engine, reads the generated pack, and continues from the focused context. In a context-enabled repo, the skill is also designed for proactive use: an agent should run `context-pack start` before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool.
+The agent should run the engine when the task needs orientation, read the generated pack, and continue from the focused context. Context Pack is not meant to be a magic-word workflow: in a context-enabled repo, agents should run `context-pack start` before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool. You can still say `Use $context-pack ...` when you want to force or debug the workflow.
 
 If you already installed the CLI, update or install the Codex plugin with:
 
@@ -148,7 +148,8 @@ These are mostly for contributors hacking on this repository. New users should s
 Install from a clone as a local Codex plugin:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-codex --force --activate
+python -m pip install -e .
+context-pack install-codex --force --activate
 ```
 
 Install only the skill:
@@ -157,11 +158,12 @@ Install only the skill:
 python scripts/install_skill.py
 ```
 
-Run from source without installing anything:
+Run from source with an editable install:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py setup
-python plugins/context-pack/scripts/context_pack.py start --review --base main
+python -m pip install -e .
+context-pack setup
+context-pack start --review --base main
 ```
 
 This repository also includes a repo-scoped Codex marketplace:
@@ -331,21 +333,18 @@ If you installed the Codex plugin, you usually do not type these commands yourse
 
 ## Agent-First UX
 
-Tell the agent:
+In normal use, you do not ask for a pack. You describe the work:
 
 ```text
-Use $context-pack to set up Context Pack in this repo.
-Use $context-pack to make a context pack for this bug.
-Use $context-pack to review this branch against main.
-Use $context-pack to checkpoint this work.
-Initialize context-pack in this repo.
-Build a review context pack for my changes.
-Checkpoint this work for the next session.
+Fix the login timeout.
+Review my changes against main.
+Figure out why the test suite is failing.
+I need to continue this from another machine later.
 ```
 
-The more important path is implicit:
+The agent-facing behavior is the important part:
 
-- before broad repo reading: run `context-pack start --task "..."`
+- infer the task from the user's request and run `context-pack start --task "..."`
 - when Context Pack is missing: run `context-pack setup`
 - when setup looks broken: run `context-pack doctor --fix`
 - before review: run `context-pack start --review --base <base-ref>` when a base is known
@@ -355,6 +354,14 @@ The more important path is implicit:
 - after verifying changed source against area docs: run `mark-reviewed <area>` to close stale warnings
 
 For teams or personal repos that move between Codex, Claude, and Cursor, run `context-pack install-agent-docs` once so each agent sees the same proactive rules at repo entry.
+
+Explicit prompts are still useful as escape hatches:
+
+```text
+Use $context-pack to set up Context Pack in this repo.
+Use $context-pack to checkpoint this work.
+Route my changes for review before reading broadly.
+```
 
 After initialization, agents should read:
 

@@ -25,14 +25,20 @@ Treat these docs as routing hints, not source of truth. Always verify behavior i
 
 When the user says something like:
 
+- "Fix the login timeout"
+- "Review this branch against main"
+- "Figure out why the test suite is failing"
+- "I need to continue this from another machine later"
 - "Use context-pack here"
 - "Initialize this repo"
 - "Prepare review context"
-- "Make a context pack for this bug"
+- "Use Context Pack to triage this bug"
 - "Checkpoint this work"
 - "Continue from the project memory"
 
 do the work. Do not stop at instructions.
+
+The user does not need to say "make a context pack." Treat natural coding, review, debugging, and handoff requests as lifecycle cues. Context Pack should feel like orientation the agent performs, not a manual chore the user has to remember.
 
 Also use this skill without explicit naming when:
 

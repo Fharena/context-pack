@@ -24,7 +24,7 @@
   <img src="https://raw.githubusercontent.com/Fharena/context-pack/main/assets/demo.gif" alt="Context Pack 터미널 데모" width="820">
 </p>
 
-Stop paying agents to rediscover your repo.
+에이전트가 repo를 읽기 전에 먼저 지도를 건네세요.
 
 한국어로 풀면, 에이전트가 매번 repo를 다시 읽고 헤매는 비용을 줄이자는 뜻입니다.
 
@@ -81,15 +81,15 @@ npx github:Fharena/context-pack install-codex --activate
 
 이 경로는 `PATH`에 Node와 Python 3.11+가 필요합니다. Codex CLI가 `PATH`에 없다면 `--activate`를 빼고, 출력되는 `codex plugin add ...` 명령을 나중에 실행하면 됩니다.
 
-그 다음 사람은 명령어를 외울 필요 없이 에이전트에게 이렇게 말하면 됩니다.
+그 다음에는 평소처럼 말하면 됩니다.
 
 ```text
-Use $context-pack to set up this repo.
-Use $context-pack to start work on this bug.
-Use $context-pack to checkpoint this work.
+Can you fix the login timeout?
+Review this branch against main.
+I am done for now; leave this easy to resume later.
 ```
 
-에이전트가 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봅니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 `context-pack start`를 스스로 실행하는 흐름을 목표로 합니다.
+에이전트는 repo 방향 잡기가 필요한 순간에 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봐야 합니다. Context Pack은 특정 주문처럼 도구 이름을 외워야 하는 방식이 아닙니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 `context-pack start`를 스스로 실행하는 흐름을 목표로 합니다. `Use $context-pack ...`는 강제 실행이나 문제 진단용 우회로입니다.
 
 이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
 
@@ -150,10 +150,13 @@ context-pack migrate
 
 ## 로컬 설치 옵션
 
+대부분 이 repo 자체를 수정하는 contributor용입니다. 새 사용자는 위의 `pipx`, `npx`, `install-codex` 경로부터 시작하는 편이 좋습니다.
+
 clone한 repo에서 Codex plugin으로 설치:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py install-codex --force --activate
+python -m pip install -e .
+context-pack install-codex --force --activate
 ```
 
 Codex skill만 설치:
@@ -162,11 +165,12 @@ Codex skill만 설치:
 python scripts/install_skill.py
 ```
 
-아무것도 설치하지 않고 source에서 직접 실행:
+editable install로 source에서 직접 실행:
 
 ```powershell
-python plugins/context-pack/scripts/context_pack.py setup
-python plugins/context-pack/scripts/context_pack.py start --review --base main
+python -m pip install -e .
+context-pack setup
+context-pack start --review --base main
 ```
 
 repo-scoped Codex marketplace도 포함되어 있습니다.
@@ -328,21 +332,20 @@ context-pack mark-reviewed runtime tests
 
 ## Agent-first UX
 
+일반 사용자는 pack을 만들라고 말하지 않아도 됩니다. 그냥 작업을 말합니다.
+
 ```text
-Use $context-pack to set up Context Pack in this repo.
-Use $context-pack to make a context pack for this bug.
-Use $context-pack to review this branch against main.
-Use $context-pack to checkpoint this work.
-Initialize context-pack in this repo.
-Build a review context pack for my changes.
-Checkpoint this work for the next session.
-이 버그 고치기 전에 context pack 만들어.
-작업 끝났으니 checkpoint 해줘.
+Fix the login timeout.
+Review my changes against main.
+Figure out why the test suite is failing.
+I need to continue this from another machine later.
+로그인 타임아웃 버그 고쳐줘.
+이 브랜치 main 기준으로 리뷰해줘.
 ```
 
-더 중요한 흐름은 암묵적 사용입니다.
+중요한 것은 에이전트 쪽 행동입니다.
 
-- repo를 넓게 읽기 전: `context-pack start --task "..."`
+- 사용자 요청에서 작업을 추론하고: `context-pack start --task "..."`
 - Context Pack이 없을 때: `context-pack setup`
 - setup이 깨진 것 같을 때: `context-pack doctor --fix`
 - 리뷰 전: base를 알면 `context-pack start --review --base <base-ref>`
@@ -352,6 +355,15 @@ Checkpoint this work for the next session.
 - source 확인 후: `mark-reviewed <area>`로 stale warning 닫기
 
 Codex, Claude, Cursor 사이를 오가는 개인/팀 repo라면 `context-pack install-agent-docs`를 한 번 실행해 각 에이전트가 같은 proactive rule을 보게 만드는 것이 좋습니다.
+
+명시적 prompt는 여전히 강제 실행이나 문제 진단용 우회로로 유용합니다.
+
+```text
+Use $context-pack to set up Context Pack in this repo.
+Use $context-pack to checkpoint this work.
+Route my changes for review before reading broadly.
+작업 끝났으니 checkpoint 해줘.
+```
 
 에이전트는 보통 다음 순서로 읽으면 됩니다.
 

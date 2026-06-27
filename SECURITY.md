@@ -20,4 +20,4 @@ Useful details:
 
 Context Pack reads git state and writes repo-local markdown files. It should not require network access for core commands.
 
-Generated files under `.codex/packs/` and local notes under `.codex/handoff/LOCAL.md` should not be committed by default.
+Generated files under `.context-pack/packs/` and local notes under `.context-pack/local/` should not be committed by default.

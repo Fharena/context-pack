@@ -16,8 +16,8 @@ body:
       label: Reproduction
       description: Minimal commands or repo state that reproduces the problem.
       placeholder: |
-        python plugins/context-pack/scripts/context_pack.py init
-        python plugins/context-pack/scripts/context_pack.py pack --changed
+        context-pack setup
+        context-pack start --changed
     validations:
       required: true
   - type: textarea
@@ -40,4 +40,4 @@ body:
     id: context
     attributes:
       label: Additional context
-      description: Include relevant output from `context_pack.py doctor` if available.
+      description: Include relevant output from `context-pack doctor` if available.

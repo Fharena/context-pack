@@ -4,6 +4,10 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Refined public docs and GitHub templates to use the current `context-pack` CLI, vendor-neutral `.context-pack/` paths, and agent-first wording that frames packs as focused triage instead of a manual chore.
+
 ## [0.2.17] - 2026-06-27
 
 ### Changed
