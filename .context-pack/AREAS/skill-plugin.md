@@ -1,6 +1,6 @@
 ---
 id: skill-plugin
-last_reviewed_head: 1e05f77758a8
+last_reviewed_head: 88a775d793db
 status: active
 paths:
   - plugins/context-pack/.codex-plugin/plugin.json
