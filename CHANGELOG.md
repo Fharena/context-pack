@@ -4,6 +4,12 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-06-27
+
+### Changed
+
+- Generic code tasks such as `fix login timeout` now route first-run inferred context to `source` and `tests` when no more specific area matches, instead of falling back to overview-only context.
+
 ## [0.2.14] - 2026-06-27
 
 ### Changed

@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.14"
+CONTEXT_PACK_VERSION = "0.2.15"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -119,6 +119,22 @@ TOKEN_STOP_WORDS = {
     "work",
     "you",
     "your",
+}
+CODE_TASK_TOKENS = {
+    "bug",
+    "crash",
+    "debug",
+    "error",
+    "exception",
+    "fail",
+    "failing",
+    "failure",
+    "fix",
+    "implement",
+    "issue",
+    "patch",
+    "regression",
+    "refactor",
 }
 
 
@@ -1567,6 +1583,17 @@ def selected_area_matches(
     selections.sort(key=lambda item: (-item.score, item.area_id))
 
     if not selections and "overview" in areas:
+        starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]
+        if starter_ids and task_tokens & CODE_TASK_TOKENS:
+            return [
+                AreaSelection(
+                    area_id=area_id,
+                    score=2,
+                    reasons=["starter code area for unclassified task"],
+                    matched_files=[],
+                )
+                for area_id in starter_ids
+            ]
         selections.append(
             AreaSelection(
                 area_id="overview",

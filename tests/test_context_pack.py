@@ -549,6 +549,38 @@ class ContextPackTests(unittest.TestCase):
             self.assertNotIn("~167% of repo files", text)
             self.assertFalse((repo / ".context-pack").exists())
 
+    def test_measure_before_setup_routes_unclassified_code_task_to_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["measure", "--repo", str(repo), "--task", "fix login timeout"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Context library: not installed; using inferred areas for measurement", text)
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertFalse((repo / ".context-pack").exists())
+
+    def test_start_first_run_routes_unclassified_code_task_to_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout", "--quiet"]), 0)
+
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("- source (score 2): starter code area for unclassified task", pack)
+            self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

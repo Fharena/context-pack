@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.14"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.15"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -120,7 +120,7 @@ Examples below use `context-pack` for readability. If you are staying on the Git
 
 Not sure what to run next? Run `context-pack` with no arguments to print the quickstart, or `context-pack --version` to confirm the installed version.
 
-`measure` can run before setup. When `.context-pack/` is missing, it infers source/test/docs/automation areas in memory and writes nothing, so you can preview the likely context reduction before changing the repo.
+`measure` can run before setup. When `.context-pack/` is missing, it infers source/test/docs/automation areas in memory and writes nothing, so you can preview the likely context reduction before changing the repo. If a generic code task like `fix login timeout` does not match a specific area yet, the first-run router starts from `source` and `tests` instead of falling back to overview-only context.
 `setup` initializes the repo context library, handoff docs, `.gitignore` entries, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc`.
 Run `setup --dry-run` first when you want to preview every file and hook without writing anything. The dry run distinguishes files it would create, update, append to, refresh, or leave unchanged, then prints the matching apply command with your selected options preserved.
 On first setup, Context Pack infers common `source`, `tests`, `docs`, and `automation` areas when those paths exist. Later setup runs preserve your existing `.context-pack/manifest.json` by default; use `setup --infer-areas` when you intentionally want to add newly inferred areas, or `setup --no-infer-areas` for an overview-only first setup.
@@ -512,4 +512,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.14](https://github.com/Fharena/context-pack/releases/tag/v0.2.14).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.15](https://github.com/Fharena/context-pack/releases/tag/v0.2.15).
