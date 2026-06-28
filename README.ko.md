@@ -345,7 +345,7 @@ context-pack mark-reviewed runtime tests
 | --- | --- |
 | `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 계획을 미리 보고, `--infer-areas`로 새 추론 area를 명시적으로 추가하거나 `--no-infer-areas`로 overview-only 설치 가능 |
 | `measure` | read-only proof: generated pack을 쓰지 않고 selected area, scope reduction, 대략적인 text budget을 미리 보여줌 |
-| `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택. review mode는 upstream/common default branch를 추론 가능 |
+| `start` | 처음 진입 명령 하나로 자동 init, task, review, continuation, handoff, changed-files 경로 선택. review mode는 upstream/common default branch를 추론 가능 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
 | `init` | repo-local context library, handoff 문서 생성. 첫 실행 area 추론은 `--infer-areas` / `--no-infer-areas`로 조절 가능 |

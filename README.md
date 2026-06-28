@@ -340,7 +340,7 @@ If you installed the Codex plugin or repo rules, you usually do not type these c
 | --- | --- |
 | `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan, `--infer-areas` to explicitly add newly inferred areas, or `--no-infer-areas` for overview-only setup |
 | `measure` | Read-only proof: previews selected areas, scope reduction, and approximate text budget without writing a generated pack |
-| `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack; review mode can infer upstream/common default branches |
+| `start` | One-command first step: auto-init if needed and prepare a task, review, continuation, handoff, or changed-files path; review mode can infer upstream/common default branches |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
 | `init` | Creates a repo-local context library and handoff docs; first-run area inference can be controlled with `--infer-areas` / `--no-infer-areas` |

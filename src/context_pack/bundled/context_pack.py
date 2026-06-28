@@ -139,6 +139,9 @@ CODE_TASK_TOKENS = {
 TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
     "broken",
     "problem",
+    "review",
+    "reviewed",
+    "reviewing",
 }
 ROUTE_NOISE_TOKENS = {
     "agent",
@@ -146,6 +149,34 @@ ROUTE_NOISE_TOKENS = {
     "context",
     "pack",
     "packs",
+}
+REVIEW_INTENT_TOKENS = {
+    "branch",
+    "change",
+    "changed",
+    "changes",
+    "commit",
+    "commits",
+    "diff",
+    "pr",
+    "pull",
+    "request",
+}
+CONTINUATION_INTENT_TOKENS = {
+    "continue",
+    "left",
+    "resume",
+    "session",
+}
+HANDOFF_INTENT_TOKENS = {
+    "another",
+    "checkpoint",
+    "done",
+    "easy",
+    "handoff",
+    "later",
+    "machine",
+    "resume",
 }
 
 
@@ -1480,12 +1511,16 @@ def cmd_start(args: argparse.Namespace) -> int:
     mode = "work"
     changed = False
     pack_reason = ""
+    task_intent = infer_start_task_intent(args.task)
 
-    if args.review or args.base:
+    if args.review or args.base or task_intent == "review":
         mode = "review"
         changed = True
         pack_reason = "review"
+        args.mode = mode
         review_base_inferred = maybe_infer_review_base(args, repo, snapshot)
+    elif task_intent in {"continue", "checkpoint"}:
+        review_base_inferred = False
     elif args.task:
         review_base_inferred = False
         changed = args.changed or (bool(snapshot.dirty_files) and not initialized)
@@ -1557,14 +1592,21 @@ def cmd_start(args: argparse.Namespace) -> int:
         else:
             print("No pack generated: no task, review request, or pre-existing dirty files were found.")
             print("")
-            print("Read next:")
-            print(f"- {normalize_path(layout.current_path)}")
-            print(f"- {normalize_path(layout.index_path)}")
-            print("")
-            print("Optional next commands:")
-            print('- `context-pack start --task "..."` for a focused work pack')
-            print("- `context-pack start --review` for a review pack")
-            print("- `context-pack start --changed` if you want to force dirty-file routing")
+            if task_intent == "checkpoint":
+                print("Detected handoff/checkpoint wording.")
+                print("")
+                print("Run next:")
+                print("- `context-pack checkpoint --pack`")
+                print("- `context-pack checkpoint --publish --pack` when the handoff should travel through git")
+            else:
+                print("Read next:")
+                print(f"- {normalize_path(layout.current_path)}")
+                print(f"- {normalize_path(layout.index_path)}")
+                print("")
+                print("Optional next commands:")
+                print('- `context-pack start --task "..."` for a focused work pack')
+                print("- `context-pack start --review` for a review pack")
+                print("- `context-pack start --changed` if you want to force dirty-file routing")
         print("")
         print("End-of-work checkpoint: `context-pack checkpoint --pack`")
     return 0
@@ -1594,6 +1636,29 @@ def tokenize(value: str) -> set[str]:
     for ch in value.lower():
         cleaned.append(ch if ch.isalnum() else " ")
     return {part for part in "".join(cleaned).split() if len(part) >= 3 and part not in TOKEN_STOP_WORDS}
+
+
+def infer_start_task_intent(task: str | None) -> str:
+    if not task:
+        return ""
+    text = f" {task.lower()} "
+    tokens = tokenize(task)
+    if "review" in tokens and (tokens & REVIEW_INTENT_TOKENS or " pull request " in text or " pr " in text):
+        return "review"
+    if (
+        "handoff" in tokens
+        or "checkpoint" in tokens
+        or " hand off " in text
+        or ("later" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"later"})))
+    ):
+        return "checkpoint"
+    if (
+        "where we left off" in text
+        or ("continue" in tokens and bool(tokens & (CONTINUATION_INTENT_TOKENS - {"continue"})))
+        or ("resume" in tokens and bool(tokens & {"session", "work"}))
+    ):
+        return "continue"
+    return ""
 
 
 def area_text(area_id: str, area: dict[str, Any]) -> str:

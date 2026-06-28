@@ -787,6 +787,73 @@ class ContextPackTests(unittest.TestCase):
             ).stdout
             self.assertEqual(status.strip(), "")
 
+    def test_start_task_review_phrase_uses_review_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "review this branch"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Generated review pack for review", text)
+            self.assertIn("Selected areas: source\n", text)
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", pack)
+            self.assertIn("Task: review this branch", pack)
+            self.assertIn("- `src/app.py`", pack)
+            self.assertNotIn("- overview (score", pack)
+
+    def test_start_task_continue_phrase_points_to_current_and_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "continue where we left off"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("No pack generated", text)
+            self.assertIn("- .context-pack/CURRENT.md", text)
+            self.assertIn("- .context-pack/INDEX.md", text)
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
+    def test_start_task_handoff_phrase_points_to_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "leave this easy to resume later"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("No pack generated", text)
+            self.assertIn("Detected handoff/checkpoint wording", text)
+            self.assertIn("context-pack checkpoint --pack", text)
+            self.assertIn("context-pack checkpoint --publish --pack", text)
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1087,6 +1154,11 @@ class ContextPackTests(unittest.TestCase):
                     "paths": [],
                     "keywords": ["agent", "context", "pack"],
                 },
+                "review_notes": {
+                    "description": "Review notes.",
+                    "paths": [],
+                    "keywords": ["review"],
+                },
             }
         }
 
@@ -1104,6 +1176,14 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(adoption_matches[0].area_id, "docs")
         self.assertIn("task matched keywords: adoption", adoption_matches[0].reasons)
+
+        review_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="review this branch",
+        )
+        self.assertEqual([item.area_id for item in review_matches], ["overview"])
+        self.assertEqual(review_matches[0].reasons, ["fallback orientation"])
         self.assertNotIn("and", adoption_matches[0].reasons[0])
 
         generic_fix_matches = self.engine.selected_area_matches(
