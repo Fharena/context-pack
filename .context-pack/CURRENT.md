@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: f3b17ffa3152
-- Dirty files: .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
-- Dirty diff hash: sha256:d7cc4b294c3960b23ed2964f
-- Updated at: 2026-06-28T22:10:21+09:00
+- HEAD: b9ddcaa1caaf
+- Dirty files: .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
+- Dirty diff hash: sha256:a652e4029de26b3224c1c27d
+- Updated at: 2026-06-28T22:18:55+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `f3b17ff test: smoke natural handoff flow` extends packaged npm validation so "나중에 이어가게 정리해줘" routes to checkpoint guidance and `checkpoint --pack` leaves tracked files unchanged.
+- Product hardening for Context Pack. Latest work: `b9ddcaa test: smoke natural committed branch review` extends packaged npm validation so `review this branch` on a clean feature branch infers `main` and reads only the committed diff context.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (68 passed)
+- `python -m unittest discover -s tests -v` (69 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .context-pack/manifest.json`
@@ -38,6 +38,7 @@
 - `git diff --check`
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
+- packaged npm temp repo smoke: `context-pack start --task "review this branch"` on a clean feature branch infers `main` and selects source
 - packaged npm temp repo smoke: `context-pack start --task "브랜치 리뷰해줘"` produces a review pack with only the changed source area
 - packaged npm temp repo smoke: `context-pack start --task "나중에 이어가게 정리해줘"` points to checkpoint and packaged `checkpoint --pack` keeps tracked status unchanged
 - `node bin/context-pack.js --help`
