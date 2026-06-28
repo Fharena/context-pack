@@ -1,6 +1,6 @@
 ---
 id: installer-release
-last_reviewed_head: 8080792310bc
+last_reviewed_head: 62d40a8692b4
 status: active
 paths:
   - scripts/install_skill.py
