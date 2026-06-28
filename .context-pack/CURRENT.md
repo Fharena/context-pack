@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: ca0388cb673f
+- HEAD: 94f8d56c1870
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:06:36+09:00
+- Updated at: 2026-06-28T20:14:53+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `b5964dd feat: infer review base for branch routing` lets `context-pack start --review` infer upstream/common default branches when the user simply asks to review a branch, while keeping `--base` as an explicit override.
+- Product hardening for Context Pack. Latest work: `9160d97 feat: pack clean committed handoffs` makes `checkpoint --pack` use committed changes since the previous checkpoint when the worktree is clean, so "leave this easy to resume later" still produces a focused pack after commits.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (52 passed)
+- `python -m unittest discover -s tests -v` (53 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
