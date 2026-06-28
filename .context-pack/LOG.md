@@ -465,3 +465,10 @@ Append-only operational log.
 - Dirty files: .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
 - Dirty diff hash: sha256:3779bca7e37490392d2e4fd8
 - Verification: `python -m unittest discover -s tests -v` (66 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed Korean bug phrases route to source/tests and Korean branch-review phrases route to review mode
+
+## 2026-06-28T22:00:47+09:00
+- Branch: main
+- HEAD: 4f9fdbe5f8eb
+- Dirty files: .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
+- Dirty diff hash: sha256:06bd8dd07bb2ea620bfa6709
+- Verification: `python -m unittest discover -s tests -v` (68 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed "why are tests failing" routes to source/tests, Korean bug phrases route to source/tests, and Korean branch-review phrases route to review mode
