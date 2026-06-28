@@ -141,6 +141,18 @@ CODE_TASK_TOKENS = {
     "고쳐주세요",
     "수정해줘",
 }
+ENGLISH_CODE_PROBLEM_PHRASES = (
+    " is broken ",
+    " are broken ",
+    " looks broken ",
+    " not working ",
+    " doesn't work ",
+    " doesnt work ",
+    " does not work ",
+    " won't work ",
+    " wont work ",
+    " stopped working ",
+)
 KOREAN_CODE_PROBLEM_PHRASES = (
     "버그",
     "오류",
@@ -1881,6 +1893,8 @@ def selected_area_matches(
 
 def is_code_task_hint(task_tokens: set[str], task_text: str) -> bool:
     if task_tokens & CODE_TASK_TOKENS:
+        return True
+    if contains_any(task_text, ENGLISH_CODE_PROBLEM_PHRASES):
         return True
     return contains_any(task_text, KOREAN_CODE_PROBLEM_PHRASES) and contains_any(task_text, KOREAN_CODE_ACTION_PHRASES)
 

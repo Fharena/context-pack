@@ -31,7 +31,7 @@ stale_if:
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
 - Coverage includes no-git initialization, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, packaged natural-language start routing, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
-- Natural-language product promises should stay covered by a small-repo flow: English and Korean bug orientation, failing-test orientation, dirty and committed branch review, soft review wording, long and short handoff wording, and handoff checkpoint.
+- Natural-language product promises should stay covered by a small-repo flow: English fix and broken/not-working bug orientation, Korean bug orientation, failing-test orientation, dirty and committed branch review, soft review wording, long and short handoff wording, and handoff checkpoint.
 - Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
 - Git tests configure user identity locally in temp repos.
@@ -50,6 +50,7 @@ stale_if:
 - Node wrapper tests stop at `--help` after README starts recommending no-argument quickstart, `npx` setup, or install-codex paths.
 - Packaged CLI validation installs successfully but does not exercise the natural-language bug/review flow advertised to agents.
 - README advertises "why are tests failing" but tests do not prove that source context is included with tests.
+- English broken/not-working routing coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Korean bug routing tests cover only "버그 고쳐줘" and miss "버그 잡아줘" / "문제 해결해줘" variants or their false-positive guard.
 - Packaged CLI validation covers bug/review prompts but not the resume-later handoff prompt from the public docs.
 

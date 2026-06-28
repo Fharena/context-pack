@@ -23,6 +23,7 @@ All notable changes to Context Pack will be documented here.
 - Broadened natural review intent handling for softer prompts like "look over my changes" and "변경사항 봐줘" while keeping meta/documentation tasks out of review mode.
 - Broadened natural handoff intent handling for short wrap-up prompts like "I'm done for now", "wrap this up", and "작업 끝났어" while avoiding false positives such as "done button".
 - Broadened Korean bug routing for prompts like "버그 잡아줘" and "문제 해결해줘" while avoiding meta/documentation phrases such as "버그 리포트 문서 정리".
+- Broadened English bug routing for broken/not-working prompts like "login is broken" and "checkout doesn't work" while avoiding loose matches such as "broken link report".
 
 ## [0.2.17] - 2026-06-27
 

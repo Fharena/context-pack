@@ -67,6 +67,15 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     assert "- tests (score 6): task matched keywords: tests" in pack
 
     run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "login is broken"],
+        ["Generated work pack for task", "Selected areas: source, tests"],
+    )
+    pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+    assert "Task: login is broken" in pack
+    assert "- source (score 2): starter code area for unclassified task" in pack
+    assert "- tests (score 2): starter code area for unclassified task" in pack
+
+    run_output(
         [str(binary), "start", "--repo", str(repo), "--task", "버그 고쳐줘"],
         ["Generated work pack for task", "Selected areas: source, tests"],
     )

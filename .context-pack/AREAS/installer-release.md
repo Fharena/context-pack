@@ -78,7 +78,7 @@ stale_if:
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
 - README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
-- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, Korean bug-fix variants, committed branch-review, soft dirty-review, Korean dirty-review, long handoff, and short handoff starts.
+- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, English broken/not-working bug prompts, Korean bug-fix variants, committed branch-review, soft dirty-review, Korean dirty-review, long handoff, and short handoff starts.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -91,6 +91,7 @@ stale_if:
 - README leads with an `npx` command path that is not covered by packaged CLI smoke tests.
 - Natural-language routing works in unit tests but fails through the installed npm entrypoint.
 - Packaged validation misses the README's "why are tests failing" prompt and lets release drift from the advertised agent flow.
+- Packaged validation misses the README's "login is broken" prompt and leaves broken/not-working routing proven only by lower-level unit tests.
 - Packaged validation covers only one Korean bug phrase and misses common variants like "버그 잡아줘" or "문제 해결해줘".
 - Packaged validation proves dirty review routing but not clean committed branch review with an inferred base.
 - Packaged validation proves explicit branch review but misses softer real-user review phrasing like "look over my changes" or "변경사항 봐줘".

@@ -741,6 +741,45 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- source: starter code area for unclassified task", text)
             self.assertIn("- tests: starter code area for unclassified task", text)
 
+    def test_start_task_broken_not_working_phrases_route_to_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            for phrase in ("login is broken", "login is not working", "checkout doesn't work", "search stopped working"):
+                with self.subTest(phrase=phrase):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
+
+                    text = output.getvalue()
+                    self.assertIn("Selected areas: source, tests", text)
+                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+                    self.assertIn(f"Task: {phrase}", pack)
+                    self.assertIn("- source (score 2): starter code area for unclassified task", pack)
+                    self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+
+    def test_start_task_broken_phrase_guard_avoids_meta_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "broken link report"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: overview", text)
+            self.assertNotIn("Selected areas: source, tests", text)
+
     def test_start_existing_repo_pairs_source_with_failing_tests(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1733,6 +1772,7 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("I'm done for now", text)
         self.assertIn("작업 끝났어", text)
         self.assertIn("why are tests failing", text)
+        self.assertIn("login is broken", text)
         self.assertIn("paired with tests for failure debugging", text)
         self.assertIn("Detected handoff/checkpoint wording", text)
         self.assertIn("Generated work pack for task", text)
@@ -1989,6 +2029,8 @@ class ContextPackTests(unittest.TestCase):
         for text in (english, korean):
             self.assertIn('"Fix the login timeout."', text)
             self.assertIn('context-pack start --task "fix login timeout"', text)
+            self.assertIn('"Login is broken."', text)
+            self.assertIn('context-pack start --task "login is broken"', text)
             self.assertIn('"Review this branch."', text)
             self.assertIn("context-pack start --review", text)
             self.assertIn('"Look over my changes."', text)
