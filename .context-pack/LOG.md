@@ -458,3 +458,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (65 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; temporary repo smoke confirmed Korean bug phrases route to source/tests and Korean branch-review phrases route to review mode
+
+## 2026-06-28T21:49:23+09:00
+- Branch: main
+- HEAD: e24d87816bbc
+- Dirty files: .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
+- Dirty diff hash: sha256:3779bca7e37490392d2e4fd8
+- Verification: `python -m unittest discover -s tests -v` (66 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed Korean bug phrases route to source/tests and Korean branch-review phrases route to review mode
