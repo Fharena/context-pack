@@ -670,6 +670,52 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)
 
+    def test_start_review_without_base_infers_main_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".context-pack/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "tests": [],
+                "keywords": ["runtime"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "checkout", "-b", "feature/runtime"], cwd=repo, check=True, capture_output=True)
+
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src/runtime.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "change runtime"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--review"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Review base: main (auto)", text)
+            self.assertIn("Selected areas: runtime", text)
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", pack)
+            self.assertIn("- runtime", pack)
+            self.assertIn("src/runtime.py", pack)
+
     def test_init_inferrs_common_project_areas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1144,10 +1190,14 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Normal use:", proc.stdout)
         self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
+        self.assertIn('Ask your agent: "Review this branch."', proc.stdout)
+        self.assertNotIn('Ask your agent: "Review this branch against main."', proc.stdout)
         self.assertIn("Direct CLI:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack measure", proc.stdout)
+        self.assertIn("context-pack start --review", proc.stdout)
+        self.assertNotIn("context-pack start --review --base main", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 
     def test_python_module_reports_version(self) -> None:
@@ -1194,10 +1244,14 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Normal use:", proc.stdout)
         self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
+        self.assertIn('Ask your agent: "Review this branch."', proc.stdout)
+        self.assertNotIn('Ask your agent: "Review this branch against main."', proc.stdout)
         self.assertIn("Direct CLI:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack measure", proc.stdout)
+        self.assertIn("context-pack start --review", proc.stdout)
+        self.assertNotIn("context-pack start --review --base main", proc.stdout)
         self.assertIn("context-pack install-codex --activate", proc.stdout)
 
     def test_node_wrapper_reports_version(self) -> None:

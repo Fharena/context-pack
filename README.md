@@ -78,7 +78,7 @@ Then keep talking normally:
 
 ```text
 Can you fix the login timeout?
-Review this branch against main.
+Review this branch.
 I am done for now; leave this easy to resume later.
 ```
 
@@ -98,7 +98,7 @@ npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
-npx github:Fharena/context-pack start --review --base main
+npx github:Fharena/context-pack start --review
 ```
 
 Prefer Python tooling or want a persistent CLI?
@@ -285,8 +285,10 @@ context-pack start --task "the bug or feature you are about to work on"
 Before reviewing code:
 
 ```powershell
-context-pack start --review --base main
+context-pack start --review
 ```
+
+Add `--base main` when you want to force the review base. Without it, review mode tries upstream/common default branches and uses the first diff it finds.
 
 When you only want a pack for current dirty or changed files:
 
@@ -320,7 +322,7 @@ If you installed the Codex plugin or repo rules, you usually do not type these c
 | --- | --- |
 | `setup` | One-command repo onboarding: context library, handoff docs, `.gitignore`, shared agent rules, and doctor check. Use `setup --dry-run` to preview the plan, `--infer-areas` to explicitly add newly inferred areas, or `--no-infer-areas` for overview-only setup |
 | `measure` | Read-only proof: previews selected areas, scope reduction, and approximate text budget without writing a generated pack |
-| `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack |
+| `start` | One-command first step: auto-init if needed and prepare a task, review, or changed-files pack; review mode can infer upstream/common default branches |
 | `install-codex` | Installs the Codex plugin and personal marketplace entry from a package or clone |
 | `install-agent-docs` | Writes shared Context Pack rules to `AGENTS.md`, `CLAUDE.md`, and Cursor project rules |
 | `init` | Creates a repo-local context library and handoff docs; first-run area inference can be controlled with `--infer-areas` / `--no-infer-areas` |
@@ -328,7 +330,7 @@ If you installed the Codex plugin or repo rules, you usually do not type these c
 | `status` | Shows context health, likely areas, stale warnings, and next action |
 | `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
 | `pack` / `pack --changed` | Builds a compact task-specific or changed-files reading pack with selected and related areas |
-| `review-pack` | Builds a compact code-review pack from dirty files or `--base` |
+| `review-pack` | Builds a compact code-review pack from dirty files, `--base`, or an inferred upstream/default branch |
 | `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
 | `doctor` | Checks whether the context library is usable; `doctor --fix` repairs missing setup files |
 | `install-git-hooks` | Adds opt-in repo-local checkpoint automation |
@@ -349,7 +351,7 @@ The agent-facing behavior is the important part:
 - infer the task from the user's request and run `context-pack start --task "..."`
 - when Context Pack is missing: run `context-pack setup`
 - when setup looks broken: run `context-pack doctor --fix`
-- before review: run `context-pack start --review --base <base-ref>` when a base is known
+- before review: run `context-pack start --review`; add `--base <base-ref>` when the base is known
 - during unfamiliar debugging: generate a task pack before opening many files
 - after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
 - when a handoff should travel through git: run `checkpoint --publish --pack`

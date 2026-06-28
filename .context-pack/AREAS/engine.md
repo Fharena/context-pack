@@ -29,6 +29,7 @@ stale_if:
 - Engine stays stdlib-only.
 - Dirty/untracked files must resolve to actual file paths for area matching.
 - Review packs must support committed branch changes via `--base`.
+- Review mode without an explicit base should infer upstream/common default branches when a diff exists.
 - Packs should stay compact: rank areas, split Read First/Read Later, and omit overflow details with clear counts.
 - Packs should show scope-reduction metrics without pretending they replace source verification.
 - Stale warnings should be actionable through `status` and `mark-reviewed`.
@@ -47,6 +48,7 @@ stale_if:
 ## Common Failure Modes
 - `git status` reports an untracked directory instead of files.
 - `review-pack` sees no dirty files and misses committed review scope.
+- `start --review` without `--base` falls back to overview instead of finding branch changes against a common base.
 - Existing hook files get overwritten instead of marker blocks being inserted.
 - Stale area docs are hidden instead of surfaced as warnings.
 - Shared `CURRENT.md` points at old work while `status` reports the context library as healthy.

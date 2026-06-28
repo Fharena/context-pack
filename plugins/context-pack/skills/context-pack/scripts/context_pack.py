@@ -850,7 +850,7 @@ Use Context Pack as quiet orientation for natural-language coding, review, debug
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
-- Review, PR, or branch work: `context-pack start --review --base <base-ref>` when a base is known, otherwise `context-pack start --review`
+- Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
 - Changed files are the only signal: `context-pack start --changed`
 - Missing or broken setup when repo memory is wanted: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for repair
 - End of meaningful work or handoff: `context-pack checkpoint --pack`
@@ -1285,7 +1285,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print("")
         print("Next:")
         print('- `context-pack start --task "..."` before broad reading')
-        print("- `context-pack start --review --base main` before branch review")
+        print("- `context-pack start --review` before branch review")
         print("- `context-pack checkpoint --pack` after meaningful work")
     return 1 if errors else 0
 
@@ -1431,12 +1431,17 @@ def cmd_start(args: argparse.Namespace) -> int:
         mode = "review"
         changed = True
         pack_reason = "review"
+        review_base_inferred = maybe_infer_review_base(args, repo, snapshot)
     elif args.task:
+        review_base_inferred = False
         changed = args.changed or (bool(snapshot.dirty_files) and not initialized)
         pack_reason = "task"
     elif args.changed or (snapshot.dirty_files and not initialized):
+        review_base_inferred = False
         changed = True
         pack_reason = "changed files"
+    else:
+        review_base_inferred = False
 
     pack_generated = bool(pack_reason)
     selected: list[AreaSelection] = []
@@ -1476,6 +1481,9 @@ def cmd_start(args: argparse.Namespace) -> int:
         print("")
         if pack_generated:
             print(f"Generated {mode} pack for {pack_reason}: {rel_to_repo(output_path, repo)}")
+            if mode == "review" and args.base:
+                suffix = " (auto)" if review_base_inferred else ""
+                print(f"Review base: {args.base}{suffix}")
             print("Selected areas: " + (", ".join(item.area_id for item in selected) if selected else "none"))
             print_selection_reasons("Why selected:", selected)
             repo_file_total = len(repo_files(repo))
@@ -1493,11 +1501,11 @@ def cmd_start(args: argparse.Namespace) -> int:
                 if doc:
                     print(f"- {doc}")
         else:
-            print("No pack generated: no task, review base, or pre-existing dirty files were found.")
+            print("No pack generated: no task, review request, or pre-existing dirty files were found.")
             print("")
             print("Next:")
             print('- `context-pack start --task "..."` for a focused work pack')
-            print("- `context-pack start --review --base main` for a review pack")
+            print("- `context-pack start --review` for a review pack")
             print("- `context-pack start --changed` if you want to force dirty-file routing")
         print("")
         print("End-of-work checkpoint: `context-pack checkpoint --pack`")
@@ -2089,6 +2097,7 @@ def cmd_measure(args: argparse.Namespace) -> int:
     if not has_context_library:
         manifest = merge_inferred_areas(repo, manifest, layout)
     args.mode = "review" if getattr(args, "review", False) or getattr(args, "base", None) else "work"
+    review_base_inferred = maybe_infer_review_base(args, repo, snapshot) if args.mode == "review" else False
     changed = resolve_changed_files(repo, snapshot, args)
     matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
     max_areas = getattr(args, "max_areas", 4) or len(matches)
@@ -2121,6 +2130,9 @@ def cmd_measure(args: argparse.Namespace) -> int:
         else:
             print("Context library: not installed; using inferred areas for measurement")
         print("Mode: " + args.mode)
+        if args.mode == "review" and args.base:
+            suffix = " (auto)" if review_base_inferred else ""
+            print(f"Review base: {args.base}{suffix}")
         if args.task:
             print(f"Task: {args.task}")
         print("No files written.")
@@ -2161,6 +2173,8 @@ def cmd_pack(args: argparse.Namespace) -> int:
 def cmd_review_pack(args: argparse.Namespace) -> int:
     args.mode = "review"
     args.changed = True
+    snapshot = collect_snapshot(Path(args.repo).resolve())
+    maybe_infer_review_base(args, snapshot.repo_root, snapshot)
     return build_pack(args)
 
 
@@ -2182,7 +2196,54 @@ def upstream_ref(repo: Path) -> str | None:
     return git_text(repo, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
 
 
+def append_unique(values: list[str], value: str | None) -> None:
+    if value and value not in values:
+        values.append(value)
+
+
+def review_base_candidates(repo: Path, snapshot: Snapshot) -> list[str]:
+    candidates: list[str] = []
+    append_unique(candidates, upstream_ref(repo))
+    append_unique(candidates, git_text(repo, ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]))
+    for ref in (
+        "origin/main",
+        "origin/master",
+        "origin/trunk",
+        "origin/develop",
+        "origin/dev",
+        "main",
+        "master",
+        "trunk",
+        "develop",
+        "dev",
+    ):
+        append_unique(candidates, ref)
+    return [ref for ref in candidates if ref not in {"HEAD", snapshot.branch}]
+
+
+def infer_review_base(repo: Path, snapshot: Snapshot) -> str | None:
+    if not snapshot.is_git or snapshot.dirty_files:
+        return None
+    for candidate in review_base_candidates(repo, snapshot):
+        if diff_name_only(repo, candidate):
+            return candidate
+    return None
+
+
+def maybe_infer_review_base(args: argparse.Namespace, repo: Path, snapshot: Snapshot) -> bool:
+    if getattr(args, "base", None):
+        return False
+    if getattr(args, "mode", "") != "review" and not getattr(args, "review", False):
+        return False
+    inferred = infer_review_base(repo, snapshot)
+    if not inferred:
+        return False
+    args.base = inferred
+    return True
+
+
 def resolve_changed_files(repo: Path, snapshot: Snapshot, args: argparse.Namespace) -> list[str]:
+    maybe_infer_review_base(args, repo, snapshot)
     base = getattr(args, "base", None)
     if base:
         return sorted(dict.fromkeys(diff_name_only(repo, base)))
@@ -2661,7 +2722,7 @@ Report briefly. Usually one sentence is enough: selected areas, stale warning if
 | --- | --- |
 | Context Pack is missing and the user wants repo memory/setup | `setup --dry-run`, then `setup` if setup was requested |
 | Starting non-trivial coding/debugging | `start --task "<short task>"` |
-| Reviewing a branch/PR/dirty files | `start --review --base <base-ref>` when base is known; otherwise `start --review` |
+| Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
 | Changed files are the only signal | `start --changed` |
 | User asks for proof before writing packs | `measure --task "<short task>"` |
 | Setup looks broken or incomplete | `doctor --fix` |
@@ -2711,8 +2772,10 @@ python scripts/context_pack.py start --task "<short task>"
 For review:
 
 ```bash
-python scripts/context_pack.py start --review --base <base-ref>
+python scripts/context_pack.py start --review
 ```
+
+Add `--base <base-ref>` when the review base is known; otherwise review mode tries upstream/common default branches and uses the first diff it finds.
 
 After running `start`, read the generated pack if present. Treat stale warnings as prompts to verify source, not as facts.
 
@@ -3113,7 +3176,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p)
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--review", action="store_true", help="Prepare a review pack instead of a work pack")
-    p.add_argument("--base", help="Review committed changes against a base ref, such as main")
+    p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
     p.add_argument("--changed", action="store_true", help="Include dirty files when preparing a work pack")
     p.add_argument("--no-init", action="store_true", help="Do not initialize missing context docs")
     p.add_argument("--no-agent-doc", action="store_true", help="When initializing, do not update AGENTS.md")
@@ -3135,14 +3198,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--changed", action="store_true", help="Select areas from dirty files")
     p.add_argument("--review", action="store_true", help="Measure a review pack instead of a work pack")
-    p.add_argument("--base", help="Review committed changes against a base ref, such as main")
+    p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
     add_pack_budget(p)
     p.set_defaults(func=cmd_measure)
 
     p = sub.add_parser("review-pack", help="Generate a code-review context pack from dirty files")
     add_common(p)
     p.add_argument("--task", help="Optional review focus")
-    p.add_argument("--base", help="Review committed changes against a base ref, such as main")
+    p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
     p.add_argument("--output", help="Output markdown path")
     add_pack_budget(p)
     p.set_defaults(func=cmd_review_pack)
@@ -3231,7 +3294,7 @@ def print_quickstart() -> None:
     print("")
     print("Normal use:")
     print('  Ask your agent: "Fix the login timeout."')
-    print('  Ask your agent: "Review this branch against main."')
+    print('  Ask your agent: "Review this branch."')
     print('  Ask your agent: "Leave this work easy to resume later."')
     print("")
     print("Set up this repo:")
@@ -3241,7 +3304,7 @@ def print_quickstart() -> None:
     print("Direct CLI:")
     print('  context-pack measure --task "fix login timeout"')
     print('  context-pack start --task "fix login timeout"')
-    print("  context-pack start --review --base main")
+    print("  context-pack start --review")
     print("  context-pack checkpoint --pack")
     print("")
     print("Codex plugin:")

@@ -30,7 +30,7 @@ Report briefly. Usually one sentence is enough: selected areas, stale warning if
 | --- | --- |
 | Context Pack is missing and the user wants repo memory/setup | `setup --dry-run`, then `setup` if setup was requested |
 | Starting non-trivial coding/debugging | `start --task "<short task>"` |
-| Reviewing a branch/PR/dirty files | `start --review --base <base-ref>` when base is known; otherwise `start --review` |
+| Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
 | Changed files are the only signal | `start --changed` |
 | User asks for proof before writing packs | `measure --task "<short task>"` |
 | Setup looks broken or incomplete | `doctor --fix` |
@@ -80,8 +80,10 @@ python scripts/context_pack.py start --task "<short task>"
 For review:
 
 ```bash
-python scripts/context_pack.py start --review --base <base-ref>
+python scripts/context_pack.py start --review
 ```
+
+Add `--base <base-ref>` when the review base is known; otherwise review mode tries upstream/common default branches and uses the first diff it finds.
 
 After running `start`, read the generated pack if present. Treat stale warnings as prompts to verify source, not as facts.
 

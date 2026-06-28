@@ -5,7 +5,7 @@ Use Context Pack as quiet orientation for natural-language coding, review, debug
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
-- Review, PR, or branch work: `context-pack start --review --base <base-ref>` when a base is known, otherwise `context-pack start --review`
+- Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
 - Changed files are the only signal: `context-pack start --changed`
 - Missing or broken setup when repo memory is wanted: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for repair
 - End of meaningful work or handoff: `context-pack checkpoint --pack`

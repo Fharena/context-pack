@@ -85,7 +85,7 @@ npx github:Fharena/context-pack install-codex --activate
 
 ```text
 Can you fix the login timeout?
-Review this branch against main.
+Review this branch.
 I am done for now; leave this easy to resume later.
 ```
 
@@ -105,7 +105,7 @@ npx github:Fharena/context-pack setup --dry-run
 npx github:Fharena/context-pack setup
 npx github:Fharena/context-pack start
 npx github:Fharena/context-pack start --task "fix login timeout"
-npx github:Fharena/context-pack start --review --base main
+npx github:Fharena/context-pack start --review
 ```
 
 Python tooling을 선호하거나 CLI를 영구 설치하고 싶다면:
@@ -292,8 +292,10 @@ context-pack start --task "고치려는 버그나 작업 설명"
 코드 리뷰 전:
 
 ```powershell
-context-pack start --review --base main
+context-pack start --review
 ```
+
+review base를 강제하고 싶을 때만 `--base main`을 붙이면 됩니다. 생략하면 review mode가 upstream/common default branch를 시도하고, 실제 diff가 있는 첫 base를 사용합니다.
 
 현재 dirty/change 파일만 기준으로 pack이 필요할 때:
 
@@ -325,7 +327,7 @@ context-pack mark-reviewed runtime tests
 | --- | --- |
 | `setup` | context library, handoff 문서, `.gitignore`, 공통 agent rule, doctor check까지 한 번에 처리. `setup --dry-run`으로 계획을 미리 보고, `--infer-areas`로 새 추론 area를 명시적으로 추가하거나 `--no-infer-areas`로 overview-only 설치 가능 |
 | `measure` | read-only proof: generated pack을 쓰지 않고 selected area, scope reduction, 대략적인 text budget을 미리 보여줌 |
-| `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
+| `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택. review mode는 upstream/common default branch를 추론 가능 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
 | `init` | repo-local context library, handoff 문서 생성. 첫 실행 area 추론은 `--infer-areas` / `--no-infer-areas`로 조절 가능 |
@@ -333,7 +335,7 @@ context-pack mark-reviewed runtime tests
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
 | `pack` / `pack --changed` | selected/related 영역으로 나뉜 compact 작업별 또는 changed-files reading pack 생성 |
-| `review-pack` | dirty files 또는 `--base` 기준 compact 코드 리뷰 팩 생성 |
+| `review-pack` | dirty files, `--base`, 또는 추론한 upstream/default branch 기준 compact 코드 리뷰 팩 생성 |
 | `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
 | `doctor` | context library가 정상인지 검증하고, `doctor --fix`로 누락된 setup 파일 복구 |
 | `install-git-hooks` | 선택적 repo-local checkpoint 자동화 |
@@ -356,7 +358,7 @@ I need to continue this from another machine later.
 - 사용자 요청에서 작업을 추론하고: `context-pack start --task "..."`
 - Context Pack이 없을 때: `context-pack setup`
 - setup이 깨진 것 같을 때: `context-pack doctor --fix`
-- 리뷰 전: base를 알면 `context-pack start --review --base <base-ref>`
+- 리뷰 전: `context-pack start --review`; base를 알면 `--base <base-ref>` 추가
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
 - 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
 - handoff 자체를 git으로 공유해야 할 때: `checkpoint --publish --pack`
