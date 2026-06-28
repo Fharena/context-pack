@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Context Pack",
     "shortDescription": "Start agents from focused repo context.",
-    "longDescription": "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns natural bug-fix, review, debugging, and handoff requests into focused task or review packs with relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by default.",
+    "longDescription": "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns natural requests like fixing bugs, debugging failing tests, reviewing branches, and handing off work into focused task or review packs with relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by default.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [

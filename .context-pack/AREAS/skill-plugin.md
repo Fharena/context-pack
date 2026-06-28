@@ -31,8 +31,8 @@ stale_if:
 ## Contracts
 - The skill must route factual work to the deterministic engine first.
 - The skill should tell agents to use `context-pack start` proactively before broad reading, review, unfamiliar debugging, and handoff.
-- The skill should use `context-pack setup` when Context Pack is missing or the user asks to configure project memory.
-- The skill should use `context-pack doctor --fix` when setup is present but broken or incomplete.
+- For normal bug/debug/review/handoff work, `start` is the first move even when `.context-pack/` is missing; reserve `setup` for explicit install or configuration requests.
+- The skill should use `context-pack setup` when the user asks to configure project memory and `context-pack doctor --fix` when setup is present but broken or incomplete.
 - The manifest must remain validation-ready.
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
 - Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.

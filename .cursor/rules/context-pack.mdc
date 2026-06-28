@@ -12,7 +12,8 @@ Run it only when repo orientation would save broad reading or preserve useful ha
 - Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
 - Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
 - Changed files are the only signal: `context-pack start --changed`
-- Missing or broken setup when repo memory is wanted: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for repair
+- Missing `.context-pack/` during a normal task: still use `context-pack start`; it auto-initializes lightweight context docs.
+- Explicit install/configuration request: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for broken setup.
 - End of meaningful work or handoff: `context-pack checkpoint --pack`
 
 Skip Context Pack for pure Q&A, tiny obvious single-file edits, or tasks where the relevant files and tests are already clear.

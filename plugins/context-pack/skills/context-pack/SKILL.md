@@ -1,13 +1,13 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use for natural coding, review, debugging, or handoff requests when the agent would otherwise read broadly or lose session context. Skip for tiny obvious edits, pure Q&A, or tasks where the relevant file is already known.
+description: Prepare focused repo context for coding agents. Use proactively when the user naturally asks to fix a bug, debug failing tests, review a branch or PR, continue or hand off work, or start non-trivial coding where the agent would otherwise read broadly. Skip tiny obvious edits, pure Q&A, or tasks where relevant files are already known.
 ---
 
 # Context Pack
 
 Context Pack is an agent behavior, not a command the user should have to remember.
 
-When a user says things like "fix this bug", "review this branch", "why are tests failing?", or "I need to continue this later", use Context Pack to orient before broad repo reading, then continue the actual task. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
+When a user says things like "fix this bug", "review this branch", "why are tests failing?", "continue this from the last session", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
 
 ## Core Loop
 
@@ -28,7 +28,8 @@ Report briefly. Usually one sentence is enough: selected areas, stale warning if
 
 | Situation | Action |
 | --- | --- |
-| Context Pack is missing and the user wants repo memory/setup | `setup --dry-run`, then `setup` if setup was requested |
+| Context Pack is missing during normal task work | Use `start`; it auto-initializes lightweight context docs |
+| User explicitly asks to install/configure repo memory | `setup --dry-run`, then `setup` if setup was requested |
 | Starting non-trivial coding/debugging | `start --task "<short task>"` |
 | Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
 | Changed files are the only signal | `start --changed` |
@@ -49,7 +50,9 @@ If you skip it, just proceed. Do not apologize or explain unless the user asked 
 
 ## Setup Behavior
 
-For first-time setup, preview writes first:
+For normal work in an uninitialized repo, use `start` first; it auto-initializes lightweight context docs and keeps the user in the task.
+
+For explicit setup/configuration requests, preview writes first:
 
 ```bash
 python scripts/context_pack.py setup --dry-run
