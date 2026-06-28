@@ -79,6 +79,7 @@ Then keep talking normally:
 ```text
 Can you fix the login timeout?
 Review this branch.
+Look over my changes.
 I am done for now; leave this easy to resume later.
 ```
 
@@ -91,6 +92,7 @@ What the agent should do:
 | "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
 | "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
 | "Review this branch." | `context-pack start --review` |
+| "Look over my changes." | `context-pack start --task "look over my changes"` |
 | "Continue where we left off." | `context-pack start` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
 
@@ -98,7 +100,7 @@ The installed agent contract is intentionally small: orient before broad reading
 
 If `.context-pack/` is missing during normal task work, `start` initializes the lightweight context docs first, then builds the focused pack. Use `setup` when you explicitly want to configure repo memory and shared agent rules.
 
-CI tests this exact small-repo flow: bug orientation and failing-test prompts start from `source, tests`, branch review reads the committed diff, natural handoff wording points to checkpointing, and `checkpoint --pack` leaves ignored local handoff state without dirtying tracked files.
+CI tests this exact small-repo flow: bug orientation and failing-test prompts start from `source, tests`, branch-review prompts and softer "look over my changes" wording read the changed source area, natural handoff wording points to checkpointing, and `checkpoint --pack` leaves ignored local handoff state without dirtying tracked files.
 
 If you already installed the CLI, update or install the Codex plugin with:
 

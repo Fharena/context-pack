@@ -3,7 +3,7 @@
 
 Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
 
-Treat requests like "fix this bug", "why are tests failing?", "review this branch", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.

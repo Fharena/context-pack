@@ -513,6 +513,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("quiet orientation", agents)
             self.assertIn("The user does not need to name it or ask for a pack", agents)
             self.assertIn('Treat requests like "fix this bug"', agents)
+            self.assertIn('"look over my changes"', agents)
             self.assertIn("Run Context Pack as part of the work", agents)
             self.assertIn("Session start or continuation with no clear task yet", agents)
             self.assertIn("Missing `.context-pack/` during a normal task", agents)
@@ -896,6 +897,37 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Task: review this branch", pack)
             self.assertIn("- `src/app.py`", pack)
 
+    def test_start_task_soft_review_phrases_use_review_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
+
+            for phrase in ("look over my changes", "take a look at this PR", "변경사항 봐줘", "PR 확인해줘"):
+                with self.subTest(phrase=phrase):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(
+                            self.engine.main(["start", "--repo", str(repo), "--task", phrase]),
+                            0,
+                        )
+
+                    text = output.getvalue()
+                    self.assertIn("Generated review pack for review", text)
+                    self.assertIn("Selected areas: source", text)
+                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+                    self.assertIn("Mode: review", pack)
+                    self.assertIn(f"Task: {phrase}", pack)
+                    self.assertIn("- `src/app.py`", pack)
+
     def test_start_task_continue_phrase_points_to_current_and_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1001,6 +1033,8 @@ class ContextPackTests(unittest.TestCase):
             self.engine.infer_start_task_intent("support Korean natural bug review handoff phrases"),
             "",
         )
+        self.assertEqual(self.engine.infer_start_task_intent("improve code review docs"), "")
+        self.assertEqual(self.engine.infer_start_task_intent("change login button color"), "")
         self.assertEqual(self.engine.infer_start_task_intent("leave this easy to resume later"), "checkpoint")
 
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
@@ -1621,6 +1655,7 @@ class ContextPackTests(unittest.TestCase):
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("agent behavior", skill)
             self.assertIn("Do not ask the user to name Context Pack first", skill)
+            self.assertIn("look over my changes", skill)
             self.assertIn("If the CLI is not on `PATH`", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
             self.assertIn("Do not use a target repo's `scripts/context_pack.py`", skill)
@@ -1656,6 +1691,8 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Generated review pack for review", text)
         self.assertIn("Review base: main (auto)", text)
         self.assertIn("review this branch", text)
+        self.assertIn("look over my changes", text)
+        self.assertIn("변경사항 봐줘", text)
         self.assertIn("before_checkpoint_status == after_checkpoint_status", text)
         self.assertIn("Mode: review", text)
 
@@ -1905,6 +1942,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn('context-pack start --task "fix login timeout"', text)
             self.assertIn('"Review this branch."', text)
             self.assertIn("context-pack start --review", text)
+            self.assertIn('"Look over my changes."', text)
+            self.assertIn('context-pack start --task "look over my changes"', text)
             self.assertIn('"Leave this easy to resume later."', text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("`.context-pack/`", text)
@@ -1913,6 +1952,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("failing-test", text.lower())
             self.assertIn("checkpoint --pack", text)
             self.assertIn("agent contract", text.lower())
+        self.assertIn('"변경사항 봐줘."', korean)
+        self.assertIn('context-pack start --task "변경사항 봐줘"', korean)
 
 
 if __name__ == "__main__":

@@ -90,6 +90,24 @@ def validate_natural_start(binary: pathlib.Path) -> None:
 
     (repo / "src" / "app.py").write_text("def login_timeout():\n    return 60\n", encoding="utf-8")
     run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "look over my changes"],
+        ["Generated review pack for review", "Selected areas: source"],
+    )
+    pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+    assert "Mode: review" in pack
+    assert "Task: look over my changes" in pack
+    assert "- `src/app.py`" in pack
+
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "변경사항 봐줘"],
+        ["Generated review pack for review", "Selected areas: source"],
+    )
+    pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+    assert "Mode: review" in pack
+    assert "Task: 변경사항 봐줘" in pack
+    assert "- `src/app.py`" in pack
+
+    run_output(
         [str(binary), "start", "--repo", str(repo), "--task", "브랜치 리뷰해줘"],
         ["Generated review pack for review", "Selected areas: source"],
     )

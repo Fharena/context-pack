@@ -190,6 +190,41 @@ REVIEW_INTENT_TOKENS = {
     "pull",
     "request",
 }
+ENGLISH_REVIEW_ACTION_PHRASES = (
+    " look over ",
+    " take a look at ",
+    " look at ",
+    " inspect ",
+    " audit ",
+)
+ENGLISH_REVIEW_TARGET_PHRASES = (
+    " pull request ",
+    " pr ",
+    " my changes ",
+    " the changes ",
+    " this change ",
+    " this branch ",
+    " this commit ",
+    " this diff ",
+    " my code ",
+    " this code ",
+)
+KOREAN_REVIEW_ACTION_PHRASES = (
+    "리뷰",
+    "검토",
+    "봐줘",
+    "살펴",
+    "확인해",
+)
+KOREAN_REVIEW_TARGET_PHRASES = (
+    "브랜치",
+    "변경",
+    "변경사항",
+    "커밋",
+    "차이",
+    " pr ",
+    " pull request ",
+)
 CONTINUATION_INTENT_TOKENS = {
     "continue",
     "left",
@@ -956,7 +991,7 @@ def agent_rules_body(layout: ContextLayout | None = None) -> str:
 
 Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
 
-Treat requests like "fix this bug", "why are tests failing?", "review this branch", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
@@ -1683,10 +1718,11 @@ def infer_start_task_intent(task: str | None) -> str:
         return ""
     text = f" {task.lower()} "
     tokens = tokenize(task)
-    if (
-        "review" in tokens
-        and (tokens & REVIEW_INTENT_TOKENS or " pull request " in text or " pr " in text)
-    ) or ("리뷰" in text and contains_any(text, ["브랜치", "변경", "변경사항", "커밋", " pr ", " pull request "])):
+    english_review_action = "review" in tokens or contains_any(text, ENGLISH_REVIEW_ACTION_PHRASES)
+    english_review_target = bool(tokens & REVIEW_INTENT_TOKENS) or contains_any(text, ENGLISH_REVIEW_TARGET_PHRASES)
+    korean_review_action = contains_any(text, KOREAN_REVIEW_ACTION_PHRASES)
+    korean_review_target = contains_any(text, KOREAN_REVIEW_TARGET_PHRASES)
+    if (english_review_action and english_review_target) or (korean_review_action and korean_review_target):
         return "review"
     if (
         "checkpoint" in tokens
@@ -2887,7 +2923,7 @@ description: Prepare focused repo context for coding agents. Use proactively whe
 
 Context Pack is an agent behavior, not a command the user should have to remember.
 
-When a user says things like "fix this bug", "review this branch", "why are tests failing?", "continue this from the last session", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
+When a user says things like "fix this bug", "review this branch", "look over my changes", "why are tests failing?", "continue this from the last session", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
 
 ## Core Loop
 

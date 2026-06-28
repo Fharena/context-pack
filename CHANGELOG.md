@@ -20,6 +20,7 @@ All notable changes to Context Pack will be documented here.
 - Extended packaged CLI validation to cover natural handoff wording and prove `checkpoint --pack` keeps tracked files unchanged.
 - Clarified `start --task` output for continuation and handoff wording so it no longer prints a generic no-dirty-files reason in dirty repos.
 - Extended packaged CLI validation to cover natural branch-review routing on a clean committed feature branch with an inferred `main` base.
+- Broadened natural review intent handling for softer prompts like "look over my changes" and "변경사항 봐줘" while keeping meta/documentation tasks out of review mode.
 
 ## [0.2.17] - 2026-06-27
 
