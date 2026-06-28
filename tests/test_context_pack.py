@@ -172,6 +172,23 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue((repo / "AGENTS.md").exists())
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
+    def test_start_without_task_points_to_current_and_index_without_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo)]), 0)
+
+            text = output.getvalue()
+            self.assertIn("No pack generated", text)
+            self.assertIn("Read next:", text)
+            self.assertIn("- .context-pack/CURRENT.md", text)
+            self.assertIn("- .context-pack/INDEX.md", text)
+            self.assertIn("Optional next commands:", text)
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
     def test_legacy_codex_layout_still_routes_until_migrated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -497,6 +514,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("The user does not need to name it or ask for a pack", agents)
             self.assertIn('Treat requests like "fix this bug"', agents)
             self.assertIn("Run Context Pack as part of the work", agents)
+            self.assertIn("Session start or continuation with no clear task yet", agents)
             self.assertIn("Missing `.context-pack/` during a normal task", agents)
             self.assertIn("it auto-initializes lightweight context docs", agents)
             self.assertIn("Skip Context Pack", claude)
@@ -1377,6 +1395,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("If the CLI is not on `PATH`", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
             self.assertIn("Do not use a target repo's `scripts/context_pack.py`", skill)
+            self.assertIn("Continuing with no clear task yet", skill)
             self.assertIn("Use `start`; it auto-initializes lightweight context docs", skill)
             self.assertIn("context-pack measure", skill)
             self.assertIn("setup --dry-run", skill)

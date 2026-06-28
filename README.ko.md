@@ -98,6 +98,7 @@ I am done for now; leave this easy to resume later.
 | "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
 | "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
 | "Review this branch." | `context-pack start --review` |
+| "Continue where we left off." | `context-pack start` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
 
 설치된 뒤의 agent contract는 일부러 작게 유지합니다. 넓게 읽기 전에 방향을 잡고, 생성된 pack을 읽고, 곧바로 사용자의 실제 작업을 계속하며, 의미 있는 작업이 끝나면 checkpoint를 남기는 정도입니다. Context Pack은 사용자가 관리해야 하는 별도 업무가 아니라 repo 방향 잡기처럼 느껴져야 합니다.
@@ -301,6 +302,8 @@ Mode: work
 context-pack measure --task "고치려는 버그나 작업 설명"
 context-pack start --task "고치려는 버그나 작업 설명"
 ```
+
+다음 작업이 아직 분명하지 않으면 `context-pack start`만 실행해도 focused pack을 쓰지 않고 `CURRENT.md`와 `INDEX.md`를 먼저 읽으라고 안내합니다.
 
 `measure`는 read-only입니다. `.context-pack/packs/CONTEXT_PACK.md`를 쓰지 않고 selected area, Read First 항목, 대략적인 text budget만 먼저 보여줍니다.
 

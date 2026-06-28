@@ -897,6 +897,7 @@ Use Context Pack as quiet orientation for natural-language coding, review, debug
 Treat requests like "fix this bug", "why are tests failing?", "review this branch", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
+- Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
 - Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
 - Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
 - Changed files are the only signal: `context-pack start --changed`
@@ -1556,7 +1557,11 @@ def cmd_start(args: argparse.Namespace) -> int:
         else:
             print("No pack generated: no task, review request, or pre-existing dirty files were found.")
             print("")
-            print("Next:")
+            print("Read next:")
+            print(f"- {normalize_path(layout.current_path)}")
+            print(f"- {normalize_path(layout.index_path)}")
+            print("")
+            print("Optional next commands:")
             print('- `context-pack start --task "..."` for a focused work pack')
             print("- `context-pack start --review` for a review pack")
             print("- `context-pack start --changed` if you want to force dirty-file routing")
@@ -2784,6 +2789,7 @@ Report briefly. Usually one sentence is enough: selected areas, stale warning if
 | --- | --- |
 | Context Pack is missing during normal task work | Use `start`; it auto-initializes lightweight context docs |
 | User explicitly asks to install/configure repo memory | `setup --dry-run`, then `setup` if setup was requested |
+| Continuing with no clear task yet | `start`, then read `CURRENT.md` and `INDEX.md` |
 | Starting non-trivial coding/debugging | `start --task "<short task>"` |
 | Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
 | Changed files are the only signal | `start --changed` |

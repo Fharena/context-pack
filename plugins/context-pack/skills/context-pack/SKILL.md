@@ -38,6 +38,7 @@ Report briefly. Usually one sentence is enough: selected areas, stale warning if
 | --- | --- |
 | Context Pack is missing during normal task work | Use `start`; it auto-initializes lightweight context docs |
 | User explicitly asks to install/configure repo memory | `setup --dry-run`, then `setup` if setup was requested |
+| Continuing with no clear task yet | `start`, then read `CURRENT.md` and `INDEX.md` |
 | Starting non-trivial coding/debugging | `start --task "<short task>"` |
 | Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
 | Changed files are the only signal | `start --changed` |

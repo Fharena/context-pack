@@ -91,6 +91,7 @@ What the agent should do:
 | "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
 | "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
 | "Review this branch." | `context-pack start --review` |
+| "Continue where we left off." | `context-pack start` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
 
 The installed agent contract is intentionally small: orient before broad reading, read the generated pack, keep working on the user's actual request, and checkpoint meaningful work at the end. Context Pack should feel like repo orientation, not a separate chore the user has to manage.
@@ -294,6 +295,8 @@ Before starting work:
 context-pack measure --task "the bug or feature you are about to work on"
 context-pack start --task "the bug or feature you are about to work on"
 ```
+
+When the next task is not clear yet, `context-pack start` still orients the agent by pointing to `CURRENT.md` and `INDEX.md` without writing a focused pack.
 
 `measure` is read-only. It prints selected areas, Read First entries, and the approximate text budget without writing `.context-pack/packs/CONTEXT_PACK.md`.
 

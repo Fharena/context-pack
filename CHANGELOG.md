@@ -12,6 +12,7 @@ All notable changes to Context Pack will be documented here.
 - Reworked the no-argument CLI quickstart so normal agent prompts appear before direct CLI commands.
 - Refreshed the README demo GIF around natural-language agent prompts, quiet orientation, skip cases, review routing, and local handoff checkpoints.
 - Clarified the installed agent contract: users speak normally, agents orient before broad reading, read the generated pack, continue the actual task, and checkpoint meaningful work without making users manage packs manually.
+- Made `context-pack start` useful for continuation sessions with no clear task by printing `CURRENT.md` and `INDEX.md` as read-next files even when no focused pack is generated.
 
 ## [0.2.17] - 2026-06-27
 
