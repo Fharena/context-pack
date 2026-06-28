@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 176b9619fc00
+- HEAD: 951942e5b54c
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:49:02+09:00
+- Updated at: 2026-06-28T20:55:39+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `45c9d1a docs: show agent-first natural language workflow` adds README/README.ko tables mapping normal user requests to the agent's first Context Pack action, so the product reads less like a manual CLI and more like an agent-first workflow. `176b961` marks the touched context areas reviewed.
+- Product hardening for Context Pack. Latest work: `4d87d45 fix: ignore broad product terms in task routing` removes `context`, `pack`, and `agent(s)` from task keyword scoring so natural requests do not select most areas just because the repo is about Context Pack. `951942e` marks the touched context areas reviewed.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
