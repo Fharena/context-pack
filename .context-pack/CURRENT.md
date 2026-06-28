@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: a376ead8307a
+- HEAD: cb38638734aa
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T22:40:53+09:00
+- Updated at: 2026-06-28T22:49:01+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `1148dfe feat: recognize short natural handoff prompts` lets `start --task` point short wrap-up requests like "I'm done for now", "wrap this up", and "작업 끝났어" to checkpoint guidance without treating "done button" or "wrap parser errors" as handoff. Context areas reviewed at `a376ead`.
+- Product hardening for Context Pack. Latest product work: `367e96d feat: recognize Korean bug fix variants` lets `start --task` route "버그 잡아줘", "문제 해결해줘", and similar Korean bug phrases to source/tests without treating "버그 리포트 문서 정리" as code work. Context areas reviewed at `cb38638`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (71 passed)
+- `python -m unittest discover -s tests -v` (72 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .context-pack/manifest.json`
@@ -38,6 +38,8 @@
 - `git diff --check`
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
+- packaged npm temp repo smoke: `context-pack start --task "버그 잡아줘"` selects source/tests
+- packaged npm temp repo smoke: `context-pack start --task "문제 해결해줘"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "review this branch"` on a clean feature branch infers `main` and selects source
 - packaged npm temp repo smoke: `context-pack start --task "look over my changes"` routes to review mode and selects source
 - packaged npm temp repo smoke: `context-pack start --task "변경사항 봐줘"` routes to review mode and selects source
