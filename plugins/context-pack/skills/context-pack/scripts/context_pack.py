@@ -1621,7 +1621,12 @@ def cmd_start(args: argparse.Namespace) -> int:
                 if doc:
                     print(f"- {doc}")
         else:
-            print("No pack generated: no task, review request, or pre-existing dirty files were found.")
+            if task_intent == "checkpoint":
+                print("No pack generated: handoff/checkpoint wording was detected.")
+            elif task_intent == "continue":
+                print("No pack generated: continuation wording was detected.")
+            else:
+                print("No pack generated: no task, review request, or pre-existing dirty files were found.")
             print("")
             if task_intent == "checkpoint":
                 print("Detected handoff/checkpoint wording.")

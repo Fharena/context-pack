@@ -876,6 +876,7 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("No pack generated", text)
+            self.assertIn("No pack generated: continuation wording was detected.", text)
             self.assertIn("- .context-pack/CURRENT.md", text)
             self.assertIn("- .context-pack/INDEX.md", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
@@ -894,6 +895,7 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("No pack generated", text)
+            self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
             self.assertIn("Detected handoff/checkpoint wording", text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("context-pack checkpoint --publish --pack", text)
@@ -955,6 +957,7 @@ class ContextPackTests(unittest.TestCase):
                 )
 
             text = output.getvalue()
+            self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
             self.assertIn("Detected handoff/checkpoint wording", text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
@@ -1610,11 +1613,14 @@ class ContextPackTests(unittest.TestCase):
 
         self.assertIn("버그 고쳐줘", text)
         self.assertIn("브랜치 리뷰해줘", text)
+        self.assertIn("나중에 이어가게 정리해줘", text)
         self.assertIn("why are tests failing", text)
         self.assertIn("paired with tests for failure debugging", text)
+        self.assertIn("Detected handoff/checkpoint wording", text)
         self.assertIn("Generated work pack for task", text)
         self.assertIn("Selected areas: source, tests", text)
         self.assertIn("Generated review pack for review", text)
+        self.assertIn("before_checkpoint_status == after_checkpoint_status", text)
         self.assertIn("Mode: review", text)
 
     def test_python_module_cli_runs(self) -> None:

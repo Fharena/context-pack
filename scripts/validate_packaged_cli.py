@@ -84,6 +84,31 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     assert "Task: 브랜치 리뷰해줘" in pack
     assert "- `src/app.py`" in pack
 
+    before_checkpoint_status = subprocess.check_output(
+        ["git", "status", "--porcelain=v1", "-uall"],
+        cwd=repo,
+        env=SUBPROCESS_ENV,
+        encoding="utf-8",
+    )
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "나중에 이어가게 정리해줘"],
+        [
+            "No pack generated: handoff/checkpoint wording was detected.",
+            "Detected handoff/checkpoint wording",
+            "context-pack checkpoint --pack",
+        ],
+    )
+    run([str(binary), "checkpoint", "--repo", str(repo), "--pack", "--quiet"])
+    after_checkpoint_status = subprocess.check_output(
+        ["git", "status", "--porcelain=v1", "-uall"],
+        cwd=repo,
+        env=SUBPROCESS_ENV,
+        encoding="utf-8",
+    )
+    assert before_checkpoint_status == after_checkpoint_status
+    assert (repo / ".context-pack" / "local" / "LOCAL.md").exists()
+    assert (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").exists()
+
 
 def main() -> int:
     npm = shutil.which("npm") or "npm"
