@@ -1142,7 +1142,9 @@ class ContextPackTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("Start here:", proc.stdout)
+        self.assertIn("Normal use:", proc.stdout)
+        self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
+        self.assertIn("Direct CLI:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack measure", proc.stdout)
@@ -1190,7 +1192,9 @@ class ContextPackTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("Start here:", proc.stdout)
+        self.assertIn("Normal use:", proc.stdout)
+        self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
+        self.assertIn("Direct CLI:", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
         self.assertIn("context-pack measure", proc.stdout)

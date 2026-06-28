@@ -16,11 +16,13 @@ def run(args: list[str], *, cwd: pathlib.Path = ROOT) -> None:
     subprocess.run(args, cwd=cwd, check=True)
 
 
-def run_output(args: list[str], expected: str, *, cwd: pathlib.Path = ROOT) -> None:
+def run_output(args: list[str], expected: str | list[str], *, cwd: pathlib.Path = ROOT) -> None:
     print("+", " ".join(args), flush=True)
     output = subprocess.check_output(args, cwd=cwd, text=True)
-    if expected not in output:
-        raise AssertionError(f"Expected {expected!r} in output:\n{output}")
+    expected_values = [expected] if isinstance(expected, str) else expected
+    for value in expected_values:
+        if value not in output:
+            raise AssertionError(f"Expected {value!r} in output:\n{output}")
     print(output, end="")
 
 
@@ -40,8 +42,15 @@ def main() -> int:
     run([npm, "install", "--prefix", str(prefix), str(tgz), "--silent"])
 
     binary = prefix / "node_modules" / ".bin" / ("context-pack.cmd" if os.name == "nt" else "context-pack")
-    run_output([str(binary)], "Start here:")
-    run_output([str(binary)], "context-pack setup --dry-run")
+    run_output(
+        [str(binary)],
+        [
+            "Normal use:",
+            'Ask your agent: "Fix the login timeout."',
+            "Direct CLI:",
+            "context-pack setup --dry-run",
+        ],
+    )
     run_output([str(binary), "--version"], info[0]["version"])
     run([str(binary), "--help"])
 

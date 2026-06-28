@@ -9,6 +9,7 @@ All notable changes to Context Pack will be documented here.
 - Refined public docs and GitHub templates to use the current `context-pack` CLI, vendor-neutral `.context-pack/` paths, and agent-first wording that frames packs as focused triage instead of a manual chore.
 - Slimmed the Codex skill and packaged plugin prompts around natural-language agent behavior, explicit skip cases, and concise routing commands instead of a full CLI manual.
 - Updated generated `AGENTS.md`, `CLAUDE.md`, and Cursor rules to frame Context Pack as quiet orientation for natural-language tasks, with explicit skip cases for pure Q&A and tiny obvious edits.
+- Reworked the no-argument CLI quickstart so normal agent prompts appear before direct CLI commands.
 
 ## [0.2.17] - 2026-06-27
 
