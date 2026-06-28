@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: cb38638734aa
+- HEAD: 9199c331c02d
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T22:49:01+09:00
+- Updated at: 2026-06-28T22:59:55+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `367e96d feat: recognize Korean bug fix variants` lets `start --task` route "버그 잡아줘", "문제 해결해줘", and similar Korean bug phrases to source/tests without treating "버그 리포트 문서 정리" as code work. Context areas reviewed at `cb38638`.
+- Product hardening for Context Pack. Latest product work: `8080792 feat: recognize broken not-working bug prompts` lets `start --task` route "login is broken", "checkout doesn't work", and similar English broken/not-working phrases to source/tests without treating "broken link report" as code work. Context areas reviewed at `9199c33`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (72 passed)
+- `python -m unittest discover -s tests -v` (74 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .context-pack/manifest.json`
@@ -37,6 +37,7 @@
 - `python -m json.tool package.json`
 - `git diff --check`
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
+- packaged npm temp repo smoke: `context-pack start --task "login is broken"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 잡아줘"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "문제 해결해줘"` selects source/tests
