@@ -59,7 +59,7 @@ def base_frame() -> Image.Image:
     d.ellipse((88, 58, 102, 72), fill=YELLOW)
     d.ellipse((112, 58, 126, 72), fill=GREEN)
     d.text((148, 53), "context-pack demo", fill=MUTED, font=SMALL_FONT)
-    d.text((64, 98), "Stop paying agents to rediscover your repo.", fill=TEXT, font=TITLE_FONT)
+    d.text((64, 98), "Agents get a map before repo-wide reading.", fill=TEXT, font=TITLE_FONT)
     return img
 
 
@@ -74,51 +74,42 @@ def draw_lines(img: Image.Image, lines: list[tuple[str, str]], *, start_y: int =
 
 SCENES: list[list[tuple[str, str]]] = [
     [
-        ("$ context-pack measure --task \"fix login timeout\"", BLUE),
-        ("Context library: not installed; using inferred areas", MUTED),
-        ("No files written.", YELLOW),
-        ("Selected areas: source, tests", TEXT),
-        ("Why selected:", TEXT),
-        ("- source/tests: starter code areas for unclassified task", GREEN),
-        ("Scope reduction: preview before changing the repo", YELLOW),
+        ("User: Fix the login timeout.", BLUE),
+        ("Agent: orient before broad repo reading.", TEXT),
+        ("Runs quietly: context-pack start --task \"fix login timeout\"", MUTED),
+        ("Selected areas: source, tests", GREEN),
+        ("Why selected: starter code areas for this task", TEXT),
+        ("Read first: pack, area docs, then real source", YELLOW),
     ],
     [
-        ("$ context-pack setup --dry-run", BLUE),
-        ("Context Pack setup dry run for ./repo", MUTED),
-        ("Setup plan:", TEXT),
+        ("First run is previewable.", BLUE),
+        ("$ context-pack setup --dry-run", MUTED),
+        ("No files written.", YELLOW),
+        ("Plan:", TEXT),
         ("- create .context-pack/manifest.json", GREEN),
-        ("- create .context-pack/AREAS/source.md, tests.md", GREEN),
-        ("- create AGENTS.md / CLAUDE.md / Cursor rules", GREEN),
-        ("No files were written.", YELLOW),
+        ("- create source/tests area docs", GREEN),
+        ("- install AGENTS.md / CLAUDE.md / Cursor rules", GREEN),
     ],
     [
         ("$ context-pack setup", BLUE),
         ("Context Pack setup complete for ./repo", GREEN),
         ("Ready:", TEXT),
         ("- Context library: .context-pack", TEXT),
-        ("- Handoff docs: .context-pack", TEXT),
-        ("- Agent docs: AGENTS.md, CLAUDE.md, Cursor", TEXT),
+        ("- Agent docs teach quiet orientation", TEXT),
+        ("- Tiny obvious edits can skip Context Pack", YELLOW),
     ],
     [
-        ("$ context-pack start --task \"fix login timeout\"", BLUE),
-        ("Generated work pack: .context-pack/packs/CONTEXT_PACK.md", GREEN),
-        ("Selected areas: source, tests", TEXT),
-        ("Why selected:", TEXT),
-        ("- source/tests: starter code areas for unclassified task", GREEN),
-        ("Approx text budget: Read First before repo-wide scan", YELLOW),
-        ("Read next: pack, area docs, then actual source files", MUTED),
+        ("Generated work pack:", TEXT),
+        (".context-pack/packs/CONTEXT_PACK.md", BLUE),
+        ("Selected areas: source, tests", GREEN),
+        ("Scope reduction: start from 2 areas, not the whole repo", YELLOW),
+        ("Approx text budget shown with chars/4 caveat", MUTED),
+        ("Agent now opens the listed files first.", TEXT),
     ],
     [
         ("# Context Pack", YELLOW),
         ("Mode: work", TEXT),
-        ("## Scope Reduction", TEXT),
-        ("- Primary areas selected: 2 of 4", TEXT),
-        ("- Read First entries: source + tests docs first", TEXT),
-        ("- Approx Read First text shown with chars/4 caveat", GREEN),
-        ("- Token estimates use chars/4, not billing tokens", MUTED),
-    ],
-    [
-        ("Read First:", TEXT),
+        ("## Read First", TEXT),
         ("- .context-pack/AREAS/source.md", BLUE),
         ("- .context-pack/AREAS/tests.md", BLUE),
         ("- src/", BLUE),
@@ -126,12 +117,20 @@ SCENES: list[list[tuple[str, str]]] = [
         ("- then verify against real code", MUTED),
     ],
     [
-        ("$ context-pack checkpoint --pack", BLUE),
+        ("Review branch against main.", BLUE),
+        ("Agent runs: context-pack start --review --base main", MUTED),
+        ("Pack includes:", TEXT),
+        ("- changed files", GREEN),
+        ("- relevant contracts and tests", GREEN),
+        ("- stale warnings to verify in source", YELLOW),
+    ],
+    [
+        ("User: leave this easy to resume later.", BLUE),
+        ("Agent runs: context-pack checkpoint --pack", MUTED),
         ("Local checkpoint updated at .context-pack/local/LOCAL.md", GREEN),
         ("Context pack: .context-pack/packs/CONTEXT_PACK.md", TEXT),
-        ("Tracked handoff stays clean unless --publish is used.", TEXT),
-        ("Next agent prompt:", MUTED),
-        ("\"Use $context-pack to continue from the current handoff.\"", TEXT),
+        ("Tracked handoff stays clean unless --publish is used.", YELLOW),
+        ("Next session starts from the same map.", TEXT),
     ],
 ]
 

@@ -1323,14 +1323,18 @@ class ContextPackTests(unittest.TestCase):
 
     def test_demo_gif_script_matches_current_product_flow(self) -> None:
         text = DEMO_GIF_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("User: Fix the login timeout.", text)
+        self.assertIn("quiet orientation", text)
         self.assertIn("context-pack setup --dry-run", text)
-        self.assertIn("context-pack measure --task", text)
+        self.assertIn("context-pack start --task", text)
+        self.assertIn("context-pack start --review --base main", text)
         self.assertIn("fix login timeout", text)
-        self.assertIn("Why selected", text)
-        self.assertIn("starter code areas", text)
+        self.assertIn("Tiny obvious edits can skip Context Pack", text)
         self.assertIn(".context-pack/manifest.json", text)
-        self.assertIn("Approx text budget", text)
+        self.assertIn("Approx text budget shown with chars/4 caveat", text)
         self.assertIn("checkpoint --pack", text)
+        self.assertIn("Next session starts from the same map.", text)
+        self.assertNotIn("Stop paying agents", text)
         self.assertNotIn(".codex/", text)
         self.assertTrue((ROOT / "assets/demo.gif").exists())
         demo_url = "https://raw.githubusercontent.com/Fharena/context-pack/main/assets/demo.gif"
