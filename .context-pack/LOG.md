@@ -451,3 +451,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (61 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; temporary repo smoke confirmed review intent maps to review mode and handoff wording points to `checkpoint --pack`
+
+## 2026-06-28T21:40:22+09:00
+- Branch: main
+- HEAD: 81d36d6db1c8
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (65 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; temporary repo smoke confirmed Korean bug phrases route to source/tests and Korean branch-review phrases route to review mode

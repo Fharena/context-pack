@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: eca2ade702e3
+- HEAD: 81d36d6db1c8
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T21:31:40+09:00
+- Updated at: 2026-06-28T21:40:22+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `eca2ade feat: guard natural start intent` makes `start --task` recover from obvious review, continuation, and handoff phrases instead of generating noisy work packs.
+- Product hardening for Context Pack. Latest work: `81d36d6 feat: support Korean natural start phrases` routes "버그 고쳐줘" to source/tests, "브랜치 리뷰해줘" to review mode, and "나중에 이어가게 정리해줘" to checkpoint guidance while avoiding meta-task false positives.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,13 +29,13 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (61 passed)
+- `python -m unittest discover -s tests -v` (65 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
 - `git diff --check`
-- temporary repo smoke: `context-pack start --task "review this branch"` produces a review pack with only the changed source area
-- temporary repo smoke: `context-pack start --task "leave this easy to resume later"` points to `checkpoint --pack`
+- temporary repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
+- temporary repo smoke: `context-pack start --task "브랜치 리뷰해줘"` produces a review pack with only the changed source area
 - `npm pack --dry-run`
 - `python -m build`
 - `python -m twine check dist/*`
