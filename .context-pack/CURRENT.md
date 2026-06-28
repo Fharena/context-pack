@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 94f8d56c1870
+- HEAD: 7f41dfc1ba7f
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:14:53+09:00
+- Updated at: 2026-06-28T20:21:19+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `9160d97 feat: pack clean committed handoffs` makes `checkpoint --pack` use committed changes since the previous checkpoint when the worktree is clean, so "leave this easy to resume later" still produces a focused pack after commits.
+- Product hardening for Context Pack. Latest work: `73b877f fix: skip context-only checkpoint pack bases` prevents context maintenance commits from becoming the base for local handoff packs, so "leave this easy to resume later" stays focused on real work changes.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (53 passed)
+- `python -m unittest discover -s tests -v` (54 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
