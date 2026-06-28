@@ -11,6 +11,7 @@ All notable changes to Context Pack will be documented here.
 - Updated generated `AGENTS.md`, `CLAUDE.md`, and Cursor rules to frame Context Pack as quiet orientation for natural-language tasks, with explicit skip cases for pure Q&A and tiny obvious edits.
 - Reworked the no-argument CLI quickstart so normal agent prompts appear before direct CLI commands.
 - Refreshed the README demo GIF around natural-language agent prompts, quiet orientation, skip cases, review routing, and local handoff checkpoints.
+- Clarified the installed agent contract: users speak normally, agents orient before broad reading, read the generated pack, continue the actual task, and checkpoint meaningful work without making users manage packs manually.
 
 ## [0.2.17] - 2026-06-27
 

@@ -1,7 +1,9 @@
 <!-- context-pack:rules:start -->
 ## Context Pack
 
-Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it.
+Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
+
+Treat requests like "fix this bug", "why are tests failing?", "review this branch", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`

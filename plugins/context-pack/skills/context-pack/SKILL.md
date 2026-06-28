@@ -12,11 +12,19 @@ When a user says things like "fix this bug", "review this branch", "why are test
 ## Core Loop
 
 1. Decide whether orientation is worth it.
-2. Run the bundled engine from this skill folder:
+2. Run Context Pack in the target repo:
 
    ```bash
-   python scripts/context_pack.py <command>
+   context-pack <command>
    ```
+
+   If the CLI is not on `PATH`, run the bundled engine from this skill folder instead:
+
+   ```bash
+   python <this-skill-folder>/scripts/context_pack.py <command>
+   ```
+
+   Do not use a target repo's `scripts/context_pack.py` unless the target repo is Context Pack itself.
 
 3. Read `.context-pack/packs/CONTEXT_PACK.md` when generated.
 4. Read only the listed area docs and source files first.
@@ -55,13 +63,13 @@ For normal work in an uninitialized repo, use `start` first; it auto-initializes
 For explicit setup/configuration requests, preview writes first:
 
 ```bash
-python scripts/context_pack.py setup --dry-run
+context-pack setup --dry-run
 ```
 
 If the user explicitly asked to configure or install Context Pack, apply setup:
 
 ```bash
-python scripts/context_pack.py setup
+context-pack setup
 ```
 
 This creates `.context-pack/`, ignored generated/local paths, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Preserve user text outside managed blocks. Do not install git hooks unless the user explicitly asks for git-boundary automation.
@@ -69,7 +77,7 @@ This creates `.context-pack/`, ignored generated/local paths, and shared agent r
 For legacy repos, migrate only when needed:
 
 ```bash
-python scripts/context_pack.py migrate
+context-pack migrate
 ```
 
 ## Task And Review Behavior
@@ -77,13 +85,13 @@ python scripts/context_pack.py migrate
 For normal coding/debugging:
 
 ```bash
-python scripts/context_pack.py start --task "<short task>"
+context-pack start --task "<short task>"
 ```
 
 For review:
 
 ```bash
-python scripts/context_pack.py start --review
+context-pack start --review
 ```
 
 Add `--base <base-ref>` when the review base is known; otherwise review mode tries upstream/common default branches and uses the first diff it finds.
@@ -95,7 +103,7 @@ After running `start`, read the generated pack if present. Treat stale warnings 
 At the end of meaningful agent work:
 
 ```bash
-python scripts/context_pack.py checkpoint --pack
+context-pack checkpoint --pack
 ```
 
 This writes ignored local state by default, so proactive checkpoints do not dirty tracked files. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git.
@@ -107,17 +115,17 @@ When the worktree is clean after commits, `checkpoint --pack` uses committed cha
 Use these only when directly relevant:
 
 ```bash
-python scripts/context_pack.py install-codex --force
-python scripts/context_pack.py install-agent-docs
-python scripts/context_pack.py status
-python scripts/context_pack.py measure --task "<short task>"
-python scripts/context_pack.py doctor --fix
-python scripts/context_pack.py mark-reviewed <area-id>
-python scripts/context_pack.py refresh
-python scripts/context_pack.py install-git-hooks --mode safe
+context-pack install-codex --force
+context-pack install-agent-docs
+context-pack status
+context-pack measure --task "<short task>"
+context-pack doctor --fix
+context-pack mark-reviewed <area-id>
+context-pack refresh
+context-pack install-git-hooks --mode safe
 ```
 
-Run `python scripts/context_pack.py <command> --help` for options instead of expanding this skill into a full CLI manual.
+Run `context-pack <command> --help` for options instead of expanding this skill into a full CLI manual. Use the bundled script path only as the fallback command prefix.
 
 ## Operating Rules
 

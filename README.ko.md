@@ -100,6 +100,8 @@ I am done for now; leave this easy to resume later.
 | "Review this branch." | `context-pack start --review` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
 
+설치된 뒤의 agent contract는 일부러 작게 유지합니다. 넓게 읽기 전에 방향을 잡고, 생성된 pack을 읽고, 곧바로 사용자의 실제 작업을 계속하며, 의미 있는 작업이 끝나면 checkpoint를 남기는 정도입니다. Context Pack은 사용자가 관리해야 하는 별도 업무가 아니라 repo 방향 잡기처럼 느껴져야 합니다.
+
 일반 작업 중 `.context-pack/`가 없으면 `start`가 가벼운 context 문서를 먼저 초기화한 뒤 focused pack을 만듭니다. `setup`은 repo memory와 공통 agent rule을 명시적으로 설정하고 싶을 때 쓰는 명령입니다.
 
 CI는 이 작은 repo 흐름을 그대로 검증합니다. 버그 작업은 `source, tests`에서 시작하고, branch review는 committed diff를 읽으며, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.

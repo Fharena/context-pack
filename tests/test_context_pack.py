@@ -494,7 +494,9 @@ class ContextPackTests(unittest.TestCase):
             self.assertFalse(claude.startswith("\n"))
             self.assertFalse(cursor.startswith("\n"))
             self.assertIn("quiet orientation", agents)
-            self.assertIn("The user does not need to name it", agents)
+            self.assertIn("The user does not need to name it or ask for a pack", agents)
+            self.assertIn('Treat requests like "fix this bug"', agents)
+            self.assertIn("Run Context Pack as part of the work", agents)
             self.assertIn("Missing `.context-pack/` during a normal task", agents)
             self.assertIn("it auto-initializes lightweight context docs", agents)
             self.assertIn("Skip Context Pack", claude)
@@ -1372,8 +1374,11 @@ class ContextPackTests(unittest.TestCase):
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("agent behavior", skill)
             self.assertIn("Do not ask the user to name Context Pack first", skill)
+            self.assertIn("If the CLI is not on `PATH`", skill)
+            self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
+            self.assertIn("Do not use a target repo's `scripts/context_pack.py`", skill)
             self.assertIn("Use `start`; it auto-initializes lightweight context docs", skill)
-            self.assertIn("context_pack.py measure", skill)
+            self.assertIn("context-pack measure", skill)
             self.assertIn("setup --dry-run", skill)
             openai = (target / "skills/context-pack/agents/openai.yaml").read_text(encoding="utf-8")
             self.assertIn("focused repo context", openai)
@@ -1641,6 +1646,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("`start`", text)
             self.assertIn("source, tests", text)
             self.assertIn("checkpoint --pack", text)
+            self.assertIn("agent contract", text.lower())
 
 
 if __name__ == "__main__":
