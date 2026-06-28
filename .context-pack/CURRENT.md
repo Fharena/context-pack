@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: ddbd58d824ea
+- HEAD: ca0388cb673f
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T19:54:35+09:00
+- Updated at: 2026-06-28T20:06:36+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `ddbd58d docs: sharpen agent-first positioning` aligns README/package copy around natural-language agent requests, clarifies that terminal demos show under-the-hood routing, and keeps `$context-pack` as an escape hatch rather than the normal UX.
+- Product hardening for Context Pack. Latest work: `b5964dd feat: infer review base for branch routing` lets `context-pack start --review` infer upstream/common default branches when the user simply asks to review a branch, while keeping `--base` as an explicit override.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,7 +18,7 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Watch CI for `ddbd58d`.
+1. Watch CI after pushing the latest handoff.
 2. Next product iteration: test Context Pack on 3-5 external repos and collect before/after orientation examples.
 3. Improve registry publishing readiness only after the lightweight skill UX stays stable.
 
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (51 passed)
+- `python -m unittest discover -s tests -v` (52 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
