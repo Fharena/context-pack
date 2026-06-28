@@ -997,16 +997,35 @@ class ContextPackTests(unittest.TestCase):
             (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
             self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
 
+            for phrase in ("버그 고쳐줘", "버그 잡아줘", "문제 해결해줘", "오류 수정해줘"):
+                with self.subTest(phrase=phrase):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
+
+                    text = output.getvalue()
+                    self.assertIn("Selected areas: source, tests", text)
+                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+                    self.assertIn(f"Task: {phrase}", pack)
+                    self.assertIn("- source (score 2): starter code area for unclassified task", pack)
+                    self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+
+    def test_start_task_korean_bug_phrase_guard_avoids_meta_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "버그 고쳐줘"]), 0)
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "버그 리포트 문서 정리"]), 0)
 
             text = output.getvalue()
-            self.assertIn("Selected areas: source, tests", text)
-            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Task: 버그 고쳐줘", pack)
-            self.assertIn("- source (score 2): starter code area for unclassified task", pack)
-            self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+            self.assertIn("Selected areas: overview", text)
+            self.assertNotIn("Selected areas: source, tests", text)
 
     def test_start_task_korean_review_phrase_uses_review_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1707,6 +1726,8 @@ class ContextPackTests(unittest.TestCase):
         text = (ROOT / "scripts" / "validate_packaged_cli.py").read_text(encoding="utf-8")
 
         self.assertIn("버그 고쳐줘", text)
+        self.assertIn("버그 잡아줘", text)
+        self.assertIn("문제 해결해줘", text)
         self.assertIn("브랜치 리뷰해줘", text)
         self.assertIn("나중에 이어가게 정리해줘", text)
         self.assertIn("I'm done for now", text)
@@ -1984,6 +2005,10 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("agent contract", text.lower())
         self.assertIn('"변경사항 봐줘."', korean)
         self.assertIn('context-pack start --task "변경사항 봐줘"', korean)
+        self.assertIn('"버그 잡아줘."', korean)
+        self.assertIn('context-pack start --task "버그 잡아줘"', korean)
+        self.assertIn('"문제 해결해줘."', korean)
+        self.assertIn('context-pack start --task "문제 해결해줘"', korean)
         self.assertIn('"작업 끝났어."', korean)
         self.assertIn('context-pack start --task "작업 끝났어"', korean)
 

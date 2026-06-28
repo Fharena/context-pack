@@ -141,6 +141,18 @@ CODE_TASK_TOKENS = {
     "고쳐주세요",
     "수정해줘",
 }
+KOREAN_CODE_PROBLEM_PHRASES = (
+    "버그",
+    "오류",
+    "에러",
+    "문제",
+)
+KOREAN_CODE_ACTION_PHRASES = (
+    "고쳐",
+    "수정",
+    "잡아",
+    "해결해",
+)
 TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
     "broken",
     "problem",
@@ -1782,6 +1794,7 @@ def selected_area_matches(
     areas = manifest.get("areas") or {}
     selections: list[AreaSelection] = []
     task_tokens = tokenize(task or "")
+    task_text = f" {task.lower()} " if task else ""
 
     for area_id, area in areas.items():
         score = 0
@@ -1845,7 +1858,7 @@ def selected_area_matches(
 
     if not selections and "overview" in areas:
         starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]
-        if "source" in starter_ids and task_tokens & CODE_TASK_TOKENS:
+        if "source" in starter_ids and is_code_task_hint(task_tokens, task_text):
             return [
                 AreaSelection(
                     area_id=area_id,
@@ -1864,6 +1877,12 @@ def selected_area_matches(
             )
         )
     return selections
+
+
+def is_code_task_hint(task_tokens: set[str], task_text: str) -> bool:
+    if task_tokens & CODE_TASK_TOKENS:
+        return True
+    return contains_any(task_text, KOREAN_CODE_PROBLEM_PHRASES) and contains_any(task_text, KOREAN_CODE_ACTION_PHRASES)
 
 
 def selected_areas(

@@ -75,6 +75,16 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     assert "- source (score 2): starter code area for unclassified task" in pack
     assert "- tests (score 2): starter code area for unclassified task" in pack
 
+    for phrase in ("버그 잡아줘", "문제 해결해줘"):
+        run_output(
+            [str(binary), "start", "--repo", str(repo), "--task", phrase],
+            ["Generated work pack for task", "Selected areas: source, tests"],
+        )
+        pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+        assert f"Task: {phrase}" in pack
+        assert "- source (score 2): starter code area for unclassified task" in pack
+        assert "- tests (score 2): starter code area for unclassified task" in pack
+
     run(["git", "checkout", "-b", "feature/review-demo"], cwd=repo)
     (repo / "src" / "app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
     run(["git", "add", "src/app.py"], cwd=repo)

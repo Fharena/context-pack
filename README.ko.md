@@ -105,6 +105,8 @@ I am done for now; leave this easy to resume later.
 | "I'm done for now." | `context-pack start --task "I'm done for now"` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
 | "버그 고쳐줘." | `context-pack start --task "버그 고쳐줘"` |
+| "버그 잡아줘." | `context-pack start --task "버그 잡아줘"` |
+| "문제 해결해줘." | `context-pack start --task "문제 해결해줘"` |
 | "브랜치 리뷰해줘." | `context-pack start --task "브랜치 리뷰해줘"` 또는 `context-pack start --review` |
 | "변경사항 봐줘." | `context-pack start --task "변경사항 봐줘"` |
 | "작업 끝났어." | `context-pack start --task "작업 끝났어"` |
@@ -114,7 +116,7 @@ I am done for now; leave this easy to resume later.
 
 일반 작업 중 `.context-pack/`가 없으면 `start`가 가벼운 context 문서를 먼저 초기화한 뒤 focused pack을 만듭니다. `setup`은 repo memory와 공통 agent rule을 명시적으로 설정하고 싶을 때 쓰는 명령입니다.
 
-CI는 이 작은 repo 흐름을 그대로 검증합니다. 버그 작업과 failing-test prompt는 `source, tests`에서 시작하고, branch review와 "변경사항 봐줘" 같은 부드러운 리뷰 표현은 변경된 source 영역을 읽으며, "I'm done for now"나 "작업 끝났어" 같은 짧은 handoff 표현은 checkpoint로 안내되고, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.
+CI는 이 작은 repo 흐름을 그대로 검증합니다. 버그 작업과 failing-test prompt는 `source, tests`에서 시작하고, "버그 잡아줘" / "문제 해결해줘" 같은 한국어 bug 표현도 source/tests로 라우팅합니다. branch review와 "변경사항 봐줘" 같은 부드러운 리뷰 표현은 변경된 source 영역을 읽으며, "I'm done for now"나 "작업 끝났어" 같은 짧은 handoff 표현은 checkpoint로 안내되고, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.
 
 이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
 
