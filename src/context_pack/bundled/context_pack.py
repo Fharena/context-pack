@@ -1320,8 +1320,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"- Manifest: {layout.manifest_path}")
         print("")
         print("Ask your agent next:")
-        print('- "Use $context-pack to build a review context pack for this branch."')
-        print('- "Use $context-pack to make a context pack for this bug."')
+        print('- "Review this branch against main."')
+        print('- "Fix the login timeout without rereading the whole repo."')
         print("")
         print("Optional automation:")
         print('- Ask: "Use $context-pack to install safe git hook automation."')
@@ -2598,24 +2598,24 @@ def plugin_manifest_doc() -> dict[str, Any]:
         "description": "Repo-local context packs and handoff checkpoints for coding agents.",
         "author": {"name": "Context Pack"},
         "license": "MIT",
-        "keywords": ["context", "handoff", "code-review", "agents", "codex"],
+        "keywords": ["context", "handoff", "code-review", "agents", "codex", "claude", "cursor"],
         "skills": "./skills/",
         "interface": {
             "displayName": "Context Pack",
             "shortDescription": "Start agents from focused repo context.",
             "longDescription": (
-                "Context Pack keeps a lightweight repo-local context library, provides previewable setup, read-only "
-                "measurement, and one-command start flows, writes ignored local checkpoints by default, and generates "
-                "task or review packs so coding agents can begin from relevant files, contracts, tests, and stale "
-                "warnings instead of rereading the repository."
+                "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns "
+                "natural bug-fix, review, debugging, and handoff requests into focused task or review packs with "
+                "relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by "
+                "default."
             ),
             "developerName": "Context Pack",
             "category": "Productivity",
             "capabilities": ["Write", "Automation"],
             "defaultPrompt": [
-                "Preview setup, then start Context Pack in this repo.",
-                "Build a review context pack for my changes.",
-                "Checkpoint this work for the next session.",
+                "Fix a bug from focused repo context.",
+                "Review this branch without rereading the whole repo.",
+                "Leave this work easy to resume later.",
             ],
             "brandColor": "#2563EB",
         },
@@ -2626,104 +2626,126 @@ def packaged_skill_doc() -> str:
     return """\
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when starting substantial coding work, debugging unfamiliar code, reviewing changes, entering a repo with existing context docs, needing to reduce token use before broad reading, or ending an agent work unit that should be resumable. Also use when the user asks to set up project memory, initialize context docs, install shared AGENTS.md/CLAUDE.md/Cursor rules, prepare a task or review context pack, checkpoint work for another session, refresh context indexes, or continue work across Codex, Claude, Cursor, cloud worktrees, remote machines, or other agent sessions.
+description: Prepare focused repo context for coding agents. Use for natural coding, review, debugging, or handoff requests when the agent would otherwise read broadly or lose session context. Skip for tiny obvious edits, pure Q&A, or tasks where the relevant file is already known.
 ---
 
 # Context Pack
 
-Use this skill as the agent-facing workflow for Context Pack. Run the bundled engine yourself, read the generated pack when one is created, then continue the user's coding, review, or handoff task.
+Context Pack is an agent behavior, not a command the user should have to remember.
 
-Do not wait for the user to name Context Pack when the situation clearly calls for it. Use it proactively before broad repo reading, before review, during unfamiliar debugging, and at the end of a meaningful agent work unit.
+When a user says things like "fix this bug", "review this branch", "why are tests failing?", or "I need to continue this later", use Context Pack to orient before broad repo reading, then continue the actual task. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
 
-## Set Up A Repo
+## Core Loop
 
-When Context Pack is missing or the user asks to initialize, install, configure, or start project memory, preview the write plan first:
+1. Decide whether orientation is worth it.
+2. Run the bundled engine from this skill folder:
+
+   ```bash
+   python scripts/context_pack.py <command>
+   ```
+
+3. Read `.context-pack/packs/CONTEXT_PACK.md` when generated.
+4. Read only the listed area docs and source files first.
+5. Continue the user's coding, review, debugging, or handoff task.
+
+Report briefly. Usually one sentence is enough: selected areas, stale warning if any, and what you will inspect next. Only include scope-reduction or text-budget numbers when the user asks for proof, you ran `measure`, or the numbers materially explain the next step.
+
+## When To Use
+
+| Situation | Action |
+| --- | --- |
+| Context Pack is missing and the user wants repo memory/setup | `setup --dry-run`, then `setup` if setup was requested |
+| Starting non-trivial coding/debugging | `start --task "<short task>"` |
+| Reviewing a branch/PR/dirty files | `start --review --base <base-ref>` when base is known; otherwise `start --review` |
+| Changed files are the only signal | `start --changed` |
+| User asks for proof before writing packs | `measure --task "<short task>"` |
+| Setup looks broken or incomplete | `doctor --fix` |
+| Meaningful work ended or handoff is requested | `checkpoint --pack` |
+| Handoff must travel through git | `checkpoint --publish --pack` |
+
+## When To Skip
+
+- The user asks a pure question that does not need repo orientation.
+- The change is a tiny, obvious single-file edit.
+- The relevant file and test are already clear from the conversation.
+- A fresh generated pack already matches the current task and git state.
+- Running the tool would be more expensive than directly answering.
+
+If you skip it, just proceed. Do not apologize or explain unless the user asked why.
+
+## Setup Behavior
+
+For first-time setup, preview writes first:
 
 ```bash
 python scripts/context_pack.py setup --dry-run
 ```
 
-The dry run writes nothing and prints the matching apply command with selected options preserved. If the user explicitly asked you to set up the repo, run the apply command after reviewing the plan; otherwise summarize what would change before writing files.
+If the user explicitly asked to configure or install Context Pack, apply setup:
 
 ```bash
 python scripts/context_pack.py setup
 ```
 
-This initializes `.context-pack/`, `.gitignore`, and shared agent docs for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. First setup may infer common source/test/docs/automation areas; later setup runs preserve the existing manifest unless `--infer-areas` is explicit. Use `--agent-docs none` only when the user explicitly does not want repo agent docs. Use `--git-hooks safe` only when the user asks for git-boundary automation.
+This creates `.context-pack/`, ignored generated/local paths, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Preserve user text outside managed blocks. Do not install git hooks unless the user explicitly asks for git-boundary automation.
 
-If a repo already has the legacy `.codex/context` layout and the user wants the vendor-neutral layout, run:
+For legacy repos, migrate only when needed:
 
 ```bash
 python scripts/context_pack.py migrate
 ```
 
-## Fast Path
+## Task And Review Behavior
 
-Run this first when entering a repo or starting non-trivial work:
+For normal coding/debugging:
 
 ```bash
-python scripts/context_pack.py start --task "<short task description>"
+python scripts/context_pack.py start --task "<short task>"
 ```
 
-CLI equivalent: `context-pack start --task "<short task description>"`.
-
-For reviews:
+For review:
 
 ```bash
 python scripts/context_pack.py start --review --base <base-ref>
 ```
 
-With no task:
+After running `start`, read the generated pack if present. Treat stale warnings as prompts to verify source, not as facts.
 
-```bash
-python scripts/context_pack.py start
-```
+## Checkpoint Behavior
 
-Read `.context-pack/packs/CONTEXT_PACK.md` if generated. Treat context docs as routing hints, not source truth, and verify source before editing or reviewing.
-
-When reporting back, include selected areas plus scope-reduction and approximate text-budget numbers when present.
-
-## Read-Only Measurement
-
-When the user asks whether Context Pack will save context, wants proof before writing generated packs, or is comparing repo orientation cost, run:
-
-```bash
-python scripts/context_pack.py measure --task "<short task description>"
-```
-
-This writes no pack. Report the selected areas, scope reduction, approximate text budget, and the suggested `start` command.
-
-## Install Shared Agent Docs
-
-When the user wants Context Pack to work across Codex, Claude, Cursor, or mixed-agent repos, run:
-
-```bash
-python scripts/context_pack.py install-agent-docs
-```
-
-This updates `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/context-pack.mdc` with a managed marker block. Use `--target agents`, `--target claude`, or `--target cursor` for a narrower install.
-
-## Checkpoint Work
-
-After meaningful edits, tests, review notes, or handoff work, run:
+At the end of meaningful agent work:
 
 ```bash
 python scripts/context_pack.py checkpoint --pack
 ```
 
-This writes ignored local state by default. Use `checkpoint --publish --pack` only when tracked handoff docs should travel through git.
+This writes ignored local state by default, so proactive checkpoints do not dirty tracked files. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git.
 
-## Other Commands
+## Admin Commands
 
-- `python scripts/context_pack.py status`
-- `python scripts/context_pack.py measure --task "<short task description>"`
-- `python scripts/context_pack.py doctor --fix`
-- `python scripts/context_pack.py migrate`
-- `python scripts/context_pack.py mark-reviewed <area-id>`
-- `python scripts/context_pack.py refresh`
-- `python scripts/context_pack.py doctor`
-- `python scripts/context_pack.py install-agent-docs`
-- `python scripts/context_pack.py install-git-hooks --mode safe`
+Use these only when directly relevant:
+
+```bash
+python scripts/context_pack.py install-codex --force
+python scripts/context_pack.py install-agent-docs
+python scripts/context_pack.py status
+python scripts/context_pack.py measure --task "<short task>"
+python scripts/context_pack.py doctor --fix
+python scripts/context_pack.py mark-reviewed <area-id>
+python scripts/context_pack.py refresh
+python scripts/context_pack.py install-git-hooks --mode safe
+```
+
+Run `python scripts/context_pack.py <command> --help` for options instead of expanding this skill into a full CLI manual.
+
+## Operating Rules
+
+- Keep the user in their normal workflow; do not make them manage packs manually.
+- Prefer `start` over lower-level `pack` commands.
+- Prefer source verification over trusting summaries.
+- Keep `CURRENT.md` short; durable knowledge belongs in `.context-pack/AREAS/*.md`.
+- Do not commit `.context-pack/packs/` or `.context-pack/local/LOCAL.md`.
+- If a changed file maps to no area, finish the task first, then consider updating the manifest or area docs.
 """
 
 
@@ -2732,7 +2754,7 @@ def packaged_openai_yaml() -> str:
 interface:
   display_name: "Context Pack"
   short_description: "Start agents from focused repo context"
-  default_prompt: "Use $context-pack to preview setup, then start from focused context before broad reading, review, debugging, or handoff."
+  default_prompt: "Fix, review, debug, or hand off work from focused repo context before broad reading."
 policy:
   allow_implicit_invocation: true
 """

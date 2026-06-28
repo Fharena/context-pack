@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Context Pack",
     "shortDescription": "Start agents from focused repo context.",
-    "longDescription": "Context Pack keeps a lightweight repo-local context library, provides previewable setup, read-only measurement, repair, and one-command start flows, installs shared repo rules for Codex, Claude, and Cursor, writes ignored local checkpoints by default, and generates task or review packs so coding agents can begin from relevant files, contracts, tests, and stale warnings instead of rereading the repository.",
+    "longDescription": "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns natural bug-fix, review, debugging, and handoff requests into focused task or review packs with relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by default.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [
@@ -27,9 +27,9 @@
       "Automation"
     ],
     "defaultPrompt": [
-      "Preview setup, then start Context Pack in this repo.",
-      "Build a review context pack for my changes.",
-      "Checkpoint this work for the next session."
+      "Fix a bug from focused repo context.",
+      "Review this branch without rereading the whole repo.",
+      "Leave this work easy to resume later."
     ],
     "brandColor": "#2563EB"
   }
