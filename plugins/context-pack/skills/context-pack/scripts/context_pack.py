@@ -140,6 +140,13 @@ TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
     "broken",
     "problem",
 }
+ROUTE_NOISE_TOKENS = {
+    "agent",
+    "agents",
+    "context",
+    "pack",
+    "packs",
+}
 
 
 @dataclasses.dataclass
@@ -1619,7 +1626,7 @@ def selected_area_matches(
             more = len(unique(matched_files)) - 3
             reasons.append(f"changed files matched: {shown}" + (f" (+{more} more)" if more > 0 else ""))
 
-        route_tokens = task_tokens - TASK_ACTION_TOKENS
+        route_tokens = task_tokens - TASK_ACTION_TOKENS - ROUTE_NOISE_TOKENS
         if route_tokens:
             overlap = route_tokens & tokenize(area_text(area_id, area))
             if overlap:

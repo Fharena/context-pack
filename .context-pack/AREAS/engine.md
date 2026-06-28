@@ -59,6 +59,7 @@ stale_if:
 - Clean committed work ends with an overview-only checkpoint pack because there are no dirty files.
 - Context-only maintenance commits become the checkpoint pack base and hide the actual prior work.
 - Generic task verbs like `fix` select unrelated areas instead of acting as code-task hints.
+- Product-wide words like `context`, `pack`, or `agent` select most areas instead of narrowing the route.
 - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
 - `doctor --fix` reports success while required context files are still missing.
 - `start` hides setup errors or creates noisy tracked files on first run.

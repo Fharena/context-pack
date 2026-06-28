@@ -993,6 +993,11 @@ class ContextPackTests(unittest.TestCase):
                     "paths": [],
                     "keywords": ["fix"],
                 },
+                "agent_docs": {
+                    "description": "Agent context pack instructions.",
+                    "paths": [],
+                    "keywords": ["agent", "context", "pack"],
+                },
             }
         }
 
@@ -1018,6 +1023,20 @@ class ContextPackTests(unittest.TestCase):
             task="fix login timeout",
         )
         self.assertEqual([item.area_id for item in generic_fix_matches], ["overview"])
+
+        product_noise_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="agent context pack",
+        )
+        self.assertEqual([item.area_id for item in product_noise_matches], ["overview"])
+
+        product_noise_with_signal_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="agent context pack runtime",
+        )
+        self.assertEqual([item.area_id for item in product_noise_with_signal_matches], ["runtime"])
 
         tests_only_manifest = {
             "areas": {
