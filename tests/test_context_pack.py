@@ -188,8 +188,8 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
-            self.assertIn("context-pack start", (repo / "AGENTS.md").read_text(encoding="utf-8"))
-            self.assertIn("context-pack start", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
+            self.assertIn("quiet orientation", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("Skip Context Pack", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
             self.assertIn(
                 "alwaysApply: true",
                 (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8"),
@@ -410,8 +410,8 @@ class ContextPackTests(unittest.TestCase):
             agents = (repo / "AGENTS.md").read_text(encoding="utf-8")
             claude = (repo / "CLAUDE.md").read_text(encoding="utf-8")
             cursor = (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8")
-            self.assertIn("context-pack start", agents)
-            self.assertIn("context-pack start", claude)
+            self.assertIn("quiet orientation", agents)
+            self.assertIn("Skip Context Pack", claude)
             self.assertIn("alwaysApply: true", cursor)
             self.assertIn("context-pack checkpoint --pack", cursor)
             self.assertEqual(cursor.count("context-pack:rules:start"), 1)
@@ -1226,7 +1226,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
-            self.assertIn("context-pack start", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("quiet orientation", (repo / "AGENTS.md").read_text(encoding="utf-8"))
 
     def test_node_wrapper_can_install_codex_plugin(self) -> None:
         node = shutil.which("node")
