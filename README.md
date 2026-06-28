@@ -328,7 +328,7 @@ If you installed the Codex plugin or repo rules, you usually do not type these c
 | `init` | Creates a repo-local context library and handoff docs; first-run area inference can be controlled with `--infer-areas` / `--no-infer-areas` |
 | `migrate` | Copies legacy `.codex/context` and `.codex/handoff` docs into `.context-pack/` |
 | `status` | Shows context health, likely areas, stale warnings, and next action |
-| `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default |
+| `checkpoint` | Records branch, HEAD, dirty files, and diff hash to ignored local state by default; `--pack` uses dirty files or clean committed changes since the previous checkpoint |
 | `pack` / `pack --changed` | Builds a compact task-specific or changed-files reading pack with selected and related areas |
 | `review-pack` | Builds a compact code-review pack from dirty files, `--base`, or an inferred upstream/default branch |
 | `mark-reviewed` | Marks verified area docs reviewed at the current HEAD |
@@ -353,7 +353,7 @@ The agent-facing behavior is the important part:
 - when setup looks broken: run `context-pack doctor --fix`
 - before review: run `context-pack start --review`; add `--base <base-ref>` when the base is known
 - during unfamiliar debugging: generate a task pack before opening many files
-- after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git
+- after meaningful edits or review notes: run `checkpoint --pack` so the local agent state is resumable without dirtying git; after clean commits it packs changes since the previous checkpoint
 - when a handoff should travel through git: run `checkpoint --publish --pack`
 - after verifying changed source against area docs: run `mark-reviewed <area>` to close stale warnings
 

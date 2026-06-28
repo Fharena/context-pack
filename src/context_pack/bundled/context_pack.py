@@ -818,6 +818,25 @@ def checkpoint_entry(snapshot: Snapshot) -> str:
     )
 
 
+def checkpoint_pack_base(repo: Path, layout: ContextLayout, snapshot: Snapshot, *, publish: bool) -> str | None:
+    if not snapshot.is_git or snapshot.dirty_files:
+        return None
+    candidates = [layout.current_path] if publish else [layout.local_path, layout.current_path]
+    for rel in candidates:
+        path = repo / rel
+        if not path.exists():
+            continue
+        recorded_head = marker_fields(read_text(path), FINGERPRINT_START, FINGERPRINT_END).get("HEAD")
+        if not recorded_head or recorded_head in {"unknown", "not-a-git-repo", snapshot.head}:
+            continue
+        changed_since = committed_files_between(repo, recorded_head)
+        if changed_since is None:
+            continue
+        if any(not is_handoff_only_path(item, layout) for item in changed_since):
+            return recorded_head
+    return None
+
+
 def agent_rules(layout: ContextLayout | None = None) -> str:
     return f"""{AGENT_RULES_START}
 {agent_rules_body(layout)}
@@ -1338,6 +1357,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     layout = resolve_layout(repo, for_write=True)
     ensure_dirs(repo, layout)
+    pack_base = checkpoint_pack_base(repo, layout, snapshot, publish=args.publish) if args.pack else None
 
     entry = checkpoint_entry(snapshot)
     if args.publish:
@@ -1372,6 +1392,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
             repo=str(repo),
             task=None,
             changed=True,
+            base=pack_base,
             output=str(repo / layout.pack_path),
             quiet=True,
             mode="work",
@@ -1387,6 +1408,8 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         print(f"HEAD: {snapshot.head}; dirty: {len(snapshot.dirty_files)} file(s); hash: {snapshot.diff_hash}")
         if args.pack:
             print(f"Context pack: {normalize_path(layout.pack_path)}")
+            if pack_base:
+                print(f"Context pack base: {pack_base}")
         if not args.publish:
             print("Note: local checkpoints are ignored by git. Use --publish when this handoff should be committed.")
         print('Next agent prompt: "Use $context-pack to continue from the current handoff."')
@@ -2788,6 +2811,8 @@ python scripts/context_pack.py checkpoint --pack
 ```
 
 This writes ignored local state by default, so proactive checkpoints do not dirty tracked files. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git.
+
+When the worktree is clean after commits, `checkpoint --pack` uses committed changes since the previous checkpoint when available, so handoff packs still point at the work just finished.
 
 ## Admin Commands
 

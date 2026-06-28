@@ -97,6 +97,8 @@ python scripts/context_pack.py checkpoint --pack
 
 This writes ignored local state by default, so proactive checkpoints do not dirty tracked files. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git.
 
+When the worktree is clean after commits, `checkpoint --pack` uses committed changes since the previous checkpoint when available, so handoff packs still point at the work just finished.
+
 ## Admin Commands
 
 Use these only when directly relevant:

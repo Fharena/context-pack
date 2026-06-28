@@ -333,7 +333,7 @@ context-pack mark-reviewed runtime tests
 | `init` | repo-local context library, handoff 문서 생성. 첫 실행 area 추론은 `--infer-areas` / `--no-infer-areas`로 조절 가능 |
 | `migrate` | 기존 `.codex/context`, `.codex/handoff` 문서를 `.context-pack/`로 복사 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
-| `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
+| `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록. `--pack`은 dirty files 또는 이전 checkpoint 이후 clean commit 변경을 사용 |
 | `pack` / `pack --changed` | selected/related 영역으로 나뉜 compact 작업별 또는 changed-files reading pack 생성 |
 | `review-pack` | dirty files, `--base`, 또는 추론한 upstream/default branch 기준 compact 코드 리뷰 팩 생성 |
 | `mark-reviewed` | 확인한 area doc을 현재 HEAD 기준 reviewed로 표시 |
@@ -360,7 +360,7 @@ I need to continue this from another machine later.
 - setup이 깨진 것 같을 때: `context-pack doctor --fix`
 - 리뷰 전: `context-pack start --review`; base를 알면 `--base <base-ref>` 추가
 - 낯선 디버깅 전: 여러 파일을 열기 전에 task pack 생성
-- 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint
+- 의미 있는 수정/리뷰 후: git을 더럽히지 않게 `checkpoint --pack`으로 local checkpoint. clean commit 뒤에는 이전 checkpoint 이후 변경을 pack에 반영
 - handoff 자체를 git으로 공유해야 할 때: `checkpoint --publish --pack`
 - source 확인 후: `mark-reviewed <area>`로 stale warning 닫기
 

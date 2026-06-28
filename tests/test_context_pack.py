@@ -82,6 +82,57 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn(".context-pack/CURRENT.md", status)
             self.assertIn(".context-pack/LOG.md", status)
 
+    def test_checkpoint_pack_uses_previous_checkpoint_for_clean_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "doc": ".context-pack/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "tests": [],
+                "keywords": ["runtime"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
+                "---\nid: runtime\nlast_reviewed_head: unknown\nstatus: active\n---\n# Runtime\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack", "--quiet"]), 0)
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'gpu'\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src/runtime.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "change runtime"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack"]), 0)
+
+            self.assertIn("Context pack base:", output.getvalue())
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Changed files in scope: 1", pack)
+            self.assertIn("src/runtime.py", pack)
+            self.assertIn("- runtime", pack)
+            status = subprocess.run(
+                ["git", "status", "--porcelain=v1", "-uall"],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertEqual(status.strip(), "")
+
     def test_start_initializes_missing_context_library(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
