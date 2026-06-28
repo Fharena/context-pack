@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 4f9fdbe5f8eb
+- HEAD: f3b17ffa3152
 - Dirty files: .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
-- Dirty diff hash: sha256:06bd8dd07bb2ea620bfa6709
-- Updated at: 2026-06-28T22:00:47+09:00
+- Dirty diff hash: sha256:d7cc4b294c3960b23ed2964f
+- Updated at: 2026-06-28T22:10:21+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `4f9fdbe feat: route failing test prompts to source` makes natural prompts like "why are tests failing" start from `source, tests` instead of tests alone, with packaged npm smoke coverage.
+- Product hardening for Context Pack. Latest work: `f3b17ff test: smoke natural handoff flow` extends packaged npm validation so "나중에 이어가게 정리해줘" routes to checkpoint guidance and `checkpoint --pack` leaves tracked files unchanged.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -39,6 +39,7 @@
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "브랜치 리뷰해줘"` produces a review pack with only the changed source area
+- packaged npm temp repo smoke: `context-pack start --task "나중에 이어가게 정리해줘"` points to checkpoint and packaged `checkpoint --pack` keeps tracked status unchanged
 - `node bin/context-pack.js --help`
 - `npm pack --dry-run`
 - `python -m build`
