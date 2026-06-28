@@ -86,6 +86,7 @@ npx github:Fharena/context-pack install-codex --activate
 ```text
 Can you fix the login timeout?
 Login is broken.
+CI is red.
 Review this branch.
 Look over my changes.
 I'm done for now.
@@ -101,6 +102,7 @@ I am done for now; leave this easy to resume later.
 | "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
 | "Login is broken." | `context-pack start --task "login is broken"` |
 | "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
+| "CI is red." | `context-pack start --task "ci is red"` |
 | "Review this branch." | `context-pack start --review` |
 | "Look over my changes." | `context-pack start --task "look over my changes"` |
 | "Continue where we left off." | `context-pack start` |
@@ -118,7 +120,7 @@ I am done for now; leave this easy to resume later.
 
 일반 작업 중 `.context-pack/`가 없으면 `start`가 가벼운 context 문서를 먼저 초기화한 뒤 focused pack을 만듭니다. `setup`은 repo memory와 공통 agent rule을 명시적으로 설정하고 싶을 때 쓰는 명령입니다.
 
-CI는 이 작은 repo 흐름을 그대로 검증합니다. bug 작업, `login is broken` 같은 broken/not-working prompt, failing-test prompt는 `source, tests`에서 시작하고, "버그 잡아줘" / "문제 해결해줘" 같은 한국어 bug 표현도 source/tests로 라우팅합니다. branch review와 "변경사항 봐줘" 같은 부드러운 리뷰 표현은 변경된 source 영역을 읽으며, "I'm done for now"나 "작업 끝났어" 같은 짧은 handoff 표현은 checkpoint로 안내되고, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.
+CI는 이 작은 repo 흐름을 그대로 검증합니다. bug 작업, `login is broken` 같은 broken/not-working prompt, failing-test prompt는 `source, tests`에서 시작하고, `CI is red` 같은 CI/build failure 표현은 `automation, source, tests`에서 시작합니다. "버그 잡아줘" / "문제 해결해줘" 같은 한국어 bug 표현도 source/tests로 라우팅합니다. branch review와 "변경사항 봐줘" 같은 부드러운 리뷰 표현은 변경된 source 영역을 읽으며, "I'm done for now"나 "작업 끝났어" 같은 짧은 handoff 표현은 checkpoint로 안내되고, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.
 
 이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
 

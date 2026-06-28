@@ -44,6 +44,7 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     configure_git_repo(repo)
     (repo / "src").mkdir()
     (repo / "tests").mkdir()
+    (repo / ".github" / "workflows").mkdir(parents=True)
     (repo / "README.md").write_text("# Demo app\n", encoding="utf-8")
     (repo / "src" / "app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
     (repo / "tests" / "test_app.py").write_text(
@@ -52,6 +53,7 @@ def validate_natural_start(binary: pathlib.Path) -> None:
         "    assert login_timeout() == 30\n",
         encoding="utf-8",
     )
+    (repo / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
 
     run([str(binary), "setup", "--repo", str(repo), "--quiet"])
     run(["git", "add", "."], cwd=repo)
@@ -65,6 +67,16 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     assert "Task: why are tests failing" in pack
     assert "- source (score 6): paired with tests for failure debugging" in pack
     assert "- tests (score 6): task matched keywords: tests" in pack
+
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "ci is red"],
+        ["Generated work pack for task", "Selected areas: automation, source, tests"],
+    )
+    pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+    assert "Task: ci is red" in pack
+    assert "- automation (score 2): paired with CI/build failure debugging" in pack
+    assert "- source (score 2): paired with CI/build failure debugging" in pack
+    assert "- tests (score 2): paired with CI/build failure debugging" in pack
 
     run_output(
         [str(binary), "start", "--repo", str(repo), "--task", "login is broken"],

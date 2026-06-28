@@ -41,6 +41,7 @@ stale_if:
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - Test-failure/debugging prompts should pair source with tests when both inferred areas exist, so agents do not inspect tests alone.
 - English broken/not-working prompts should route common coding phrases like "login is broken" and "checkout doesn't work" to source/tests while avoiding loose matches such as "broken link report".
+- CI/build failure prompts should route common debugging phrases like "CI is red" and "build failed" to automation/source/tests while avoiding loose badge/docs matches.
 - Korean bug prompts should route common coding phrases like "버그 잡아줘" and "문제 해결해줘" to source/tests while avoiding meta/docs phrases such as "버그 리포트 문서 정리".
 - Natural review prompts should handle softer user wording like "look over my changes" and "변경사항 봐줘" while keeping meta/documentation tasks in normal work mode.
 - Natural handoff prompts should handle short wrap-up wording like "I'm done for now", "wrap this up", and "작업 끝났어" while avoiding broad matches on words like `done` or `wrap`.
@@ -67,6 +68,7 @@ stale_if:
 - Generic task verbs like `fix` select unrelated areas instead of acting as code-task hints.
 - Natural prompts like "why are tests failing" route only to tests and omit source context needed to debug failures.
 - English bug routing is too narrow and misses "login is broken" / "checkout doesn't work", or too broad and treats "broken link report" as code work.
+- CI/build failure routing sees only automation docs and omits source/tests, or over-corrects and treats "red build badge docs" as code failure work.
 - Korean bug routing is too narrow and misses "버그 잡아줘" / "문제 해결해줘", or too broad and treats bug-report documentation as code work.
 - Natural review intent is either too narrow to catch "look over my changes" / "변경사항 봐줘" or too broad and turns product/documentation work into review mode.
 - Short handoff intent is either too narrow to catch "I'm done for now" / "작업 끝났어" or too broad and turns "done button" / "wrap parser errors" into checkpoint guidance.

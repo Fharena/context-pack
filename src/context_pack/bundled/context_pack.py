@@ -123,6 +123,8 @@ TOKEN_STOP_WORDS = {
 CODE_TASK_TOKENS = {
     "bug",
     "crash",
+    "crashed",
+    "crashes",
     "debug",
     "error",
     "exception",
@@ -195,6 +197,25 @@ TEST_SCOPE_TOKENS = {
     "tests",
     "테스트",
 }
+CI_BUILD_SCOPE_TOKENS = {
+    "action",
+    "actions",
+    "build",
+    "builds",
+    "pipeline",
+    "pipelines",
+    "workflow",
+    "workflows",
+}
+CI_BUILD_RED_PHRASES = (
+    " ci is red ",
+    " ci went red ",
+    " build is red ",
+    " build went red ",
+    " actions are red ",
+    " pipeline is red ",
+    " workflow is red ",
+)
 ROUTE_NOISE_TOKENS = {
     "agent",
     "agents",
@@ -1850,6 +1871,24 @@ def selected_area_matches(
 
     selections.sort(key=lambda item: (-item.score, item.area_id))
     selected_ids = {item.area_id for item in selections}
+    if is_ci_build_failure_hint(task_tokens, task_text):
+        score = max(
+            [item.score for item in selections if item.area_id == "automation"]
+            or [2]
+        )
+        for area_id in ("automation", "source", "tests"):
+            if area_id in areas and area_id not in selected_ids:
+                selections.append(
+                    AreaSelection(
+                        area_id=area_id,
+                        score=score,
+                        reasons=["paired with CI/build failure debugging"],
+                        matched_files=[],
+                    )
+                )
+                selected_ids.add(area_id)
+        selections.sort(key=lambda item: (-item.score, item.area_id))
+
     if (
         "tests" in selected_ids
         and "source" in areas
@@ -1889,6 +1928,15 @@ def selected_area_matches(
             )
         )
     return selections
+
+
+def is_ci_build_failure_hint(task_tokens: set[str], task_text: str) -> bool:
+    has_scope = bool(task_tokens & CI_BUILD_SCOPE_TOKENS) or contains_any(task_text, (" ci ", " github action"))
+    if not has_scope:
+        return False
+    if task_tokens & (TEST_FAILURE_TOKENS - {"red"}):
+        return True
+    return contains_any(task_text, CI_BUILD_RED_PHRASES)
 
 
 def is_code_task_hint(task_tokens: set[str], task_text: str) -> bool:
