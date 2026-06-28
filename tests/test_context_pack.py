@@ -133,6 +133,34 @@ class ContextPackTests(unittest.TestCase):
             ).stdout
             self.assertEqual(status.strip(), "")
 
+    def test_checkpoint_pack_ignores_context_only_commits_for_base(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose():\n    return 'cpu'\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack", "--quiet"]), 0)
+
+            area_doc = repo / ".context-pack/AREAS/overview.md"
+            area_doc.write_text(area_doc.read_text(encoding="utf-8") + "\nReviewed locally.\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".context-pack/AREAS/overview.md"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "context maintenance"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack"]), 0)
+
+            self.assertNotIn("Context pack base:", output.getvalue())
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Changed files in scope: 0", pack)
+            self.assertNotIn(".context-pack/AREAS/overview.md", pack.split("## Changed Files", 1)[-1])
+
     def test_start_initializes_missing_context_library(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

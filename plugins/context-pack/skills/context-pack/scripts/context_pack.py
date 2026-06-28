@@ -832,9 +832,22 @@ def checkpoint_pack_base(repo: Path, layout: ContextLayout, snapshot: Snapshot, 
         changed_since = committed_files_between(repo, recorded_head)
         if changed_since is None:
             continue
-        if any(not is_handoff_only_path(item, layout) for item in changed_since):
+        if any(not is_checkpoint_pack_only_path(item, layout) for item in changed_since):
             return recorded_head
     return None
+
+
+def is_checkpoint_pack_only_path(path: str, layout: ContextLayout) -> bool:
+    path = normalize_path(path)
+    context_dir = path_text(layout.context_dir).rstrip("/")
+    legacy_context_dir = path_text(LEGACY_CONTEXT_DIR).rstrip("/")
+    return (
+        is_handoff_only_path(path, layout)
+        or path == context_dir
+        or path.startswith(context_dir + "/")
+        or path == legacy_context_dir
+        or path.startswith(legacy_context_dir + "/")
+    )
 
 
 def agent_rules(layout: ContextLayout | None = None) -> str:

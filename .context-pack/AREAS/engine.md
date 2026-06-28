@@ -57,6 +57,7 @@ stale_if:
 - Contracts or failure modes repeat until the pack stops saving tokens.
 - Automatic end-of-work checkpoints dirty tracked handoff files and create commit noise.
 - Clean committed work ends with an overview-only checkpoint pack because there are no dirty files.
+- Context-only maintenance commits become the checkpoint pack base and hide the actual prior work.
 - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
 - `doctor --fix` reports success while required context files are still missing.
 - `start` hides setup errors or creates noisy tracked files on first run.
