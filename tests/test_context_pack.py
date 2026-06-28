@@ -514,6 +514,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("The user does not need to name it or ask for a pack", agents)
             self.assertIn('Treat requests like "fix this bug"', agents)
             self.assertIn('"look over my changes"', agents)
+            self.assertIn('"I\'m done for now"', agents)
             self.assertIn("Run Context Pack as part of the work", agents)
             self.assertIn("Session start or continuation with no clear task yet", agents)
             self.assertIn("Missing `.context-pack/` during a normal task", agents)
@@ -967,6 +968,26 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("context-pack checkpoint --publish --pack", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
+    def test_start_task_short_handoff_phrases_point_to_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            for phrase in ("I'm done for now", "wrap this up", "pause here", "작업 끝났어", "오늘은 여기까지"):
+                with self.subTest(phrase=phrase):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(
+                            self.engine.main(["start", "--repo", str(repo), "--task", phrase]),
+                            0,
+                        )
+
+                    text = output.getvalue()
+                    self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
+                    self.assertIn("Detected handoff/checkpoint wording", text)
+                    self.assertIn("context-pack checkpoint --pack", text)
+                    self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
     def test_start_task_korean_bug_phrase_routes_to_source_and_tests(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1035,7 +1056,11 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(self.engine.infer_start_task_intent("improve code review docs"), "")
         self.assertEqual(self.engine.infer_start_task_intent("change login button color"), "")
+        self.assertEqual(self.engine.infer_start_task_intent("implement done button"), "")
+        self.assertEqual(self.engine.infer_start_task_intent("wrap parser errors"), "")
+        self.assertEqual(self.engine.infer_start_task_intent("작업 끝 상태 표시 버그 고쳐줘"), "")
         self.assertEqual(self.engine.infer_start_task_intent("leave this easy to resume later"), "checkpoint")
+        self.assertEqual(self.engine.infer_start_task_intent("I'm done for now"), "checkpoint")
 
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1656,6 +1681,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("agent behavior", skill)
             self.assertIn("Do not ask the user to name Context Pack first", skill)
             self.assertIn("look over my changes", skill)
+            self.assertIn("I'm done for now", skill)
             self.assertIn("If the CLI is not on `PATH`", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
             self.assertIn("Do not use a target repo's `scripts/context_pack.py`", skill)
@@ -1683,6 +1709,8 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("버그 고쳐줘", text)
         self.assertIn("브랜치 리뷰해줘", text)
         self.assertIn("나중에 이어가게 정리해줘", text)
+        self.assertIn("I'm done for now", text)
+        self.assertIn("작업 끝났어", text)
         self.assertIn("why are tests failing", text)
         self.assertIn("paired with tests for failure debugging", text)
         self.assertIn("Detected handoff/checkpoint wording", text)
@@ -1944,6 +1972,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("context-pack start --review", text)
             self.assertIn('"Look over my changes."', text)
             self.assertIn('context-pack start --task "look over my changes"', text)
+            self.assertIn('"I\'m done for now."', text)
+            self.assertIn('context-pack start --task "I\'m done for now"', text)
             self.assertIn('"Leave this easy to resume later."', text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("`.context-pack/`", text)
@@ -1954,6 +1984,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("agent contract", text.lower())
         self.assertIn('"변경사항 봐줘."', korean)
         self.assertIn('context-pack start --task "변경사항 봐줘"', korean)
+        self.assertIn('"작업 끝났어."', korean)
+        self.assertIn('context-pack start --task "작업 끝났어"', korean)
 
 
 if __name__ == "__main__":

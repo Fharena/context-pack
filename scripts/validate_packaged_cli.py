@@ -130,6 +130,22 @@ def validate_natural_start(binary: pathlib.Path) -> None:
             "context-pack checkpoint --pack",
         ],
     )
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "I'm done for now"],
+        [
+            "No pack generated: handoff/checkpoint wording was detected.",
+            "Detected handoff/checkpoint wording",
+            "context-pack checkpoint --pack",
+        ],
+    )
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "작업 끝났어"],
+        [
+            "No pack generated: handoff/checkpoint wording was detected.",
+            "Detected handoff/checkpoint wording",
+            "context-pack checkpoint --pack",
+        ],
+    )
     run([str(binary), "checkpoint", "--repo", str(repo), "--pack", "--quiet"])
     after_checkpoint_status = subprocess.check_output(
         ["git", "status", "--porcelain=v1", "-uall"],

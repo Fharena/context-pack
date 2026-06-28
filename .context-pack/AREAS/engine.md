@@ -41,6 +41,7 @@ stale_if:
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
 - Test-failure/debugging prompts should pair source with tests when both inferred areas exist, so agents do not inspect tests alone.
 - Natural review prompts should handle softer user wording like "look over my changes" and "변경사항 봐줘" while keeping meta/documentation tasks in normal work mode.
+- Natural handoff prompts should handle short wrap-up wording like "I'm done for now", "wrap this up", and "작업 끝났어" while avoiding broad matches on words like `done` or `wrap`.
 - Continuation and handoff wording should explain why no pack was generated without contradicting dirty-file state.
 - Running `context-pack` with no arguments should print a quickstart and exit successfully.
 - `context-pack --version` should report the public package version.
@@ -64,6 +65,7 @@ stale_if:
 - Generic task verbs like `fix` select unrelated areas instead of acting as code-task hints.
 - Natural prompts like "why are tests failing" route only to tests and omit source context needed to debug failures.
 - Natural review intent is either too narrow to catch "look over my changes" / "변경사항 봐줘" or too broad and turns product/documentation work into review mode.
+- Short handoff intent is either too narrow to catch "I'm done for now" / "작업 끝났어" or too broad and turns "done button" / "wrap parser errors" into checkpoint guidance.
 - Handoff wording in a dirty repo prints the generic no-dirty-files reason, making correct routing look suspicious.
 - Product-wide words like `context`, `pack`, or `agent` select most areas instead of narrowing the route.
 - `setup` skips shared agent docs or installs git hooks without explicit setup flags.

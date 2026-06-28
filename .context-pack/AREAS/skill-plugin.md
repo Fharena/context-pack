@@ -37,7 +37,7 @@ stale_if:
 - Do not promise automatic lifecycle hooks unless the plugin manifest or installer actually provides them.
 - Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
 - Shared agent-doc guidance should make Context Pack feel proactive, not like a manual CLI chore.
-- Skill and generated agent-doc examples should stay aligned with the router's natural-language surface, including softer review wording such as "look over my changes".
+- Skill and generated agent-doc examples should stay aligned with the router's natural-language surface, including softer review wording such as "look over my changes" and short handoff wording such as "I'm done for now".
 
 ## Common Failure Modes
 - Skill docs drift from engine commands.
@@ -50,6 +50,7 @@ stale_if:
 - Install/update requests are routed to old local scripts instead of `install-codex`.
 - Claude/Cursor guidance drifts from the generated `AGENTS.md` rule block.
 - Skill examples promise natural review handling that the deterministic `start --task` intent guard does not recognize.
+- Skill examples promise short handoff handling that the deterministic `start --task` intent guard does not recognize.
 
 ## Expand Scope If
 - New commands are added.

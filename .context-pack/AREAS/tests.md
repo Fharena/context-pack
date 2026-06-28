@@ -31,7 +31,7 @@ stale_if:
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
 - Coverage includes no-git initialization, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, packaged natural-language start routing, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
-- Natural-language product promises should stay covered by a small-repo flow: bug orientation, failing-test orientation, dirty and committed branch review, soft review wording, natural handoff wording, and handoff checkpoint.
+- Natural-language product promises should stay covered by a small-repo flow: bug orientation, failing-test orientation, dirty and committed branch review, soft review wording, long and short handoff wording, and handoff checkpoint.
 - Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
 - Git tests configure user identity locally in temp repos.
@@ -41,6 +41,7 @@ stale_if:
 - Forgetting committed branch review behavior and testing only dirty files.
 - Natural branch-review wording is tested only with dirty files, so auto base inference can regress unnoticed.
 - Soft review wording coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
+- Short handoff wording coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Installing hooks twice and duplicating marker blocks.
 - Installing shared agent docs twice and duplicating marker blocks.
 - Letting setup drift from the init/install-agent-docs/hook commands it composes.

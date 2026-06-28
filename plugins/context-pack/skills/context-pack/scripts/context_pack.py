@@ -244,6 +244,27 @@ HANDOFF_INTENT_TOKENS = {
     "state",
     "work",
 }
+ENGLISH_CHECKPOINT_PHRASES = (
+    " done for now ",
+    " i am done for now ",
+    " i'm done for now ",
+    " wrap this up ",
+    " wrap it up ",
+    " wrap up this work ",
+    " pause here ",
+    " stop here ",
+    " leave it here ",
+    " leave this here ",
+)
+KOREAN_CHECKPOINT_PHRASES = (
+    "작업 끝났",
+    "작업 끝냈",
+    "오늘은 여기까지",
+    "여기까지 하고",
+    "여기서 멈",
+    "이따 이어",
+    "다음에 이어",
+)
 
 
 @dataclasses.dataclass
@@ -991,7 +1012,7 @@ def agent_rules_body(layout: ContextLayout | None = None) -> str:
 
 Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
 
-Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", "I'm done for now", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
 
 Run it only when repo orientation would save broad reading or preserve useful handoff state:
 - Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
@@ -1726,9 +1747,11 @@ def infer_start_task_intent(task: str | None) -> str:
         return "review"
     if (
         "checkpoint" in tokens
+        or contains_any(text, ENGLISH_CHECKPOINT_PHRASES)
         or ("handoff" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"handoff"})))
         or " hand off " in text
         or ("later" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"later"})))
+        or contains_any(text, KOREAN_CHECKPOINT_PHRASES)
         or (contains_any(text, ["나중", "인계"]) and contains_any(text, ["이어", "정리", "넘겨"]))
         or ("정리" in text and contains_any(text, ["이어", "세션", "인계"]))
     ):
@@ -2923,7 +2946,7 @@ description: Prepare focused repo context for coding agents. Use proactively whe
 
 Context Pack is an agent behavior, not a command the user should have to remember.
 
-When a user says things like "fix this bug", "review this branch", "look over my changes", "why are tests failing?", "continue this from the last session", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
+When a user says things like "fix this bug", "review this branch", "look over my changes", "why are tests failing?", "continue this from the last session", "I'm done for now", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
 
 ## Core Loop
 
