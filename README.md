@@ -84,6 +84,17 @@ I am done for now; leave this easy to resume later.
 
 The agent should run the engine when the task needs orientation, read the generated pack, and continue from the focused context. Context Pack is not meant to be a magic-word workflow: in a context-enabled repo, agents should run `context-pack start` before broad reading, review, unfamiliar debugging, or handoff even when you did not name the tool. You can still say `Use $context-pack ...` when you want to force or debug the workflow.
 
+What the agent should do:
+
+| You say | Agent starts with |
+| --- | --- |
+| "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
+| "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
+| "Review this branch." | `context-pack start --review` |
+| "Leave this easy to resume later." | `context-pack checkpoint --pack` |
+
+If `.context-pack/` is missing during normal task work, `start` initializes the lightweight context docs first, then builds the focused pack. Use `setup` when you explicitly want to configure repo memory and shared agent rules.
+
 If you already installed the CLI, update or install the Codex plugin with:
 
 ```bash
@@ -271,7 +282,7 @@ The point is not to replace source code. The point is to make the agent start fr
 
 ## Basic Usage Flow
 
-For direct terminal use:
+For direct terminal use. With the Codex plugin or generated repo rules installed, most users just ask the agent normally and let it run these commands when useful.
 
 Before starting work:
 

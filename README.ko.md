@@ -91,6 +91,17 @@ I am done for now; leave this easy to resume later.
 
 에이전트는 repo 방향 잡기가 필요한 순간에 내부 엔진을 실행하고, 생성된 pack을 읽고, 필요한 파일부터 이어서 봐야 합니다. Context Pack은 특정 주문처럼 도구 이름을 외워야 하는 방식이 아닙니다. Context Pack이 설정된 repo에서는 에이전트가 도구 이름을 듣지 않아도, 큰 작업 시작 전 / 코드 리뷰 전 / 낯선 디버깅 전 / handoff 전에 `context-pack start`를 스스로 실행하는 흐름을 목표로 합니다. `Use $context-pack ...`는 강제 실행이나 문제 진단용 우회로입니다.
 
+에이전트가 해야 할 일은 이렇게 단순합니다.
+
+| 사용자가 말하면 | 에이전트가 먼저 실행 |
+| --- | --- |
+| "Fix the login timeout." | `context-pack start --task "fix login timeout"` |
+| "Why are tests failing?" | `context-pack start --task "why tests are failing"` |
+| "Review this branch." | `context-pack start --review` |
+| "Leave this easy to resume later." | `context-pack checkpoint --pack` |
+
+일반 작업 중 `.context-pack/`가 없으면 `start`가 가벼운 context 문서를 먼저 초기화한 뒤 focused pack을 만듭니다. `setup`은 repo memory와 공통 agent rule을 명시적으로 설정하고 싶을 때 쓰는 명령입니다.
+
 이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
 
 ```bash

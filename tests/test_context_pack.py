@@ -1538,6 +1538,20 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn(demo_url, readme_text)
             self.assertNotIn('src="assets/demo.gif"', readme_text)
 
+    def test_readmes_show_agent_first_natural_language_flow(self) -> None:
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        korean = (ROOT / "README.ko.md").read_text(encoding="utf-8")
+
+        for text in (english, korean):
+            self.assertIn('"Fix the login timeout."', text)
+            self.assertIn('context-pack start --task "fix login timeout"', text)
+            self.assertIn('"Review this branch."', text)
+            self.assertIn("context-pack start --review", text)
+            self.assertIn('"Leave this easy to resume later."', text)
+            self.assertIn("context-pack checkpoint --pack", text)
+            self.assertIn("`.context-pack/`", text)
+            self.assertIn("`start`", text)
+
 
 if __name__ == "__main__":
     unittest.main()
