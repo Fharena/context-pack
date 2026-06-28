@@ -1,7 +1,7 @@
 {
   "name": "@fharena/context-pack",
   "version": "0.2.17",
-  "description": "Version-aware context packs for coding agents.",
+  "description": "Agent-first repo context for coding agents.",
   "license": "MIT",
   "bin": {
     "context-pack": "bin/context-pack.js"

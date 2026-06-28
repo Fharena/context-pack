@@ -1,7 +1,7 @@
 # Context Pack
 
 <p align="center">
-  <strong>Version-aware context packs for Codex, Claude, Cursor, and coding agents.</strong>
+  <strong>Agent-first repo context for Codex, Claude, Cursor, and coding agents.</strong>
 </p>
 
 <p align="center">
@@ -181,6 +181,8 @@ codex plugin add context-pack@context-pack
 
 ## Terminal Demo
 
+Most users should not type every command below. This shows what Context Pack does under the hood after a normal request like `Improve the agent CLI onboarding.`
+
 ```text
 $ context-pack measure --task "improve agent CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Measure for /work/context-pack
@@ -310,7 +312,7 @@ After verifying source against stale area docs:
 context-pack mark-reviewed runtime tests
 ```
 
-If you installed the Codex plugin, you usually do not type these commands yourself. Ask the agent to use `$context-pack`, and the repo rules installed by `setup` tell agents to run the right command at task, review, debugging, and checkpoint boundaries.
+If you installed the Codex plugin or repo rules, you usually do not type these commands yourself. The agent should run the right command at task, review, debugging, and checkpoint boundaries. Use `$context-pack` only when you want to force or debug the workflow.
 
 ## What It Does
 

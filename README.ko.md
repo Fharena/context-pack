@@ -1,7 +1,7 @@
 # Context Pack
 
 <p align="center">
-  <strong>Codex, Claude, Cursor 같은 코딩 에이전트를 위한 version-aware context pack generator.</strong>
+  <strong>Codex, Claude, Cursor 같은 코딩 에이전트를 위한 agent-first repo context.</strong>
 </p>
 
 <p align="center">
@@ -188,6 +188,8 @@ codex plugin add context-pack@context-pack
 
 ## 터미널 데모
 
+일반 사용자가 아래 명령을 전부 직접 치는 흐름은 아닙니다. `agent CLI onboarding 개선해줘` 같은 자연어 요청 뒤에 에이전트가 내부에서 어떤 라우팅을 하는지 보여주는 데모입니다.
+
 ```text
 $ context-pack measure --task "improve agent CLI onboarding" --max-areas 3 --max-read-first 8
 Context Pack Measure for /work/context-pack
@@ -276,7 +278,7 @@ Mode: work
 
 ## 기본 사용 흐름
 
-터미널에서 직접 쓸 때의 흐름입니다. Codex plugin으로 설치했다면 보통 명령어를 직접 치지 않고 `Use $context-pack ...`라고 말하면 됩니다.
+터미널에서 직접 쓸 때의 흐름입니다. Codex plugin이나 repo rule이 설치되어 있으면 보통 명령어를 직접 치지 않고 평소처럼 작업을 말하면 에이전트가 필요한 시점에 실행합니다.
 
 작업 시작 전:
 
@@ -291,6 +293,12 @@ context-pack start --task "고치려는 버그나 작업 설명"
 
 ```powershell
 context-pack start --review --base main
+```
+
+현재 dirty/change 파일만 기준으로 pack이 필요할 때:
+
+```powershell
+context-pack pack --changed
 ```
 
 작업 후:
@@ -320,7 +328,7 @@ context-pack mark-reviewed runtime tests
 | `start` | 처음 진입 명령 하나로 자동 init, task pack, review pack, changed-files pack 선택 |
 | `install-codex` | package나 clone에서 Codex plugin과 personal marketplace entry 설치 |
 | `install-agent-docs` | `AGENTS.md`, `CLAUDE.md`, Cursor project rules에 공통 Context Pack 규칙 작성 |
-| `init` | repo-local context library, handoff 문서, source/test/docs 영역 자동 생성 |
+| `init` | repo-local context library, handoff 문서 생성. 첫 실행 area 추론은 `--infer-areas` / `--no-infer-areas`로 조절 가능 |
 | `migrate` | 기존 `.codex/context`, `.codex/handoff` 문서를 `.context-pack/`로 복사 |
 | `status` | context health, 예상 영역, stale warning, 다음 행동 표시 |
 | `checkpoint` | branch, HEAD, dirty files, diff hash를 기본적으로 ignored local state에 기록 |
