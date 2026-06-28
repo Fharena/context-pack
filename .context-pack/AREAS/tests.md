@@ -30,7 +30,7 @@ stale_if:
 
 ## Contracts
 - Tests call the engine through `main()` to stay close to script usage.
-- Coverage includes no-git initialization, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
+- Coverage includes no-git initialization, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, packaged natural-language start routing, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
 - Natural-language product promises should stay covered by a small-repo flow: bug orientation, branch review, and handoff checkpoint.
 - Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
@@ -45,6 +45,7 @@ stale_if:
 - Adding handoff health warnings that become impossible to clear after committing tracked handoff docs.
 - Testing doctor only as read-only validation after adding repair behavior.
 - Node wrapper tests stop at `--help` after README starts recommending no-argument quickstart, `npx` setup, or install-codex paths.
+- Packaged CLI validation installs successfully but does not exercise the natural-language bug/review flow advertised to agents.
 
 ## Expand Scope If
 - Adding a command.

@@ -70,7 +70,7 @@ stale_if:
 - GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
 - Packaged CLI behavior should match the bundled skill engine.
 - Node/npx wrapper should delegate to the bundled Python engine without duplicating business logic.
-- Node/npx wrapper should be smoke-tested for first-time `setup` and packaged `install-codex`, not only `--help`.
+- Node/npx wrapper should be smoke-tested for first-time `setup`, natural-language start routing, and packaged `install-codex`, not only `--help`.
 - Python wheel/sdist builds must pass `twine check` before registry publishing.
 - Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.
 - PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs.
@@ -78,7 +78,7 @@ stale_if:
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
 - README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
-- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`.
+- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural bug-fix and branch-review starts.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -89,6 +89,7 @@ stale_if:
 - CI depends on local-only validator paths from one developer machine.
 - npm package metadata drifts from Python/plugin versions or omits the bundled engine.
 - README leads with an `npx` command path that is not covered by packaged CLI smoke tests.
+- Natural-language routing works in unit tests but fails through the installed npm entrypoint.
 - PyPI metadata starts warning or rendering poorly because build/twine checks are not in CI.
 - Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.
 - Registry publishing runs automatically before PyPI/npm trusted publishing has been configured.

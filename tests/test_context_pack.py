@@ -1560,6 +1560,16 @@ class ContextPackTests(unittest.TestCase):
     def test_packaged_cli_engine_stays_in_sync(self) -> None:
         self.assertEqual(ENGINE.read_text(encoding="utf-8"), BUNDLED_ENGINE.read_text(encoding="utf-8"))
 
+    def test_packaged_cli_validation_covers_natural_start_routing(self) -> None:
+        text = (ROOT / "scripts" / "validate_packaged_cli.py").read_text(encoding="utf-8")
+
+        self.assertIn("버그 고쳐줘", text)
+        self.assertIn("브랜치 리뷰해줘", text)
+        self.assertIn("Generated work pack for task", text)
+        self.assertIn("Selected areas: source, tests", text)
+        self.assertIn("Generated review pack for review", text)
+        self.assertIn("Mode: review", text)
+
     def test_python_module_cli_runs(self) -> None:
         env = os.environ.copy()
         src = str(ROOT / "src")

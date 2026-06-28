@@ -15,6 +15,7 @@ All notable changes to Context Pack will be documented here.
 - Made `context-pack start` useful for continuation sessions with no clear task by printing `CURRENT.md` and `INDEX.md` as read-next files even when no focused pack is generated.
 - Added a small `start --task` intent guard so obvious review, continuation, and handoff phrases route to review mode, current/index orientation, or checkpoint guidance instead of noisy work packs.
 - Added lightweight Korean natural-phrase handling for bug-fix, branch-review, and resume-later requests.
+- Extended packaged CLI validation to smoke-test natural-language bug-fix and branch-review routing from the installed npm entrypoint.
 
 ## [0.2.17] - 2026-06-27
 
