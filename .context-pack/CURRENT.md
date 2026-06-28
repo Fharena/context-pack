@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 3c4780eabf55
+- HEAD: 176b9619fc00
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:42:22+09:00
+- Updated at: 2026-06-28T20:49:02+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `fe3be5a feat: clarify agent-first auto-use rules` makes the skill and generated AGENTS/CLAUDE/Cursor rules tell agents to use `start` for natural bug/debug/review/handoff requests, even when `.context-pack/` must be auto-initialized. `3c4780e` marks the touched context areas reviewed.
+- Product hardening for Context Pack. Latest work: `45c9d1a docs: show agent-first natural language workflow` adds README/README.ko tables mapping normal user requests to the agent's first Context Pack action, so the product reads less like a manual CLI and more like an agent-first workflow. `176b961` marks the touched context areas reviewed.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (55 passed)
+- `python -m unittest discover -s tests -v` (56 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
