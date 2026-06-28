@@ -78,7 +78,7 @@ stale_if:
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
 - README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
-- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, bug-fix, branch-review, and handoff starts.
+- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, bug-fix, committed branch-review, dirty branch-review, and handoff starts.
 
 ## Common Failure Modes
 - Marketplace path is correct but the copied plugin source is stale.
@@ -91,6 +91,7 @@ stale_if:
 - README leads with an `npx` command path that is not covered by packaged CLI smoke tests.
 - Natural-language routing works in unit tests but fails through the installed npm entrypoint.
 - Packaged validation misses the README's "why are tests failing" prompt and lets release drift from the advertised agent flow.
+- Packaged validation proves dirty review routing but not clean committed branch review with an inferred base.
 - Packaged validation misses natural handoff wording and leaves checkpoint cleanliness proven only by lower-level unit tests.
 - PyPI metadata starts warning or rendering poorly because build/twine checks are not in CI.
 - Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.

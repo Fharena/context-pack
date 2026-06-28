@@ -19,6 +19,7 @@ All notable changes to Context Pack will be documented here.
 - Paired `source` with `tests` for natural test-failure/debugging prompts such as "why are tests failing" so agents do not start from test files alone.
 - Extended packaged CLI validation to cover natural handoff wording and prove `checkpoint --pack` keeps tracked files unchanged.
 - Clarified `start --task` output for continuation and handoff wording so it no longer prints a generic no-dirty-files reason in dirty repos.
+- Extended packaged CLI validation to cover natural branch-review routing on a clean committed feature branch with an inferred `main` base.
 
 ## [0.2.17] - 2026-06-27
 

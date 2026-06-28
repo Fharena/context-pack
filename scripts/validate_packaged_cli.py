@@ -34,6 +34,7 @@ def run_output(args: list[str], expected: str | list[str], *, cwd: pathlib.Path 
 
 def configure_git_repo(repo: pathlib.Path) -> None:
     run(["git", "init"], cwd=repo)
+    run(["git", "branch", "-M", "main"], cwd=repo)
     run(["git", "config", "user.name", "Context Pack Test"], cwd=repo)
     run(["git", "config", "user.email", "context-pack@example.invalid"], cwd=repo)
 
@@ -74,7 +75,20 @@ def validate_natural_start(binary: pathlib.Path) -> None:
     assert "- source (score 2): starter code area for unclassified task" in pack
     assert "- tests (score 2): starter code area for unclassified task" in pack
 
+    run(["git", "checkout", "-b", "feature/review-demo"], cwd=repo)
     (repo / "src" / "app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
+    run(["git", "add", "src/app.py"], cwd=repo)
+    run(["git", "commit", "-m", "tune login timeout"], cwd=repo)
+    run_output(
+        [str(binary), "start", "--repo", str(repo), "--task", "review this branch"],
+        ["Generated review pack for review", "Review base: main (auto)", "Selected areas: source"],
+    )
+    pack = (repo / ".context-pack" / "packs" / "CONTEXT_PACK.md").read_text(encoding="utf-8")
+    assert "Mode: review" in pack
+    assert "Task: review this branch" in pack
+    assert "- `src/app.py`" in pack
+
+    (repo / "src" / "app.py").write_text("def login_timeout():\n    return 60\n", encoding="utf-8")
     run_output(
         [str(binary), "start", "--repo", str(repo), "--task", "브랜치 리뷰해줘"],
         ["Generated review pack for review", "Selected areas: source"],

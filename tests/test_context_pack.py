@@ -862,6 +862,40 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- `src/app.py`", pack)
             self.assertNotIn("- overview (score", pack)
 
+    def test_start_task_review_phrase_infers_base_for_committed_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "checkout", "-b", "feature/review-demo"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src/app.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "tune login timeout"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "review this branch"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Generated review pack for review", text)
+            self.assertIn("Review base: main (auto)", text)
+            self.assertIn("Selected areas: source", text)
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", pack)
+            self.assertIn("Task: review this branch", pack)
+            self.assertIn("- `src/app.py`", pack)
+
     def test_start_task_continue_phrase_points_to_current_and_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1620,6 +1654,8 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Generated work pack for task", text)
         self.assertIn("Selected areas: source, tests", text)
         self.assertIn("Generated review pack for review", text)
+        self.assertIn("Review base: main (auto)", text)
+        self.assertIn("review this branch", text)
         self.assertIn("before_checkpoint_status == after_checkpoint_status", text)
         self.assertIn("Mode: review", text)
 
