@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 7f41dfc1ba7f
+- HEAD: 43b441c21bbf
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:21:19+09:00
+- Updated at: 2026-06-28T20:30:26+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `73b877f fix: skip context-only checkpoint pack bases` prevents context maintenance commits from becoming the base for local handoff packs, so "leave this easy to resume later" stays focused on real work changes.
+- Product hardening for Context Pack. Latest work: `43b441c fix: ignore generic task verbs in area scoring` keeps natural requests like "fix login timeout" from selecting unrelated areas just because an area mentions `fix`; typical source/test repos now fall back to focused `source, tests` routing.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (54 passed)
+- `python -m unittest discover -s tests -v` (55 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
