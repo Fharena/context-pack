@@ -854,6 +854,73 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("context-pack checkpoint --publish --pack", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
+    def test_start_task_korean_bug_phrase_routes_to_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "버그 고쳐줘"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: source, tests", text)
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Task: 버그 고쳐줘", pack)
+            self.assertIn("- source (score 2): starter code area for unclassified task", pack)
+            self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+
+    def test_start_task_korean_review_phrase_uses_review_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "브랜치 리뷰해줘"]), 0)
+
+            self.assertIn("Generated review pack for review", output.getvalue())
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", pack)
+            self.assertIn("Task: 브랜치 리뷰해줘", pack)
+            self.assertIn("- `src/app.py`", pack)
+
+    def test_start_task_korean_handoff_phrase_points_to_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "나중에 이어가게 정리해줘"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Detected handoff/checkpoint wording", text)
+            self.assertIn("context-pack checkpoint --pack", text)
+            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+
+    def test_start_task_intent_guard_does_not_treat_meta_work_as_handoff(self) -> None:
+        self.assertEqual(
+            self.engine.infer_start_task_intent("support Korean natural bug review handoff phrases"),
+            "",
+        )
+        self.assertEqual(self.engine.infer_start_task_intent("leave this easy to resume later"), "checkpoint")
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

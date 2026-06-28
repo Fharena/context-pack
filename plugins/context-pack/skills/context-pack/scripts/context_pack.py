@@ -135,6 +135,9 @@ CODE_TASK_TOKENS = {
     "patch",
     "regression",
     "refactor",
+    "고쳐줘",
+    "고쳐주세요",
+    "수정해줘",
 }
 TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
     "broken",
@@ -177,6 +180,9 @@ HANDOFF_INTENT_TOKENS = {
     "later",
     "machine",
     "resume",
+    "session",
+    "state",
+    "work",
 }
 
 
@@ -1638,24 +1644,34 @@ def tokenize(value: str) -> set[str]:
     return {part for part in "".join(cleaned).split() if len(part) >= 3 and part not in TOKEN_STOP_WORDS}
 
 
+def contains_any(text: str, phrases: Iterable[str]) -> bool:
+    return any(phrase in text for phrase in phrases)
+
+
 def infer_start_task_intent(task: str | None) -> str:
     if not task:
         return ""
     text = f" {task.lower()} "
     tokens = tokenize(task)
-    if "review" in tokens and (tokens & REVIEW_INTENT_TOKENS or " pull request " in text or " pr " in text):
+    if (
+        "review" in tokens
+        and (tokens & REVIEW_INTENT_TOKENS or " pull request " in text or " pr " in text)
+    ) or ("리뷰" in text and contains_any(text, ["브랜치", "변경", "변경사항", "커밋", " pr ", " pull request "])):
         return "review"
     if (
-        "handoff" in tokens
-        or "checkpoint" in tokens
+        "checkpoint" in tokens
+        or ("handoff" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"handoff"})))
         or " hand off " in text
         or ("later" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"later"})))
+        or (contains_any(text, ["나중", "인계"]) and contains_any(text, ["이어", "정리", "넘겨"]))
+        or ("정리" in text and contains_any(text, ["이어", "세션", "인계"]))
     ):
         return "checkpoint"
     if (
         "where we left off" in text
         or ("continue" in tokens and bool(tokens & (CONTINUATION_INTENT_TOKENS - {"continue"})))
         or ("resume" in tokens and bool(tokens & {"session", "work"}))
+        or contains_any(text, ["이어가", "이어서", "계속 이어"])
     ):
         return "continue"
     return ""

@@ -100,6 +100,9 @@ I am done for now; leave this easy to resume later.
 | "Review this branch." | `context-pack start --review` |
 | "Continue where we left off." | `context-pack start` |
 | "Leave this easy to resume later." | `context-pack checkpoint --pack` |
+| "버그 고쳐줘." | `context-pack start --task "버그 고쳐줘"` |
+| "브랜치 리뷰해줘." | `context-pack start --task "브랜치 리뷰해줘"` 또는 `context-pack start --review` |
+| "나중에 이어가게 정리해줘." | `context-pack start --task "나중에 이어가게 정리해줘"` 또는 `context-pack checkpoint --pack` |
 
 설치된 뒤의 agent contract는 일부러 작게 유지합니다. 넓게 읽기 전에 방향을 잡고, 생성된 pack을 읽고, 곧바로 사용자의 실제 작업을 계속하며, 의미 있는 작업이 끝나면 checkpoint를 남기는 정도입니다. Context Pack은 사용자가 관리해야 하는 별도 업무가 아니라 repo 방향 잡기처럼 느껴져야 합니다.
 
