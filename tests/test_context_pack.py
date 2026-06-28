@@ -672,6 +672,24 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- source (score 2): starter code area for unclassified task", pack)
             self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
 
+    def test_start_existing_repo_routes_unclassified_code_task_to_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("- source: starter code area for unclassified task", text)
+            self.assertIn("- tests: starter code area for unclassified task", text)
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -962,6 +980,11 @@ class ContextPackTests(unittest.TestCase):
                     "paths": [],
                     "keywords": ["overview"],
                 },
+                "engine": {
+                    "description": "Engine internals.",
+                    "paths": [],
+                    "keywords": ["fix"],
+                },
             }
         }
 
@@ -980,6 +1003,34 @@ class ContextPackTests(unittest.TestCase):
         self.assertEqual(adoption_matches[0].area_id, "docs")
         self.assertIn("task matched keywords: adoption", adoption_matches[0].reasons)
         self.assertNotIn("and", adoption_matches[0].reasons[0])
+
+        generic_fix_matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="fix login timeout",
+        )
+        self.assertEqual([item.area_id for item in generic_fix_matches], ["overview"])
+
+        tests_only_manifest = {
+            "areas": {
+                "tests": {
+                    "description": "Test suites.",
+                    "paths": [],
+                    "keywords": ["tests"],
+                },
+                "overview": {
+                    "description": "Project orientation.",
+                    "paths": [],
+                    "keywords": ["overview"],
+                },
+            }
+        }
+        tests_only_matches = self.engine.selected_area_matches(
+            tests_only_manifest,
+            changed_files=[],
+            task="fix login timeout",
+        )
+        self.assertEqual([item.area_id for item in tests_only_matches], ["overview"])
 
     def test_first_modified_status_file_keeps_first_character(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

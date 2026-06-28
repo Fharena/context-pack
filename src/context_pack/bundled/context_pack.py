@@ -136,6 +136,10 @@ CODE_TASK_TOKENS = {
     "regression",
     "refactor",
 }
+TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
+    "broken",
+    "problem",
+}
 
 
 @dataclasses.dataclass
@@ -1611,8 +1615,9 @@ def selected_area_matches(
             more = len(unique(matched_files)) - 3
             reasons.append(f"changed files matched: {shown}" + (f" (+{more} more)" if more > 0 else ""))
 
-        if task_tokens:
-            overlap = task_tokens & tokenize(area_text(area_id, area))
+        route_tokens = task_tokens - TASK_ACTION_TOKENS
+        if route_tokens:
+            overlap = route_tokens & tokenize(area_text(area_id, area))
             if overlap:
                 score += 6 * len(overlap)
                 reasons.append("task matched keywords: " + ", ".join(sorted(overlap)[:5]))
@@ -1634,7 +1639,7 @@ def selected_area_matches(
 
     if not selections and "overview" in areas:
         starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]
-        if starter_ids and task_tokens & CODE_TASK_TOKENS:
+        if "source" in starter_ids and task_tokens & CODE_TASK_TOKENS:
             return [
                 AreaSelection(
                     area_id=area_id,
