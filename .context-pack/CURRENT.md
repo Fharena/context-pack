@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 951942e5b54c
+- HEAD: cec64c134013
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:55:39+09:00
+- Updated at: 2026-06-28T21:04:35+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `4d87d45 fix: ignore broad product terms in task routing` removes `context`, `pack`, and `agent(s)` from task keyword scoring so natural requests do not select most areas just because the repo is about Context Pack. `951942e` marks the touched context areas reviewed.
+- Product hardening for Context Pack. Latest work: `78b6d4f test: cover natural language bug review handoff flow` adds a small-repo end-to-end test for "fix login timeout", branch review from a committed diff, and `checkpoint --pack` leaving ignored local handoff state without dirtying tracked files. `cec64c1` marks the touched context areas reviewed.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (56 passed)
+- `python -m unittest discover -s tests -v` (57 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
