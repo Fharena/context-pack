@@ -16,6 +16,7 @@ All notable changes to Context Pack will be documented here.
 - Added a small `start --task` intent guard so obvious review, continuation, and handoff phrases route to review mode, current/index orientation, or checkpoint guidance instead of noisy work packs.
 - Added lightweight Korean natural-phrase handling for bug-fix, branch-review, and resume-later requests.
 - Extended packaged CLI validation to smoke-test natural-language bug-fix and branch-review routing from the installed npm entrypoint.
+- Paired `source` with `tests` for natural test-failure/debugging prompts such as "why are tests failing" so agents do not start from test files alone.
 
 ## [0.2.17] - 2026-06-27
 

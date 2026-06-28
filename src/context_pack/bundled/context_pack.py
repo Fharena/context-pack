@@ -127,6 +127,8 @@ CODE_TASK_TOKENS = {
     "error",
     "exception",
     "fail",
+    "failed",
+    "fails",
     "failing",
     "failure",
     "fix",
@@ -145,6 +147,29 @@ TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
     "review",
     "reviewed",
     "reviewing",
+}
+TEST_FAILURE_TOKENS = {
+    "broken",
+    "crash",
+    "debug",
+    "error",
+    "exception",
+    "fail",
+    "failed",
+    "fails",
+    "failing",
+    "failure",
+    "red",
+    "실패",
+    "실패해",
+    "실패함",
+}
+TEST_SCOPE_TOKENS = {
+    "spec",
+    "specs",
+    "test",
+    "tests",
+    "테스트",
 }
 ROUTE_NOISE_TOKENS = {
     "agent",
@@ -1735,6 +1760,24 @@ def selected_area_matches(
             )
 
     selections.sort(key=lambda item: (-item.score, item.area_id))
+    selected_ids = {item.area_id for item in selections}
+    if (
+        "tests" in selected_ids
+        and "source" in areas
+        and "source" not in selected_ids
+        and task_tokens & TEST_SCOPE_TOKENS
+        and task_tokens & TEST_FAILURE_TOKENS
+    ):
+        score = max((item.score for item in selections if item.area_id == "tests"), default=2)
+        selections.append(
+            AreaSelection(
+                area_id="source",
+                score=score,
+                reasons=["paired with tests for failure debugging"],
+                matched_files=[],
+            )
+        )
+        selections.sort(key=lambda item: (-item.score, item.area_id))
 
     if not selections and "overview" in areas:
         starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]

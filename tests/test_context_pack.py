@@ -658,6 +658,27 @@ class ContextPackTests(unittest.TestCase):
             self.assertNotIn("~167% of repo files", text)
             self.assertFalse((repo / ".context-pack").exists())
 
+    def test_measure_before_setup_pairs_source_with_failing_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["measure", "--repo", str(repo), "--task", "why are tests failing"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("- source: paired with tests for failure debugging", text)
+            self.assertIn("- tests: task matched keywords: tests", text)
+            self.assertFalse((repo / ".context-pack").exists())
+
     def test_measure_before_setup_routes_unclassified_code_task_to_source_and_tests(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -717,6 +738,30 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Selected areas: source, tests", text)
             self.assertIn("- source: starter code area for unclassified task", text)
             self.assertIn("- tests: starter code area for unclassified task", text)
+
+    def test_start_existing_repo_pairs_source_with_failing_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "debug broken login test"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("- source: paired with tests for failure debugging", text)
+            self.assertIn("- tests: task matched keywords: test", text)
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("- source (score 6): paired with tests for failure debugging", pack)
+            self.assertIn("- tests (score 6): task matched keywords: test", pack)
 
     def test_natural_language_bug_review_handoff_flow_on_small_repo(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1565,6 +1610,8 @@ class ContextPackTests(unittest.TestCase):
 
         self.assertIn("버그 고쳐줘", text)
         self.assertIn("브랜치 리뷰해줘", text)
+        self.assertIn("why are tests failing", text)
+        self.assertIn("paired with tests for failure debugging", text)
         self.assertIn("Generated work pack for task", text)
         self.assertIn("Selected areas: source, tests", text)
         self.assertIn("Generated review pack for review", text)
@@ -1821,6 +1868,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("`.context-pack/`", text)
             self.assertIn("`start`", text)
             self.assertIn("source, tests", text)
+            self.assertIn("failing-test", text.lower())
             self.assertIn("checkpoint --pack", text)
             self.assertIn("agent contract", text.lower())
 

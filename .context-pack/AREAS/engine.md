@@ -39,6 +39,7 @@ stale_if:
 - `setup` should stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.
 - `doctor --fix` should repair missing setup files through the same safe setup path and must not install git hooks.
 - `start` should stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.
+- Test-failure/debugging prompts should pair source with tests when both inferred areas exist, so agents do not inspect tests alone.
 - Running `context-pack` with no arguments should print a quickstart and exit successfully.
 - `context-pack --version` should report the public package version.
 - `install-codex` should refuse unsafe overwrites and work from both source checkouts and packaged CLI installs.
@@ -59,6 +60,7 @@ stale_if:
 - Clean committed work ends with an overview-only checkpoint pack because there are no dirty files.
 - Context-only maintenance commits become the checkpoint pack base and hide the actual prior work.
 - Generic task verbs like `fix` select unrelated areas instead of acting as code-task hints.
+- Natural prompts like "why are tests failing" route only to tests and omit source context needed to debug failures.
 - Product-wide words like `context`, `pack`, or `agent` select most areas instead of narrowing the route.
 - `setup` skips shared agent docs or installs git hooks without explicit setup flags.
 - `doctor --fix` reports success while required context files are still missing.
