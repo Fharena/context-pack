@@ -486,3 +486,10 @@ Append-only operational log.
 - Dirty files: .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
 - Dirty diff hash: sha256:a652e4029de26b3224c1c27d
 - Verification: `python -m unittest discover -s tests -v` (69 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed "why are tests failing" routes to source/tests, Korean bug phrases route to source/tests, natural committed branch review infers `main` and selects source, Korean dirty branch-review phrases route to review mode, Korean handoff wording points to checkpoint, and packaged `checkpoint --pack` keeps tracked status unchanged
+
+## 2026-06-28T22:31:25+09:00
+- Branch: main
+- HEAD: 3d80dfedc664
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (70 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed "look over my changes" and "변경사항 봐줘" route to review mode and select source while meta/docs tasks stay out of review mode.

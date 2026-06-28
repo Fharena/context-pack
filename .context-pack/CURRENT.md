@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: b9ddcaa1caaf
-- Dirty files: .context-pack/AREAS/installer-release.md, .context-pack/AREAS/tests.md
-- Dirty diff hash: sha256:a652e4029de26b3224c1c27d
-- Updated at: 2026-06-28T22:18:55+09:00
+- HEAD: 3d80dfedc664
+- Dirty files: none
+- Dirty diff hash: clean
+- Updated at: 2026-06-28T22:31:25+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `b9ddcaa test: smoke natural committed branch review` extends packaged npm validation so `review this branch` on a clean feature branch infers `main` and reads only the committed diff context.
+- Product hardening for Context Pack. Latest product work: `8536a75 feat: recognize softer natural review prompts` lets `start --task` route softer review requests like "look over my changes" and "변경사항 봐줘" into review packs without turning meta/docs tasks into review mode. Context areas reviewed at `3d80dfe`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -19,8 +19,8 @@
 
 ## Next Actions
 1. Watch CI after pushing the latest handoff.
-2. Next product iteration: test Context Pack on 3-5 external repos and collect before/after orientation examples.
-3. Improve registry publishing readiness only after the lightweight skill UX stays stable.
+2. Next product iteration: dogfood on 3-5 external repos and collect before/after orientation examples.
+3. Keep improving natural agent triggers only when they reduce manual tool use without making the skill feel heavy.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (69 passed)
+- `python -m unittest discover -s tests -v` (70 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .context-pack/manifest.json`
@@ -39,6 +39,8 @@
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "버그 고쳐줘"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "review this branch"` on a clean feature branch infers `main` and selects source
+- packaged npm temp repo smoke: `context-pack start --task "look over my changes"` routes to review mode and selects source
+- packaged npm temp repo smoke: `context-pack start --task "변경사항 봐줘"` routes to review mode and selects source
 - packaged npm temp repo smoke: `context-pack start --task "브랜치 리뷰해줘"` produces a review pack with only the changed source area
 - packaged npm temp repo smoke: `context-pack start --task "나중에 이어가게 정리해줘"` points to checkpoint and packaged `checkpoint --pack` keeps tracked status unchanged
 - `node bin/context-pack.js --help`
