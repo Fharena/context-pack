@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 32a079b30176
+- HEAD: ddbd58d824ea
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T19:48:23+09:00
+- Updated at: 2026-06-28T19:54:35+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `32a079b docs: refresh demo around agent prompts` updates the README GIF so the first visual impression is natural-language agent prompts, quiet orientation, setup preview, skip cases, review routing, and local handoff checkpoints rather than a manual CLI workflow.
+- Product hardening for Context Pack. Latest work: `ddbd58d docs: sharpen agent-first positioning` aligns README/package copy around natural-language agent requests, clarifies that terminal demos show under-the-hood routing, and keeps `$context-pack` as an escape hatch rather than the normal UX.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,7 +18,7 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Watch CI for `32a079b`.
+1. Watch CI for `ddbd58d`.
 2. Next product iteration: test Context Pack on 3-5 external repos and collect before/after orientation examples.
 3. Improve registry publishing readiness only after the lightweight skill UX stays stable.
 
