@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 43b441c21bbf
+- HEAD: 3c4780eabf55
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T20:30:26+09:00
+- Updated at: 2026-06-28T20:42:22+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `43b441c fix: ignore generic task verbs in area scoring` keeps natural requests like "fix login timeout" from selecting unrelated areas just because an area mentions `fix`; typical source/test repos now fall back to focused `source, tests` routing.
+- Product hardening for Context Pack. Latest work: `fe3be5a feat: clarify agent-first auto-use rules` makes the skill and generated AGENTS/CLAUDE/Cursor rules tell agents to use `start` for natural bug/debug/review/handoff requests, even when `.context-pack/` must be auto-initialized. `3c4780e` marks the touched context areas reviewed.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
