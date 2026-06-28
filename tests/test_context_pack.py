@@ -698,6 +698,75 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- source: starter code area for unclassified task", text)
             self.assertIn("- tests: starter code area for unclassified task", text)
 
+    def test_natural_language_bug_review_handoff_flow_on_small_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "tests").mkdir()
+            (repo / "README.md").write_text("# Demo app\n", encoding="utf-8")
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text(
+                "from src.app import login_timeout\n\n"
+                "def test_login_timeout():\n"
+                "    assert login_timeout() == 30\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            bug_output = io.StringIO()
+            with contextlib.redirect_stdout(bug_output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout"]),
+                    0,
+                )
+            self.assertIn("Selected areas: source, tests", bug_output.getvalue())
+            bug_pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Task: fix login timeout", bug_pack)
+            self.assertIn("- source (score 2): starter code area for unclassified task", bug_pack)
+            self.assertIn("- tests (score 2): starter code area for unclassified task", bug_pack)
+
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
+            (repo / "tests/test_app.py").write_text(
+                "from src.app import login_timeout\n\n"
+                "def test_login_timeout():\n"
+                "    assert login_timeout() == 45\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "src/app.py", "tests/test_app.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "tune login timeout"], cwd=repo, check=True, capture_output=True)
+
+            review_output = io.StringIO()
+            with contextlib.redirect_stdout(review_output):
+                self.assertEqual(
+                    self.engine.main(["start", "--repo", str(repo), "--review", "--base", "HEAD~1"]),
+                    0,
+                )
+            review_text = review_output.getvalue()
+            self.assertIn("Generated review pack for review", review_text)
+            self.assertIn("Selected areas: source, tests", review_text)
+            review_pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertIn("Mode: review", review_pack)
+            self.assertIn("- `src/app.py`", review_pack)
+            self.assertIn("- `tests/test_app.py`", review_pack)
+
+            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack", "--quiet"]), 0)
+            self.assertTrue((repo / ".context-pack/local/LOCAL.md").exists())
+            self.assertTrue((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+            status = subprocess.run(
+                ["git", "status", "--porcelain=v1", "-uall"],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertEqual(status.strip(), "")
+
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1570,6 +1639,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("`.context-pack/`", text)
             self.assertIn("`start`", text)
+            self.assertIn("source, tests", text)
+            self.assertIn("checkpoint --pack", text)
 
 
 if __name__ == "__main__":

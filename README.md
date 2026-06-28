@@ -95,6 +95,8 @@ What the agent should do:
 
 If `.context-pack/` is missing during normal task work, `start` initializes the lightweight context docs first, then builds the focused pack. Use `setup` when you explicitly want to configure repo memory and shared agent rules.
 
+CI tests this exact small-repo flow: bug orientation starts from `source, tests`, branch review reads the committed diff, and `checkpoint --pack` leaves ignored local handoff state without dirtying tracked files.
+
 If you already installed the CLI, update or install the Codex plugin with:
 
 ```bash

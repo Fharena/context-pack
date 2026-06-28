@@ -76,6 +76,7 @@ stale_if:
 - PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs.
 - README should distinguish Codex plugin installation from shared repo-rule installation.
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
+- README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
 - Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`.
 

@@ -102,6 +102,8 @@ I am done for now; leave this easy to resume later.
 
 일반 작업 중 `.context-pack/`가 없으면 `start`가 가벼운 context 문서를 먼저 초기화한 뒤 focused pack을 만듭니다. `setup`은 repo memory와 공통 agent rule을 명시적으로 설정하고 싶을 때 쓰는 명령입니다.
 
+CI는 이 작은 repo 흐름을 그대로 검증합니다. 버그 작업은 `source, tests`에서 시작하고, branch review는 committed diff를 읽으며, `checkpoint --pack`은 tracked 파일을 더럽히지 않고 ignored local handoff state만 남깁니다.
+
 이미 CLI를 설치했다면 Codex plugin은 이렇게 설치하거나 갱신할 수 있습니다.
 
 ```bash
