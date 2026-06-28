@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 2ecc673d7465
+- HEAD: cc268789cba1
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T21:13:43+09:00
+- Updated at: 2026-06-28T21:22:01+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest work: `2ecc673 docs: clarify agent-first context contract` tightens the installed skill command path, generated agent rules, README/README.ko positioning, and tests so users can speak normally while agents run Context Pack as quiet orientation.
+- Product hardening for Context Pack. Latest work: `cc26878 feat: orient no-task start sessions` makes `context-pack start` useful for "continue where we left off" sessions by printing `CURRENT.md` and `INDEX.md` even when no focused pack is generated.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -29,11 +29,12 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (57 passed)
+- `python -m unittest discover -s tests -v` (58 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .agents/plugins/marketplace.json`
 - `git diff --check`
+- temporary repo smoke: `context-pack setup --quiet`; `context-pack start` prints `CURRENT.md` and `INDEX.md`
 - `npm pack --dry-run`
 - `python -m build`
 - `python -m twine check dist/*`
