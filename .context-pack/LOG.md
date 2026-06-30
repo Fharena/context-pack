@@ -535,3 +535,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (79 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; BrowserQuest A/B orientation benchmark at HEAD `af32d247cac3` measured broad repo text ~602.2k tokens vs Context Pack first-read ~98.2k-103.6k tokens (~16-17%) for mobile controls, sprite asset loading, and websocket connection prompts.
+
+## 2026-06-30T14:21:08+09:00
+- Branch: main
+- HEAD: 4056c8f25067
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (81 passed); `python scripts/validate_packaged_cli.py`; `python scripts/benchmark_context_pack.py --public --fail-on-weak --json docs/benchmarks/latest.json --markdown docs/benchmarks/latest.md --workdir C:\Users\99yoo\AppData\Local\Temp\context-pack-benchmark-kcg8tf73 --reuse --keep-workdir` (10 public scenarios, 0 weak flags, handoff replay same signature); `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`

@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 2a035522d335
+- HEAD: 4056c8f25067
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-30T13:06:39+09:00
+- Updated at: 2026-06-30T14:21:08+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `fd38d64 feat: benchmark web game routing` prepares `v0.2.19` with BrowserQuest A/B orientation benchmarks, web/client-server JS first-run inference, split `sprites`/`maps`/`media` routing, and vendored `client/js/lib` avoidance. Context areas reviewed at `2a03552`.
+- Product hardening for Context Pack. Latest product work: `db336dc feat: expand benchmark coverage` prepares `v0.2.20` with a reproducible public-repo benchmark harness, Go/Rust first-run inference hardening, binary media text-budget skips, generated benchmark artifacts, and refreshed English/Korean benchmark positioning. Context areas were marked reviewed at `4056c8f`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,7 +18,7 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `v0.2.19`, create the GitHub Release from `docs/releases/v0.2.19.md`, and watch CI/release workflows.
+1. Push `main`, tag `v0.2.20`, create the GitHub Release from `docs/releases/v0.2.20.md`, and watch CI/release workflows.
 2. npm/PyPI publish still needs registry login or trusted publishing configuration; local `npm whoami` is unauthorized and repo publish variables are not set.
 3. Next product iteration: collect a true independent-agent A/B trace, not only deterministic orientation/token-budget measurements.
 
@@ -29,11 +29,13 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (79 passed)
+- `python -m unittest discover -s tests -v` (81 passed)
 - `python scripts/validate_packaged_cli.py`
+- `python scripts/benchmark_context_pack.py --public --fail-on-weak --json docs/benchmarks/latest.json --markdown docs/benchmarks/latest.md --workdir C:\Users\99yoo\AppData\Local\Temp\context-pack-benchmark-kcg8tf73 --reuse --keep-workdir` (10 public scenarios, 0 weak flags; handoff replay same signature)
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
+- `python -m json.tool .agents/plugins/marketplace.json`
 - `git diff --check`
-- BrowserQuest A/B orientation benchmark: broad repo text ~602.2k tokens; Context Pack first-read ~98.2k-103.6k tokens (~16-17%)
+- public benchmark snapshot: BrowserQuest first-read ~16-17%; `gin-gonic/gin` ~4%; `expressjs/express` ~9%; `sharkdp/fd` ~30%
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "ci is red"` selects automation/source/tests
 - packaged npm temp repo smoke: `context-pack start --task "login is broken"` selects source/tests
