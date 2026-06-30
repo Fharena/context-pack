@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 5d0dafc7b2da
+- HEAD: 2a035522d335
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-30T12:47:21+09:00
+- Updated at: 2026-06-30T13:06:39+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `53d3b3c feat: prepare public beta release` bumps `v0.2.18`, adds dogfood benchmarks, public beta launch copy, skill audit, and top-level Python package source inference. Context areas reviewed at `5d0dafc`.
+- Product hardening for Context Pack. Latest product work: `fd38d64 feat: benchmark web game routing` prepares `v0.2.19` with BrowserQuest A/B orientation benchmarks, web/client-server JS first-run inference, split `sprites`/`maps`/`media` routing, and vendored `client/js/lib` avoidance. Context areas reviewed at `2a03552`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,9 +18,9 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `v0.2.18`, create the GitHub Release from `docs/releases/v0.2.18.md`, and watch CI/release workflows.
+1. Push `v0.2.19`, create the GitHub Release from `docs/releases/v0.2.19.md`, and watch CI/release workflows.
 2. npm/PyPI publish still needs registry login or trusted publishing configuration; local `npm whoami` is unauthorized and repo publish variables are not set.
-3. Next product iteration: collect real before/after task traces, not more phrase-only routing.
+3. Next product iteration: collect a true independent-agent A/B trace, not only deterministic orientation/token-budget measurements.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -29,13 +29,11 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (78 passed)
+- `python -m unittest discover -s tests -v` (79 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
-- `python -m json.tool .context-pack/manifest.json`
-- `python -m json.tool .agents/plugins/marketplace.json`
-- `python -m json.tool package.json`
 - `git diff --check`
+- BrowserQuest A/B orientation benchmark: broad repo text ~602.2k tokens; Context Pack first-read ~98.2k-103.6k tokens (~16-17%)
 - packaged npm temp repo smoke: `context-pack start --task "why are tests failing"` selects source/tests
 - packaged npm temp repo smoke: `context-pack start --task "ci is red"` selects automation/source/tests
 - packaged npm temp repo smoke: `context-pack start --task "login is broken"` selects source/tests

@@ -528,3 +528,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (78 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; dogfood measured `psf/requests`, `pallets/click`, `encode/httpx`, and `pypa/sampleproject`; `encode/httpx` build-failure routing now includes source through top-level Python package inference; npm/PyPI registry publish remains blocked on authentication/trusted publishing configuration.
+
+## 2026-06-30T13:06:39+09:00
+- Branch: main
+- HEAD: 2a035522d335
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (79 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; BrowserQuest A/B orientation benchmark at HEAD `af32d247cac3` measured broad repo text ~602.2k tokens vs Context Pack first-read ~98.2k-103.6k tokens (~16-17%) for mobile controls, sprite asset loading, and websocket connection prompts.
