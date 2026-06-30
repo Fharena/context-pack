@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 4056c8f25067
+- HEAD: 5d8fbfea9b51
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-30T14:21:08+09:00
+- Updated at: 2026-06-30T14:35:12+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `db336dc feat: expand benchmark coverage` prepares `v0.2.20` with a reproducible public-repo benchmark harness, Go/Rust first-run inference hardening, binary media text-budget skips, generated benchmark artifacts, and refreshed English/Korean benchmark positioning. Context areas were marked reviewed at `4056c8f`.
+- Product hardening for Context Pack. Latest product work: `1e8f664 test: add remaining validation checks` adds deterministic A/B proxy validation, fresh-clone session consistency checks, and post-release install-path evidence for `v0.2.20`. Context areas were marked reviewed at `5d8fbfe`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,9 +18,9 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Push `main`, tag `v0.2.20`, create the GitHub Release from `docs/releases/v0.2.20.md`, and watch CI/release workflows.
-2. npm/PyPI publish still needs registry login or trusted publishing configuration; local `npm whoami` is unauthorized and repo publish variables are not set.
-3. Next product iteration: collect a true independent-agent A/B trace, not only deterministic orientation/token-budget measurements.
+1. Push the validation documentation commits to `main` and watch CI.
+2. npm/PyPI publish still needs registry login or trusted publishing configuration; current registry checks show `@fharena/context-pack` and `context-pack` are not published.
+3. Next product iteration: collect a true independent LLM patch-quality trace with captured transcripts; current validation is deterministic routing/installability evidence.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -30,6 +30,12 @@
 
 ## Last Verified
 - `python -m unittest discover -s tests -v` (81 passed)
+- `python scripts/validate_remaining.py --fail-on-weak --json docs/validation/latest.json --markdown docs/validation/latest.md --keep-workdir` (synthetic A/B proxy: 97% first-read reduction; fresh-clone session signatures match for 3 prompts)
+- `npx --yes github:Fharena/context-pack --version` -> `context-pack 0.2.20`
+- GitHub Release npm tarball install -> `context-pack 0.2.20`; `setup --dry-run` wrote no files
+- GitHub Release Python wheel install -> `context-pack 0.2.20`
+- `npm view @fharena/context-pack version` -> E404, not published
+- `python -m pip index versions context-pack` -> no matching distribution
 - `python scripts/validate_packaged_cli.py`
 - `python scripts/benchmark_context_pack.py --public --fail-on-weak --json docs/benchmarks/latest.json --markdown docs/benchmarks/latest.md --workdir C:\Users\99yoo\AppData\Local\Temp\context-pack-benchmark-kcg8tf73 --reuse --keep-workdir` (10 public scenarios, 0 weak flags; handoff replay same signature)
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`

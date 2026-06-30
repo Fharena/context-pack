@@ -542,3 +542,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (81 passed); `python scripts/validate_packaged_cli.py`; `python scripts/benchmark_context_pack.py --public --fail-on-weak --json docs/benchmarks/latest.json --markdown docs/benchmarks/latest.md --workdir C:\Users\99yoo\AppData\Local\Temp\context-pack-benchmark-kcg8tf73 --reuse --keep-workdir` (10 public scenarios, 0 weak flags, handoff replay same signature); `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .agents/plugins/marketplace.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`
+
+## 2026-06-30T14:35:12+09:00
+- Branch: main
+- HEAD: 5d8fbfea9b51
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (81 passed); `python scripts/validate_remaining.py --fail-on-weak --json docs/validation/latest.json --markdown docs/validation/latest.md --keep-workdir` (synthetic A/B proxy 97% reduction and fresh-clone session signatures match for `why are tests failing`, `ci is red`, `fix login timeout`); `npx --yes github:Fharena/context-pack --version` reported `context-pack 0.2.20`; GitHub Release npm tarball install reported `context-pack 0.2.20` and `setup --dry-run` wrote no files; GitHub Release Python wheel install reported `context-pack 0.2.20`; npm registry check returned E404 for `@fharena/context-pack`; PyPI check returned no matching distribution for `context-pack`
