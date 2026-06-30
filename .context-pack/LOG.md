@@ -521,3 +521,10 @@ Append-only operational log.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: `python -m unittest discover -s tests -v` (77 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; packaged npm temp repo smoke confirmed "ci is red" routes to automation/source/tests while "red build badge docs" stays out of code-failure routing.
+
+## 2026-06-30T12:47:21+09:00
+- Branch: main
+- HEAD: 5d0dafc7b2da
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: `python -m unittest discover -s tests -v` (78 passed); `python scripts/validate_packaged_cli.py`; `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`; `python -m json.tool .context-pack/manifest.json`; `python -m json.tool .agents/plugins/marketplace.json`; `python -m json.tool package.json`; `git diff --check`; `node bin/context-pack.js --help`; `npm pack --dry-run`; `python -m build`; `python -m twine check dist/*`; dogfood measured `psf/requests`, `pallets/click`, `encode/httpx`, and `pypa/sampleproject`; `encode/httpx` build-failure routing now includes source through top-level Python package inference; npm/PyPI registry publish remains blocked on authentication/trusted publishing configuration.

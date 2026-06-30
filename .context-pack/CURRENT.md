@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 6ea29a3485d6
+- HEAD: 5d0dafc7b2da
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-28T23:16:32+09:00
+- Updated at: 2026-06-30T12:47:21+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Product hardening for Context Pack. Latest product work: `62d40a8 feat: route ci build failure prompts` lets `start --task` route "CI is red", "build failed", and similar CI/build failure phrases to automation/source/tests without treating "red build badge docs" as code failure work. Context areas reviewed at `6ea29a3`.
+- Product hardening for Context Pack. Latest product work: `53d3b3c feat: prepare public beta release` bumps `v0.2.18`, adds dogfood benchmarks, public beta launch copy, skill audit, and top-level Python package source inference. Context areas reviewed at `5d0dafc`.
 
 ## Read First
 1. `.context-pack/CURRENT.md`
@@ -18,9 +18,9 @@
 3. The relevant `.context-pack/AREAS/*.md` files
 
 ## Next Actions
-1. Watch CI after pushing the latest handoff.
-2. Next product iteration: dogfood on 3-5 external repos and collect before/after orientation examples.
-3. Keep improving natural agent triggers only when they reduce manual tool use without making the skill feel heavy.
+1. Push `v0.2.18`, create the GitHub Release from `docs/releases/v0.2.18.md`, and watch CI/release workflows.
+2. npm/PyPI publish still needs registry login or trusted publishing configuration; local `npm whoami` is unauthorized and repo publish variables are not set.
+3. Next product iteration: collect real before/after task traces, not more phrase-only routing.
 
 ## Watch Outs
 - Treat stale context as a hint, not a fact.
@@ -29,7 +29,7 @@
 - Text-budget metrics are approximate (`chars/4`) and should be described as context-size guidance, not exact billing tokens.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (77 passed)
+- `python -m unittest discover -s tests -v` (78 passed)
 - `python scripts/validate_packaged_cli.py`
 - `python -m json.tool plugins/context-pack/.codex-plugin/plugin.json`
 - `python -m json.tool .context-pack/manifest.json`
@@ -49,6 +49,9 @@
 - packaged npm temp repo smoke: `context-pack start --task "나중에 이어가게 정리해줘"` points to checkpoint and packaged `checkpoint --pack` keeps tracked status unchanged
 - packaged npm temp repo smoke: `context-pack start --task "I'm done for now"` points to checkpoint
 - packaged npm temp repo smoke: `context-pack start --task "작업 끝났어"` points to checkpoint
+- dogfood: `psf/requests` with `why are tests failing` selects source/tests, ~27% first-read text
+- dogfood: `pallets/click` with `fix shell completion bug` selects source/tests, ~59% first-read text
+- dogfood: `encode/httpx` with `build failed` selects automation/source/tests, ~79% first-read text after top-level package inference fix
 - `node bin/context-pack.js --help`
 - `npm pack --dry-run`
 - `python -m build`
