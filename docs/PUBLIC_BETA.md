@@ -23,7 +23,9 @@ Examples:
 
 It is intentionally not a vector DB or another agent memory silo. It is markdown-first, git-aware, stale-aware, and explainable. The pack says why each area was selected and reminds the agent to verify source before editing.
 
-The current public beta is CI-tested on Windows/Ubuntu, Python 3.11/3.12, packaged through both Python and npm tarball paths, and dogfooded on public repos. Early read-only dogfood examples selected first-read context from about 27% to 79% of repo text depending on repo shape. That range is honest: curated area docs matter for larger projects.
+The current public beta is CI-tested on Windows/Ubuntu, Python 3.11/3.12, packaged through both Python and npm tarball paths, and dogfooded on public repos. The current benchmark run covers 10 public-repo scenarios with 0 weak flags under the harness thresholds. First-read routing varied by repo shape: examples include `psf/requests` at ~27% of repo text, `gin-gonic/gin` at ~4%, `expressjs/express` at ~9%, and three `mozilla/BrowserQuest` web-game tasks at ~16-17% of broad repo text. A synthetic orientation proxy also reduced a broad 64-file first read to 2 files, ~97% less approximate text budget.
+
+Those numbers are intentionally narrow claims: they measure deterministic orientation and approximate text-budget reduction, not provider billing tokens or independent-agent patch quality. Curated area docs still matter for larger projects.
 
 Looking for feedback from heavy Codex/Claude/Cursor users, especially people moving work between local and cloud worktrees.
 
@@ -31,16 +33,13 @@ Repo: https://github.com/Fharena/context-pack
 
 ## X / Short Social
 
-I built Context Pack so coding agents stop rediscovering the same repo every session.
+Context Pack gives Codex/Claude/Cursor a repo-local map before broad reading.
 
-It gives Codex/Claude/Cursor a repo-local `.context-pack/` map before broad reading:
+Benchmarked: 10 public-repo scenarios, 0 weak flags; BrowserQuest first-read was 16-17% of repo text.
 
-- "why are tests failing" -> source/tests
-- "CI is red" -> automation/source/tests
-- "review this branch" -> review pack
-- "done for now" -> checkpoint
+코딩 에이전트가 repo를 다시 훑기 전에 필요한 맥락부터 보게 합니다.
 
-Public beta: https://github.com/Fharena/context-pack
+https://github.com/Fharena/context-pack
 
 ## Show HN Title
 

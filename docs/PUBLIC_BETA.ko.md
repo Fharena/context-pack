@@ -23,7 +23,9 @@ Context Pack은 제가 코딩 에이전트와 긴 작업을 하다가 만든 도
 
 벡터 DB나 또 다른 agent memory silo가 아닙니다. Markdown-first, git-aware, stale-aware, explainable한 routing layer입니다. pack은 왜 그 area가 선택됐는지 보여주고, 편집 전 source verification을 요구합니다.
 
-현재 public beta는 Windows/Ubuntu, Python 3.11/3.12 CI를 통과했고, Python/npm tarball build path를 검증했으며, 공개 repo dogfood도 했습니다. read-only dogfood에서는 repo 구조에 따라 first-read context가 repo text의 약 27%-79% 범위였습니다. 이 범위는 일부러 정직하게 적었습니다. 큰 프로젝트에서는 curated area docs가 중요합니다.
+현재 public beta는 Windows/Ubuntu, Python 3.11/3.12 CI를 통과했고, Python/npm tarball build path를 검증했으며, 공개 repo dogfood도 했습니다. 현재 benchmark run은 공개 repo 10개 시나리오를 다루고, harness threshold 기준 weak flag는 0개였습니다. first-read routing은 repo 구조에 따라 달랐습니다. 예를 들어 `psf/requests`는 repo text의 약 27%, `gin-gonic/gin`은 약 4%, `expressjs/express`는 약 9%, `mozilla/BrowserQuest` 웹게임 작업 3개는 넓은 repo text의 약 16-17%에서 시작했습니다. synthetic orientation proxy에서는 넓은 64-file first read를 2 files로 줄였고, 대략적인 text budget 기준 약 97% 감소했습니다.
+
+이 숫자는 일부러 좁게 주장합니다. 검증한 것은 deterministic orientation과 approximate text-budget reduction이지, provider billing token이나 independent-agent patch quality가 아닙니다. 큰 프로젝트에서는 curated area docs가 여전히 중요합니다.
 
 Codex/Claude/Cursor를 많이 쓰고, local/cloud worktree를 오가는 분들의 피드백을 받고 싶습니다.
 
@@ -31,13 +33,10 @@ Repo: https://github.com/Fharena/context-pack
 
 ## 짧은 소셜 문안
 
-코딩 에이전트가 매 세션마다 repo를 다시 읽지 않게 하려고 Context Pack을 만들었습니다.
+Context Pack gives Codex/Claude/Cursor a repo-local map before broad reading.
 
-Codex/Claude/Cursor가 넓게 읽기 전에 repo-local `.context-pack/` 지도를 봅니다.
+Benchmarked: 10 public-repo scenarios, 0 weak flags; BrowserQuest first-read was 16-17% of repo text.
 
-- "why are tests failing" -> source/tests
-- "CI is red" -> automation/source/tests
-- "review this branch" -> review pack
-- "done for now" -> checkpoint
+코딩 에이전트가 repo를 다시 훑기 전에 필요한 맥락부터 보게 합니다.
 
-Public beta: https://github.com/Fharena/context-pack
+https://github.com/Fharena/context-pack
