@@ -1,6 +1,6 @@
 {
   "name": "@fharena/context-pack",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Agent-first repo context for coding agents.",
   "license": "MIT",
   "bin": {

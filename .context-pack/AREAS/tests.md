@@ -33,6 +33,7 @@ stale_if:
 - Coverage includes no-git initialization, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, packaged natural-language start routing, scope-reduction pack output, dirty file packs, task keyword packs, committed review packs, and hook idempotency.
 - Natural-language product promises should stay covered by a small-repo flow: English fix, crash, and broken/not-working bug orientation, Korean bug orientation, failing-test and CI/build failure orientation, dirty and committed branch review, soft review wording, long and short handoff wording, and handoff checkpoint.
 - First-run inference coverage should include common top-level Python package source layouts such as `httpx/`.
+- First-run inference coverage should include common web game layouts with `client/js`, `server/js`, `shared/js`, and sprite assets so BrowserQuest-like repos do not regress to overview-only context.
 - Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
 - Git tests configure user identity locally in temp repos.
@@ -53,6 +54,7 @@ stale_if:
 - README advertises "why are tests failing" but tests do not prove that source context is included with tests.
 - CI/build failure routing coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Top-level Python package inference is removed, so real repos without `src/` miss source context during first-run routing.
+- Web/client-server JavaScript inference is removed, so BrowserQuest-like repos miss source/sprite context during first-run routing.
 - English broken/not-working routing coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Korean bug routing tests cover only "버그 고쳐줘" and miss "버그 잡아줘" / "문제 해결해줘" variants or their false-positive guard.
 - Packaged CLI validation covers bug/review prompts but not the resume-later handoff prompt from the public docs.

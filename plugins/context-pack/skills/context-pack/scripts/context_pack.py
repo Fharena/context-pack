@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.18"
+CONTEXT_PACK_VERSION = "0.2.19"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -654,10 +654,34 @@ SOURCE_TOP_LEVEL_EXCLUDES = {
     "tests",
 }
 
+WEB_SOURCE_PATHS = [
+    "client/js/**",
+    "server/js/**",
+    "shared/js/**",
+    "client/src/**",
+    "server/src/**",
+    "shared/src/**",
+    "frontend/src/**",
+    "backend/src/**",
+    "web/src/**",
+]
+
+WEB_SOURCE_START_FILES = [
+    "client/js/*.js",
+    "server/js/*.js",
+    "shared/js/*.js",
+    "client/src",
+    "server/src",
+    "shared/src",
+    "frontend/src",
+    "backend/src",
+    "web/src",
+]
+
 
 def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
-    paths = ["src/**", "lib/**", "app/**", "packages/**"]
-    start_files = ["src", "lib", "app", "packages"]
+    paths = ["src/**", "lib/**", "app/**", "packages/**"] + WEB_SOURCE_PATHS
+    start_files = ["src", "lib", "app", "packages"] + WEB_SOURCE_START_FILES
     for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
         if not child.is_dir():
             continue
@@ -680,7 +704,24 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "paths": source_paths,
             "start_files": source_start_files,
             "tests": ["tests/**", "test/**"],
-            "keywords": ["source", "implementation", "application", "library"],
+            "keywords": [
+                "source",
+                "implementation",
+                "application",
+                "library",
+                "client",
+                "server",
+                "shared",
+                "frontend",
+                "backend",
+                "web",
+                "mobile",
+                "touch",
+                "canvas",
+                "websocket",
+                "socket",
+                "loading",
+            ],
             "contracts": [
                 "Verify behavior in source before trusting summaries.",
                 "Keep public interfaces backward compatible unless the task explicitly changes them.",
@@ -690,6 +731,89 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "Assuming generated or stale context docs reflect current source behavior.",
             ],
             "stale_if_paths": source_paths,
+        },
+        "assets": {
+            "doc": path_text(layout.areas_dir / "assets.md"),
+            "description": "Static assets and frontend media that do not have a more specific inferred area.",
+            "paths": [
+                "assets/**",
+                "public/assets/**",
+                "static/**",
+                "shared/assets/**",
+            ],
+            "start_files": [
+                "assets",
+                "public/assets",
+                "static",
+                "shared/assets",
+            ],
+            "tests": [],
+            "keywords": ["asset", "assets", "static", "media"],
+            "contracts": [
+                "Verify asset paths against the loader code before renaming or moving files.",
+                "Keep generated or exported asset formats compatible with runtime consumers.",
+            ],
+            "failure_modes": [
+                "Treating missing assets as code-only bugs without checking manifests or generated maps.",
+                "Reading large generated assets before identifying the loader or manifest contract.",
+            ],
+            "stale_if_paths": [
+                "assets/**",
+                "public/assets/**",
+                "static/**",
+                "shared/assets/**",
+            ],
+        },
+        "sprites": {
+            "doc": path_text(layout.areas_dir / "sprites.md"),
+            "description": "Sprite manifests, animation metadata, and game entity visual definitions.",
+            "paths": ["client/sprites/**", "sprites/**"],
+            "start_files": ["client/sprites", "sprites"],
+            "tests": [],
+            "keywords": ["sprite", "sprites", "animation", "animations", "entity", "entities"],
+            "contracts": [
+                "Sprite metadata must match the loader and renderer expectations.",
+                "Sprite names and frame data should stay compatible with entity and item references.",
+            ],
+            "failure_modes": [
+                "Debugging renderer code while ignoring missing or renamed sprite manifests.",
+                "Changing sprite metadata without checking references from gameplay code.",
+            ],
+            "stale_if_paths": ["client/sprites/**", "sprites/**"],
+        },
+        "maps": {
+            "doc": path_text(layout.areas_dir / "maps.md"),
+            "description": "Map, level, tile, and world data plus map conversion tooling.",
+            "paths": ["client/maps/**", "server/maps/**", "tools/maps/**", "maps/**"],
+            "start_files": ["client/maps", "server/maps", "tools/maps", "maps"],
+            "tests": [],
+            "keywords": ["map", "maps", "level", "levels", "tile", "tiles", "world", "tmx"],
+            "contracts": [
+                "Client and server map data must describe compatible world geometry.",
+                "Generated map data should be regenerated or verified when conversion tools change.",
+            ],
+            "failure_modes": [
+                "Fixing only client map data while server collision or spawn data still disagrees.",
+                "Reading large map exports before checking the converter or failing map section.",
+            ],
+            "stale_if_paths": ["client/maps/**", "server/maps/**", "tools/maps/**", "maps/**"],
+        },
+        "media": {
+            "doc": path_text(layout.areas_dir / "media.md"),
+            "description": "Images, audio, cursors, and presentation media for frontend or game clients.",
+            "paths": ["client/img/**", "client/audio/**", "public/img/**", "public/audio/**", "media/**"],
+            "start_files": ["client/img", "client/audio", "public/img", "public/audio", "media"],
+            "tests": [],
+            "keywords": ["image", "images", "audio", "sound", "sounds", "cursor", "media"],
+            "contracts": [
+                "Runtime asset URLs should match deployed file paths and cache assumptions.",
+                "Binary media should be verified by path and metadata rather than read as text.",
+            ],
+            "failure_modes": [
+                "Assuming media files are text-readable or useful to load into the model.",
+                "Changing references without checking generated bundles or preload lists.",
+            ],
+            "stale_if_paths": ["client/img/**", "client/audio/**", "public/img/**", "public/audio/**", "media/**"],
         },
         "tests": {
             "doc": path_text(layout.areas_dir / "tests.md"),
@@ -1944,6 +2068,26 @@ def selected_area_matches(
         )
         selections.sort(key=lambda item: (-item.score, item.area_id))
 
+    if (
+        selected_ids & {"assets", "sprites", "maps", "media"}
+        and "source" in areas
+        and "source" not in selected_ids
+        and is_code_task_hint(task_tokens, task_text)
+    ):
+        score = max(
+            (item.score for item in selections if item.area_id in {"assets", "sprites", "maps", "media"}),
+            default=2,
+        )
+        selections.append(
+            AreaSelection(
+                area_id="source",
+                score=score,
+                reasons=["paired with assets/media for code debugging"],
+                matched_files=[],
+            )
+        )
+        selections.sort(key=lambda item: (-item.score, item.area_id))
+
     if not selections and "overview" in areas:
         starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]
         if "source" in starter_ids and is_code_task_hint(task_tokens, task_text):
@@ -2294,7 +2438,8 @@ def render_pack(
     budget_ratio = round((read_first_tokens / repo_tokens) * 100) if repo_tokens and read_first_tokens else 0
 
     def path_line(item: str) -> str:
-        suffix = "" if item and (repo / item).exists() else " (missing)"
+        is_glob = any(ch in item for ch in "*?[")
+        suffix = "" if is_glob or (item and (repo / item).exists()) else " (missing)"
         return f"- `{item}`{suffix}"
 
     task_label = task if task else ("changed files" if changed else "general orientation")

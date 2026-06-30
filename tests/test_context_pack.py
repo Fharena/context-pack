@@ -1353,6 +1353,60 @@ class ContextPackTests(unittest.TestCase):
             text = output.getvalue()
             self.assertIn("Selected areas: automation, source, tests", text)
 
+    def test_measure_before_setup_infers_web_game_source_and_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "client/js").mkdir(parents=True)
+            (repo / "server/js").mkdir(parents=True)
+            (repo / "shared/js").mkdir(parents=True)
+            (repo / "client/sprites").mkdir(parents=True)
+            (repo / "client/maps").mkdir(parents=True)
+            (repo / "client/js/input.js").write_text("export function handleTouch() {}\n", encoding="utf-8")
+            (repo / "server/js/main.js").write_text("function connect() {}\n", encoding="utf-8")
+            (repo / "shared/js/gametypes.js").write_text("exports.Messages = {};\n", encoding="utf-8")
+            (repo / "client/sprites/player.json").write_text('{"id":"player"}\n', encoding="utf-8")
+            (repo / "client/maps/world_client.json").write_text('{"height":1,"width":1}\n', encoding="utf-8")
+
+            mobile_output = io.StringIO()
+            with contextlib.redirect_stdout(mobile_output):
+                self.assertEqual(
+                    self.engine.main(
+                        [
+                            "measure",
+                            "--repo",
+                            str(repo),
+                            "--task",
+                            "fix mobile controls bug on touch devices",
+                        ]
+                    ),
+                    0,
+                )
+
+            mobile_text = mobile_output.getvalue()
+            self.assertIn("Selected areas: source", mobile_text)
+            self.assertIn("- source: task matched keywords:", mobile_text)
+            self.assertNotIn("overview: fallback orientation", mobile_text)
+
+            asset_output = io.StringIO()
+            with contextlib.redirect_stdout(asset_output):
+                self.assertEqual(
+                    self.engine.main(
+                        [
+                            "measure",
+                            "--repo",
+                            str(repo),
+                            "--task",
+                            "fix missing sprite asset loading bug",
+                        ]
+                    ),
+                    0,
+                )
+
+            asset_text = asset_output.getvalue()
+            self.assertIn("Selected areas: source, sprites", asset_text)
+            self.assertIn("- sprites: task matched keywords:", asset_text)
+            self.assertFalse((repo / ".context-pack").exists())
+
     def test_changed_file_selects_area_and_generates_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

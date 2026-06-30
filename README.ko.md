@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.18"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.19"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -45,6 +45,8 @@ Context Pack은 이제 public beta 단계입니다. 현재 릴리즈는 Windows/
 | `psf/requests` | `why are tests failing` | `source, tests` | repo text의 약 27% |
 | `pallets/click` | `fix shell completion bug` | `source, tests` | repo text의 약 59% |
 | `encode/httpx` | `build failed` | `automation, source, tests` | repo text의 약 79% |
+
+별도 A/B 오리엔테이션 run에서는 [`mozilla/BrowserQuest`](https://github.com/mozilla/BrowserQuest)의 넓은 repo text가 약 602.2k tokens였습니다. Context Pack first-read routing은 웹게임 작업 3개를 약 98.2k-103.6k tokens에서 시작하게 했고, 이는 repo text의 약 16-17%입니다.
 
 일부러 좋은 숫자만 고르지 않았습니다. 첫 실행 추론은 방향 잡기에 도움을 주지만, 큰 repo에서는 curated area 문서가 중요합니다. 전체 표와 방법론, 한계는 [벤치마크 문서](docs/BENCHMARKS.ko.md)에 정리했습니다.
 
@@ -594,4 +596,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.18](https://github.com/Fharena/context-pack/releases/tag/v0.2.18).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.19](https://github.com/Fharena/context-pack/releases/tag/v0.2.19).

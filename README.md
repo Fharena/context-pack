@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.18"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.19"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -44,6 +44,8 @@ Read-only dogfood runs with no `.context-pack/` installed selected focused start
 | `psf/requests` | `why are tests failing` | `source, tests` | ~27% of repo text |
 | `pallets/click` | `fix shell completion bug` | `source, tests` | ~59% of repo text |
 | `encode/httpx` | `build failed` | `automation, source, tests` | ~79% of repo text |
+
+In a separate A/B orientation run on [`mozilla/BrowserQuest`](https://github.com/mozilla/BrowserQuest), broad repo text was ~602.2k tokens. Context Pack first-read routing started three web game tasks from ~98.2k-103.6k tokens (`source` or `source, sprites`), about 16-17% of the repo text.
 
 Those numbers are intentionally honest: first-run inferred areas help orientation, but curated area docs matter for larger repos. See [benchmarks](docs/BENCHMARKS.md) for the full table, methodology, and limitations.
 
@@ -576,4 +578,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.18](https://github.com/Fharena/context-pack/releases/tag/v0.2.18).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.19](https://github.com/Fharena/context-pack/releases/tag/v0.2.19).

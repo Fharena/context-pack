@@ -30,11 +30,13 @@ stale_if:
 - Context docs are routing hints, not ground truth.
 - If HEAD, dirty files, or diff hash differ from the pack, verify source code before acting.
 - Generated packs are temporary and should not be committed.
+- Public benchmark claims should distinguish deterministic orientation/token-budget comparisons from true independent-agent task success.
 
 ## Common Failure Modes
 - Trusting stale summaries after the code moved on.
 - Reading append-only logs before the current source of truth.
 - Editing a copied checkout or generated file instead of the canonical workspace.
+- Presenting a routing/token reduction benchmark as if it proved final patch quality or wall-clock agent performance.
 
 ## Expand Scope If
 - Public API, CLI, schema, storage format, subprocess launch, or test helpers changed.

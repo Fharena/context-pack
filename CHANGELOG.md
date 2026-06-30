@@ -4,6 +4,13 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.19] - 2026-06-30
+
+### Changed
+
+- Improved first-run inference for web game and client/server JavaScript repos by recognizing `client/js`, `server/js`, and `shared/js`, splitting `sprites`, `maps`, and `media` from generic assets, and avoiding vendored `client/js/lib` in initial read-first globs.
+- Added an A/B orientation benchmark on `mozilla/BrowserQuest` showing task-specific first reads at ~16-17% of broad repo text for mobile controls, sprite asset loading, and websocket connection prompts.
+
 ## [0.2.18] - 2026-06-30
 
 ### Changed
