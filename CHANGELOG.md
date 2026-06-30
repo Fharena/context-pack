@@ -4,6 +4,10 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Added remaining-validation artifacts for deterministic A/B proxy checks, fresh-clone session consistency, and post-release install path validation.
+
 ## [0.2.20] - 2026-06-30
 
 ### Added

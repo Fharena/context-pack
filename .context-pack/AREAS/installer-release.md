@@ -59,6 +59,7 @@ stale_if:
 - `scripts/install_skill.py`
 - `scripts/install_plugin.py`
 - `scripts/benchmark_context_pack.py`
+- `scripts/validate_remaining.py`
 - `scripts/validate_packaged_cli.py`
 - `.agents/plugins/marketplace.json`
 - `.github/workflows/ci.yml`
@@ -81,6 +82,7 @@ stale_if:
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
 - Public beta docs should include honest benchmark evidence and launch copy without claiming universal token savings.
 - Benchmark docs should be reproducible from `scripts/benchmark_context_pack.py` and should keep generated JSON/Markdown artifacts in sync when claims change.
+- Remaining validation docs should distinguish installability/routing consistency from true independent-agent patch quality.
 - Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, CI/build failure, English broken/not-working bug prompts, Korean bug-fix variants, committed branch-review, soft dirty-review, Korean dirty-review, long handoff, and short handoff starts.
 
 ## Common Failure Modes
@@ -111,6 +113,7 @@ stale_if:
 - README makes `install-agent-docs` sound required for single-agent Codex use.
 - Release notes claim registry availability before npm/PyPI authentication or trusted publishing is configured.
 - Benchmark claims drift from the latest generated artifacts or imply independent-agent patch quality.
+- Validation docs claim npm/PyPI registry availability when only GitHub release assets are available.
 
 ## Expand Scope If
 - Moving from local marketplace install to packaged release.

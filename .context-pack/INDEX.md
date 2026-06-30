@@ -32,11 +32,13 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
   - `scripts/benchmark_context_pack.py`
+  - `scripts/validate_remaining.py`
   - `scripts/validate_packaged_cli.py`
 - Matches:
   - `scripts/install_skill.py`
   - `scripts/install_plugin.py`
   - `scripts/benchmark_context_pack.py`
+  - `scripts/validate_remaining.py`
   - `scripts/validate_packaged_cli.py`
   - `.agents/plugins/marketplace.json`
   - `.github/**`
@@ -66,6 +68,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `npm pack --dry-run`
   - `python scripts/validate_packaged_cli.py`
   - `python scripts/benchmark_context_pack.py --public --fail-on-weak`
+  - `python scripts/validate_remaining.py --fail-on-weak`
   - `context-pack setup --repo <tmp> --quiet`
   - `context-pack doctor --repo <tmp> --fix --quiet`
   - `context-pack status --quiet`

@@ -1,0 +1,124 @@
+{
+  "engine_version": "0.2.20",
+  "generated_at": "2026-06-30T14:33:32+09:00",
+  "session_consistency": {
+    "name": "session-consistency",
+    "prompts": [
+      {
+        "clone": {
+          "read_first_entries": 4,
+          "read_first_files": 4,
+          "read_ratio": 6,
+          "read_tokens": 421,
+          "repo_tokens": 6572,
+          "selected": [
+            "source",
+            "tests"
+          ]
+        },
+        "name": "tests-failing",
+        "prompt": "why are tests failing",
+        "same_signature": true,
+        "source": {
+          "read_first_entries": 4,
+          "read_first_files": 4,
+          "read_ratio": 6,
+          "read_tokens": 421,
+          "repo_tokens": 6572,
+          "selected": [
+            "source",
+            "tests"
+          ]
+        },
+        "weak_flags": []
+      },
+      {
+        "clone": {
+          "read_first_entries": 6,
+          "read_first_files": 6,
+          "read_ratio": 10,
+          "read_tokens": 626,
+          "repo_tokens": 6572,
+          "selected": [
+            "automation",
+            "source",
+            "tests"
+          ]
+        },
+        "name": "ci-red",
+        "prompt": "ci is red",
+        "same_signature": true,
+        "source": {
+          "read_first_entries": 6,
+          "read_first_files": 6,
+          "read_ratio": 10,
+          "read_tokens": 626,
+          "repo_tokens": 6572,
+          "selected": [
+            "automation",
+            "source",
+            "tests"
+          ]
+        },
+        "weak_flags": []
+      },
+      {
+        "clone": {
+          "read_first_entries": 4,
+          "read_first_files": 4,
+          "read_ratio": 6,
+          "read_tokens": 421,
+          "repo_tokens": 6572,
+          "selected": [
+            "source",
+            "tests"
+          ]
+        },
+        "name": "login-timeout",
+        "prompt": "fix login timeout",
+        "same_signature": true,
+        "source": {
+          "read_first_entries": 4,
+          "read_first_files": 4,
+          "read_ratio": 6,
+          "read_tokens": 421,
+          "repo_tokens": 6572,
+          "selected": [
+            "source",
+            "tests"
+          ]
+        },
+        "weak_flags": []
+      }
+    ],
+    "same_all": true
+  },
+  "subject_head": "b2a66032ba93",
+  "synthetic_ab": {
+    "expected_files": [
+      "src/auth.py",
+      "tests/test_auth.py"
+    ],
+    "name": "synthetic-test-failure",
+    "prompt": "why are tests failing",
+    "weak_flags": [],
+    "with_context": {
+      "expected_files_present": true,
+      "read_first_files": 2,
+      "read_ratio": 3,
+      "read_tokens": 51,
+      "reduction": 97,
+      "selected": [
+        "source",
+        "tests"
+      ]
+    },
+    "without_context": {
+      "files": 64,
+      "mode": "broad repo text budget",
+      "text_files": 64,
+      "tokens": 1570
+    }
+  },
+  "workdir": "C:\\Users\\99yoo\\AppData\\Local\\Temp\\context-pack-remaining-5iv4dqeq"
+}
