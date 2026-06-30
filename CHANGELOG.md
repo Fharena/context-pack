@@ -4,6 +4,8 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-06-30
+
 ### Changed
 
 - Refined public docs and GitHub templates to use the current `context-pack` CLI, vendor-neutral `.context-pack/` paths, and agent-first wording that frames packs as focused triage instead of a manual chore.
@@ -25,6 +27,8 @@ All notable changes to Context Pack will be documented here.
 - Broadened Korean bug routing for prompts like "버그 잡아줘" and "문제 해결해줘" while avoiding meta/documentation phrases such as "버그 리포트 문서 정리".
 - Broadened English bug routing for broken/not-working prompts like "login is broken" and "checkout doesn't work" while avoiding loose matches such as "broken link report".
 - Routed CI/build failure prompts like "CI is red" and "build failed" to automation/source/tests while avoiding badge/docs false positives.
+- Inferred top-level Python package directories such as `httpx/` as source areas, improving first-run routing for repos that do not use `src/`.
+- Added public beta dogfood benchmarks, launch copy, and a Codex skill audit for release readiness.
 
 ## [0.2.17] - 2026-06-27
 

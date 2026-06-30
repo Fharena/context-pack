@@ -38,6 +38,7 @@ stale_if:
 - Trigger language must cover install/update requests, start routing, initialization, context packs, review packs, checkpoints, status, stale checks, mark-reviewed, and token-saving orientation.
 - Shared agent-doc guidance should make Context Pack feel proactive, not like a manual CLI chore.
 - Skill and generated agent-doc examples should stay aligned with the router's natural-language surface, including softer review wording such as "look over my changes" and short handoff wording such as "I'm done for now".
+- Skill trigger language should mention CI/build failure debugging when the deterministic router supports "CI is red" / "build failed".
 
 ## Common Failure Modes
 - Skill docs drift from engine commands.
@@ -51,6 +52,7 @@ stale_if:
 - Claude/Cursor guidance drifts from the generated `AGENTS.md` rule block.
 - Skill examples promise natural review handling that the deterministic `start --task` intent guard does not recognize.
 - Skill examples promise short handoff handling that the deterministic `start --task` intent guard does not recognize.
+- Skill metadata omits CI/build failure debugging after README and engine advertise it.
 
 ## Expand Scope If
 - New commands are added.

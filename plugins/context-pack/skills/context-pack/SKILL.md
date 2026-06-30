@@ -1,13 +1,13 @@
 ---
 name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when the user naturally asks to fix a bug, debug failing tests, review a branch or PR, continue or hand off work, or start non-trivial coding where the agent would otherwise read broadly. Skip tiny obvious edits, pure Q&A, or tasks where relevant files are already known.
+description: Prepare focused repo context for coding agents. Use proactively when the user naturally asks to fix a bug, debug failing tests or CI/build failures, review a branch or PR, continue or hand off work, or start non-trivial coding where the agent would otherwise read broadly. Skip tiny obvious edits, pure Q&A, or tasks where relevant files are already known.
 ---
 
 # Context Pack
 
 Context Pack is an agent behavior, not a command the user should have to remember.
 
-When a user says things like "fix this bug", "review this branch", "look over my changes", "why are tests failing?", "continue this from the last session", "I'm done for now", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
+When a user says things like "fix this bug", "why are tests failing?", "CI is red", "review this branch", "look over my changes", "continue this from the last session", "I'm done for now", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
 
 ## Core Loop
 

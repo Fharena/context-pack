@@ -1,6 +1,6 @@
 {
   "name": "context-pack",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "description": "Repo-local context packs and handoff checkpoints for coding agents.",
   "author": {
     "name": "Context Pack"
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Context Pack",
     "shortDescription": "Start agents from focused repo context.",
-    "longDescription": "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns natural requests like fixing bugs, debugging failing tests, reviewing branches, and handing off work into focused task or review packs with relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by default.",
+    "longDescription": "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns natural requests like fixing bugs, debugging failing tests or CI builds, reviewing branches, and handing off work into focused task or review packs with relevant files, contracts, tests, and stale warnings, while keeping generated checkpoints local by default.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [
@@ -29,6 +29,7 @@
     "defaultPrompt": [
       "Fix a bug from focused repo context.",
       "Review this branch without rereading the whole repo.",
+      "Debug a red CI build from the right files.",
       "Leave this work easy to resume later."
     ],
     "brandColor": "#2563EB"

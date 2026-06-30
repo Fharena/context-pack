@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.17"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.18"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -15,8 +15,10 @@
 <p align="center">
   <a href="README.md">English</a> ·
   <a href="#설치">설치</a> ·
+  <a href="docs/BENCHMARKS.ko.md">벤치마크</a> ·
   <a href="#터미널-데모">터미널 데모</a> ·
   <a href="#작동-방식">작동 방식</a> ·
+  <a href="docs/PUBLIC_BETA.ko.md">홍보 초안</a> ·
   <a href="docs/RELEASE.ko.md">릴리즈 가이드</a>
 </p>
 
@@ -31,6 +33,20 @@
 Context Pack은 repo 안에 작은 프로젝트 도서관을 만들고, git 상태를 checkpoint하고, 작업별로 필요한 문서와 파일만 모은 compact `.context-pack/packs/CONTEXT_PACK.md`를 생성합니다. 핵심은 "AI memory"가 아니라 **지금 작업에 필요한 것만 먼저 읽게 하는 context router**입니다.
 
 요즘 코딩 에이전트 작업은 로컬 IDE 한 곳에만 머물지 않습니다. Codex app/cloud worktree, Claude 원격 작업, Cursor, CLI, 다른 기기 사이를 오가게 됩니다. 작업 위치가 바뀌면, repo 자체가 최소한의 지도를 들고 있어야 합니다.
+
+## Public Beta Snapshot
+
+Context Pack은 이제 public beta 단계입니다. 현재 릴리즈는 Windows/Ubuntu, Python 3.11/3.12 CI를 통과하고, Node wrapper와 Python wheel/sdist build 경로를 검증하며, 실제 공개 repo에서 읽기 전 context routing을 dogfood한 뒤 배포합니다.
+
+`.context-pack/`가 없는 repo에서 read-only dogfood를 돌렸을 때, 넓게 읽기 전에 다음 시작 영역을 골랐습니다.
+
+| Repo | Prompt | 먼저 고른 영역 | 대략적인 first-read text |
+| --- | --- | --- | --- |
+| `psf/requests` | `why are tests failing` | `source, tests` | repo text의 약 27% |
+| `pallets/click` | `fix shell completion bug` | `source, tests` | repo text의 약 59% |
+| `encode/httpx` | `build failed` | `automation, source, tests` | repo text의 약 79% |
+
+일부러 좋은 숫자만 고르지 않았습니다. 첫 실행 추론은 방향 잡기에 도움을 주지만, 큰 repo에서는 curated area 문서가 중요합니다. 전체 표와 방법론, 한계는 [벤치마크 문서](docs/BENCHMARKS.ko.md)에 정리했습니다.
 
 ## 누구에게 맞는가
 
@@ -578,4 +594,4 @@ GitHub Actions에서는 Windows/Ubuntu, Python 3.11/3.12 조합으로 stdlib uni
 
 ## 릴리즈
 
-변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.17](https://github.com/Fharena/context-pack/releases/tag/v0.2.17).
+변경 기록은 [CHANGELOG.md](CHANGELOG.md)와 [docs/RELEASE.ko.md](docs/RELEASE.ko.md)를 보세요. 현재 릴리즈: [v0.2.18](https://github.com/Fharena/context-pack/releases/tag/v0.2.18).

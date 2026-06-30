@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.17"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.18"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -16,8 +16,10 @@
   <a href="README.ko.md">한국어</a> ·
   <a href="#install">Install</a> ·
   <a href="#basic-usage-flow">Usage</a> ·
+  <a href="docs/BENCHMARKS.md">Benchmarks</a> ·
   <a href="#terminal-demo">Terminal Demo</a> ·
   <a href="#how-it-works">How It Works</a> ·
+  <a href="docs/PUBLIC_BETA.md">Launch Notes</a> ·
   <a href="docs/RELEASE.md">Release Guide</a>
 </p>
 
@@ -30,6 +32,20 @@ Give coding agents a map before they start reading your repo.
 Context Pack keeps a small repo-local project library, checkpoints git state, and generates compact task-specific reading packs before an agent reads broadly. It is markdown-first, git-aware, stale-aware, and intentionally light: deterministic script first, semantic agent judgment second.
 
 This gets more useful as coding agents move across local IDEs, cloud worktrees, hosted app sessions, and remote machines. When the workspace changes, the repo should carry the map.
+
+## Public Beta Snapshot
+
+Context Pack is now in public beta. The current release is CI-tested on Windows and Ubuntu with Python 3.11/3.12, packaged through the Node wrapper and Python wheel/sdist build path, and dogfooded on real public repositories before release.
+
+Read-only dogfood runs with no `.context-pack/` installed selected focused starting areas before broad reading:
+
+| Repo | Prompt | Selected first | Approx first-read text |
+| --- | --- | --- | --- |
+| `psf/requests` | `why are tests failing` | `source, tests` | ~27% of repo text |
+| `pallets/click` | `fix shell completion bug` | `source, tests` | ~59% of repo text |
+| `encode/httpx` | `build failed` | `automation, source, tests` | ~79% of repo text |
+
+Those numbers are intentionally honest: first-run inferred areas help orientation, but curated area docs matter for larger repos. See [benchmarks](docs/BENCHMARKS.md) for the full table, methodology, and limitations.
 
 ## Who It Is For
 
@@ -560,4 +576,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.17](https://github.com/Fharena/context-pack/releases/tag/v0.2.17).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.18](https://github.com/Fharena/context-pack/releases/tag/v0.2.18).

@@ -62,7 +62,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.17"
+CONTEXT_PACK_VERSION = "0.2.18"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 TOKEN_STOP_WORDS = {
     "about",
@@ -634,14 +634,51 @@ def existing_patterns(repo: Path, patterns: list[str]) -> list[str]:
     return [pattern for pattern in patterns if pattern_has_match(repo, pattern)]
 
 
+SOURCE_TOP_LEVEL_EXCLUDES = {
+    ".git",
+    ".github",
+    ".hg",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "docs",
+    "examples",
+    "scripts",
+    "spec",
+    "test",
+    "tests",
+}
+
+
+def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
+    paths = ["src/**", "lib/**", "app/**", "packages/**"]
+    start_files = ["src", "lib", "app", "packages"]
+    for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
+        if not child.is_dir():
+            continue
+        name = child.name
+        if name in SOURCE_TOP_LEVEL_EXCLUDES or name.startswith("."):
+            continue
+        if (child / "__init__.py").is_file():
+            paths.append(f"{name}/**")
+            start_files.append(name)
+    return paths, start_files
+
+
 def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) -> dict[str, dict[str, Any]]:
     layout = layout or resolve_layout(repo)
+    source_paths, source_start_files = inferred_source_paths(repo)
     candidates = {
         "source": {
             "doc": path_text(layout.areas_dir / "source.md"),
             "description": "Application or library source code.",
-            "paths": ["src/**", "lib/**", "app/**", "packages/**"],
-            "start_files": ["src", "lib", "app", "packages"],
+            "paths": source_paths,
+            "start_files": source_start_files,
             "tests": ["tests/**", "test/**"],
             "keywords": ["source", "implementation", "application", "library"],
             "contracts": [
@@ -652,7 +689,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "Changing implementation without updating nearby tests.",
                 "Assuming generated or stale context docs reflect current source behavior.",
             ],
-            "stale_if_paths": ["src/**", "lib/**", "app/**", "packages/**"],
+            "stale_if_paths": source_paths,
         },
         "tests": {
             "doc": path_text(layout.areas_dir / "tests.md"),

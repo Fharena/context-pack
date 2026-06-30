@@ -1330,6 +1330,29 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue((repo / ".context-pack/AREAS/tests.md").exists())
             self.assertTrue((repo / ".context-pack/AREAS/docs.md").exists())
 
+    def test_init_inferrs_top_level_python_package_as_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "httpx").mkdir()
+            (repo / "tests").mkdir()
+            (repo / ".github/workflows").mkdir(parents=True)
+            (repo / "httpx/__init__.py").write_text("__version__ = '0.0.0'\n", encoding="utf-8")
+            (repo / "tests/test_client.py").write_text("def test_client():\n    pass\n", encoding="utf-8")
+            (repo / ".github/workflows/ci.yml").write_text("name: CI\n", encoding="utf-8")
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
+            source = manifest["areas"]["source"]
+            self.assertIn("httpx/**", source["paths"])
+            self.assertIn("httpx", source["start_files"])
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "build failed"]), 0)
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: automation, source, tests", text)
+
     def test_changed_file_selects_area_and_generates_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

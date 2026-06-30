@@ -78,6 +78,7 @@ stale_if:
 - README should lead direct terminal users to `context-pack setup` before lower-level commands.
 - README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
 - README should show `doctor --fix` as the recovery path for broken or partial setup.
+- Public beta docs should include honest benchmark evidence and launch copy without claiming universal token savings.
 - Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, CI/build failure, English broken/not-working bug prompts, Korean bug-fix variants, committed branch-review, soft dirty-review, Korean dirty-review, long handoff, and short handoff starts.
 
 ## Common Failure Modes
@@ -106,6 +107,7 @@ stale_if:
 - README teaches `init` plus `install-agent-docs` before the one-command `setup` path.
 - README tells users to reinstall from scratch instead of repairing with `doctor --fix`.
 - README makes `install-agent-docs` sound required for single-agent Codex use.
+- Release notes claim registry availability before npm/PyPI authentication or trusted publishing is configured.
 
 ## Expand Scope If
 - Moving from local marketplace install to packaged release.

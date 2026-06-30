@@ -1,6 +1,6 @@
 interface:
   display_name: "Context Pack"
   short_description: "Start agents from focused repo context"
-  default_prompt: "Fix, review, debug, or hand off work from focused repo context before broad reading."
+  default_prompt: "Fix, review, debug red CI, or hand off work from focused repo context before broad reading."
 policy:
   allow_implicit_invocation: true
