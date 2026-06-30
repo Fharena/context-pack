@@ -45,6 +45,9 @@ stale_if:
 - First-run source inference should include common top-level Python package directories with `__init__.py`, not only `src/`, `lib/`, `app/`, or `packages/`.
 - First-run source inference should include common web/client-server JavaScript layouts such as `client/js`, `server/js`, and `shared/js`, while keeping vendored `client/js/lib` out of the first read.
 - First-run game/frontend asset inference should split generic assets from `sprites`, `maps`, and `media` so one asset prompt does not pull every generated map or binary media path.
+- First-run source/test inference should include common Go repo layouts: root `*.go`, top-level package directories, and `*_test.go`.
+- First-run source inference should include common Rust crate start paths and Rust/filter/search task keywords.
+- Text-budget scanning should skip known binary media/archive/font suffixes and file-size rejects before reading bytes.
 - Korean bug prompts should route common coding phrases like "버그 잡아줘" and "문제 해결해줘" to source/tests while avoiding meta/docs phrases such as "버그 리포트 문서 정리".
 - Natural review prompts should handle softer user wording like "look over my changes" and "변경사항 봐줘" while keeping meta/documentation tasks in normal work mode.
 - Natural handoff prompts should handle short wrap-up wording like "I'm done for now", "wrap this up", and "작업 끝났어" while avoiding broad matches on words like `done` or `wrap`.
@@ -75,6 +78,9 @@ stale_if:
 - Repos with top-level Python packages like `httpx/` miss source context during first-run setup and measure.
 - Web game repos with `client/js`, `server/js`, or `shared/js` fall back to overview-only context because they do not have `src/`.
 - Sprite or map prompts select a broad generic asset area and pull large generated map/media data into the initial read.
+- Go repos such as `gin-gonic/gin` fall back to overview because source inference ignores root Go files and top-level package directories.
+- Rust/search tools select too broad a source/test context because crate paths and filter/search keywords are missing.
+- Media-heavy repos spend seconds reading binary assets before rejecting them as non-text.
 - Korean bug routing is too narrow and misses "버그 잡아줘" / "문제 해결해줘", or too broad and treats bug-report documentation as code work.
 - Natural review intent is either too narrow to catch "look over my changes" / "변경사항 봐줘" or too broad and turns product/documentation work into review mode.
 - Short handoff intent is either too narrow to catch "I'm done for now" / "작업 끝났어" or too broad and turns "done button" / "wrap parser errors" into checkpoint guidance.

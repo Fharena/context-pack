@@ -62,8 +62,40 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.19"
+CONTEXT_PACK_VERSION = "0.2.20"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
+TEXT_BUDGET_BINARY_SUFFIXES = {
+    ".7z",
+    ".avif",
+    ".bmp",
+    ".bz2",
+    ".cur",
+    ".dll",
+    ".dylib",
+    ".eot",
+    ".exe",
+    ".gif",
+    ".gz",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".mp3",
+    ".mp4",
+    ".ogg",
+    ".otf",
+    ".pdf",
+    ".png",
+    ".so",
+    ".tar",
+    ".tgz",
+    ".ttf",
+    ".wav",
+    ".webm",
+    ".webp",
+    ".woff",
+    ".woff2",
+    ".zip",
+}
 TOKEN_STOP_WORDS = {
     "about",
     "after",
@@ -678,10 +710,87 @@ WEB_SOURCE_START_FILES = [
     "web/src",
 ]
 
+GO_SOURCE_DIR_EXCLUDES = SOURCE_TOP_LEVEL_EXCLUDES | {
+    "assets",
+    "benchmark",
+    "benchmarks",
+    "cmdline",
+    "coverage",
+    "fixtures",
+    "testdata",
+    "vendor",
+}
+
+GO_SOURCE_FILE_LIMIT = 24
+GO_TEST_FILE_LIMIT = 24
+RUST_SOURCE_PATHS = ["crates/*/src/**"]
+RUST_SOURCE_START_FILES = ["src/lib.rs", "src/main.rs", "crates/*/src/lib.rs", "crates/*/src/main.rs"]
+
+
+def top_level_source_dirs_with_extension(repo: Path, extension: str, *, exclude_suffix: str = "") -> list[str]:
+    dirs: list[str] = []
+    for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
+        if not child.is_dir():
+            continue
+        name = child.name
+        if name in GO_SOURCE_DIR_EXCLUDES or name.startswith("."):
+            continue
+        try:
+            has_source = any(
+                path.is_file()
+                and path.suffix == extension
+                and (not exclude_suffix or not path.name.endswith(exclude_suffix))
+                for path in child.rglob(f"*{extension}")
+            )
+        except OSError:
+            has_source = False
+        if has_source:
+            dirs.append(name)
+    return dirs
+
+
+def looks_like_go_repo(repo: Path) -> bool:
+    if (repo / "go.mod").is_file():
+        return True
+    try:
+        return any(path.is_file() for path in repo.glob("*.go"))
+    except ValueError:
+        return False
+
+
+def discovered_go_source_files(repo: Path, limit: int = GO_SOURCE_FILE_LIMIT) -> list[str]:
+    if not looks_like_go_repo(repo):
+        return []
+    candidates: list[Path] = []
+    try:
+        candidates.extend(path for path in repo.glob("*.go") if path.is_file() and not path.name.endswith("_test.go"))
+    except ValueError:
+        pass
+    for dirname in top_level_source_dirs_with_extension(repo, ".go", exclude_suffix="_test.go"):
+        try:
+            candidates.extend(
+                path
+                for path in (repo / dirname).glob("*.go")
+                if path.is_file() and not path.name.endswith("_test.go")
+            )
+        except OSError:
+            continue
+    return [rel_to_repo(path, repo) for path in sorted(candidates, key=lambda item: rel_to_repo(item, repo))[:limit]]
+
+
+def discovered_go_test_files(repo: Path, limit: int = GO_TEST_FILE_LIMIT) -> list[str]:
+    if not looks_like_go_repo(repo):
+        return []
+    try:
+        candidates = sorted(repo.glob("**/*_test.go"), key=lambda item: rel_to_repo(item, repo))
+    except ValueError:
+        candidates = []
+    return [rel_to_repo(path, repo) for path in candidates if ".git" not in path.parts][:limit]
+
 
 def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
-    paths = ["src/**", "lib/**", "app/**", "packages/**"] + WEB_SOURCE_PATHS
-    start_files = ["src", "lib", "app", "packages"] + WEB_SOURCE_START_FILES
+    paths = ["src/**", "lib/**", "app/**", "packages/**"] + WEB_SOURCE_PATHS + RUST_SOURCE_PATHS
+    start_files = ["src", "lib", "app", "packages"] + WEB_SOURCE_START_FILES + RUST_SOURCE_START_FILES
     for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
         if not child.is_dir():
             continue
@@ -691,12 +800,28 @@ def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
         if (child / "__init__.py").is_file():
             paths.append(f"{name}/**")
             start_files.append(name)
+    go_source_files = discovered_go_source_files(repo)
+    if go_source_files:
+        paths.extend(["*.go", "cmd/**", "internal/**", "pkg/**"])
+        paths.extend(f"{dirname}/**" for dirname in top_level_source_dirs_with_extension(repo, ".go", exclude_suffix="_test.go"))
+        start_files.extend(go_source_files)
+    return paths, start_files
+
+
+def inferred_test_paths(repo: Path) -> tuple[list[str], list[str]]:
+    paths = ["tests/**", "test/**", "__tests__/**", "spec/**"]
+    start_files = ["tests", "test", "__tests__", "spec"]
+    go_test_files = discovered_go_test_files(repo)
+    if go_test_files:
+        paths.extend(["*_test.go", "**/*_test.go"])
+        start_files.extend(go_test_files)
     return paths, start_files
 
 
 def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) -> dict[str, dict[str, Any]]:
     layout = layout or resolve_layout(repo)
     source_paths, source_start_files = inferred_source_paths(repo)
+    test_paths, test_start_files = inferred_test_paths(repo)
     candidates = {
         "source": {
             "doc": path_text(layout.areas_dir / "source.md"),
@@ -721,6 +846,19 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "websocket",
                 "socket",
                 "loading",
+                "go",
+                "golang",
+                "middleware",
+                "handler",
+                "filter",
+                "regex",
+                "match",
+                "matching",
+                "route",
+                "router",
+                "panic",
+                "rust",
+                "crate",
             ],
             "contracts": [
                 "Verify behavior in source before trusting summaries.",
@@ -818,9 +956,9 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
         "tests": {
             "doc": path_text(layout.areas_dir / "tests.md"),
             "description": "Test suites, fixtures, and validation commands.",
-            "paths": ["tests/**", "test/**", "__tests__/**", "spec/**"],
-            "start_files": ["tests", "test", "__tests__", "spec"],
-            "tests": ["tests/**", "test/**", "__tests__/**", "spec/**"],
+            "paths": test_paths,
+            "start_files": test_start_files,
+            "tests": test_paths,
             "keywords": ["test", "tests", "fixture", "validation", "ci"],
             "contracts": [
                 "Tests should exercise user-visible behavior, not only implementation details.",
@@ -829,7 +967,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "Mocks pass while real integration paths fail.",
                 "Fixtures drift from the source contracts they claim to cover.",
             ],
-            "stale_if_paths": ["tests/**", "test/**", "__tests__/**", "spec/**"],
+            "stale_if_paths": test_paths,
         },
         "docs": {
             "doc": path_text(layout.areas_dir / "docs.md"),
@@ -2227,11 +2365,19 @@ def repo_files(repo: Path) -> list[str]:
 
 
 def readable_text_chars(path: Path) -> int | None:
+    if path.suffix.lower() in TEXT_BUDGET_BINARY_SUFFIXES:
+        return None
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return None
+    if not size or size > TEXT_BUDGET_MAX_FILE_BYTES:
+        return None
     try:
         data = path.read_bytes()
     except OSError:
         return None
-    if not data or len(data) > TEXT_BUDGET_MAX_FILE_BYTES or b"\0" in data:
+    if b"\0" in data:
         return None
     try:
         return len(data.decode("utf-8"))

@@ -1407,6 +1407,56 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- sprites: task matched keywords:", asset_text)
             self.assertFalse((repo / ".context-pack").exists())
 
+    def test_measure_before_setup_infers_go_source_and_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "binding").mkdir()
+            (repo / "render").mkdir()
+            (repo / "testdata").mkdir()
+            (repo / "gin.go").write_text("package gin\n\nfunc New() {}\n", encoding="utf-8")
+            (repo / "context.go").write_text("package gin\n\nfunc recoverPanic() {}\n", encoding="utf-8")
+            (repo / "gin_test.go").write_text("package gin\n\nfunc TestNew() {}\n", encoding="utf-8")
+            (repo / "binding/json.go").write_text("package binding\n\nfunc BindJSON() {}\n", encoding="utf-8")
+            (repo / "binding/json_test.go").write_text("package binding\n\nfunc TestBindJSON() {}\n", encoding="utf-8")
+            (repo / "render/html.go").write_text("package render\n\nfunc HTML() {}\n", encoding="utf-8")
+            (repo / "testdata/fixture.go").write_text("package testdata\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(["measure", "--repo", str(repo), "--task", "fix middleware panic bug"]),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("Selected areas: source", text)
+            self.assertIn("- source: task matched keywords:", text)
+            self.assertNotIn("overview: fallback orientation", text)
+
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+            manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
+            source = manifest["areas"]["source"]
+            tests = manifest["areas"]["tests"]
+            self.assertIn("*.go", source["paths"])
+            self.assertIn("binding/**", source["paths"])
+            self.assertIn("gin.go", source["start_files"])
+            self.assertNotIn("testdata/**", source["paths"])
+            self.assertIn("**/*_test.go", tests["paths"])
+            self.assertIn("gin_test.go", tests["start_files"])
+
+    def test_text_budget_skips_known_binary_media_suffixes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "client/img").mkdir(parents=True)
+            (repo / "README.md").write_bytes(b"# Demo\n")
+            (repo / "client/img/sprite.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 1024)
+
+            budget = self.engine.text_budget_for_files(repo, ["README.md", "client/img/sprite.png"])
+
+            self.assertEqual(budget.files, 1)
+            self.assertEqual(budget.skipped, 1)
+            self.assertEqual(budget.chars, len("# Demo\n"))
+
     def test_changed_file_selects_area_and_generates_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

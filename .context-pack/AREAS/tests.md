@@ -34,6 +34,8 @@ stale_if:
 - Natural-language product promises should stay covered by a small-repo flow: English fix, crash, and broken/not-working bug orientation, Korean bug orientation, failing-test and CI/build failure orientation, dirty and committed branch review, soft review wording, long and short handoff wording, and handoff checkpoint.
 - First-run inference coverage should include common top-level Python package source layouts such as `httpx/`.
 - First-run inference coverage should include common web game layouts with `client/js`, `server/js`, `shared/js`, and sprite assets so BrowserQuest-like repos do not regress to overview-only context.
+- First-run inference coverage should include Go source/test layouts and known binary media text-budget skips.
+- Public benchmark coverage should exercise Python, JavaScript, web game, Go, Rust, CI/build, test-failure, and handoff replay scenarios.
 - Status coverage should include stale shared handoff fingerprints and avoid false positives after handoff-only publish commits.
 - Version sync tests should include Python package, plugin manifest, engine, and npm package metadata.
 - Git tests configure user identity locally in temp repos.
@@ -55,6 +57,9 @@ stale_if:
 - CI/build failure routing coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Top-level Python package inference is removed, so real repos without `src/` miss source context during first-run routing.
 - Web/client-server JavaScript inference is removed, so BrowserQuest-like repos miss source/sprite context during first-run routing.
+- Go inference is removed, so Go repos without `src/` miss source/test context during first-run routing.
+- Text-budget tests count binary media as readable text or spend time reading known binary assets.
+- Benchmark docs drift from the reproducible `scripts/benchmark_context_pack.py` results.
 - English broken/not-working routing coverage is removed from the packaged npm entrypoint, leaving release behavior weaker than unit tests.
 - Korean bug routing tests cover only "버그 고쳐줘" and miss "버그 잡아줘" / "문제 해결해줘" variants or their false-positive guard.
 - Packaged CLI validation covers bug/review prompts but not the resume-later handoff prompt from the public docs.

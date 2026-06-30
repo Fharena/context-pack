@@ -1,0 +1,362 @@
+{
+  "engine_version": "0.2.20",
+  "generated_at": "2026-06-30T14:18:27+09:00",
+  "handoff_replay": {
+    "clone": {
+      "read_first_entries": 4,
+      "read_first_files": 4,
+      "read_ratio": 9,
+      "read_tokens": 404,
+      "repo_tokens": 4427,
+      "selected": [
+        "source",
+        "tests"
+      ]
+    },
+    "name": "handoff-replay",
+    "prompt": "why are tests failing",
+    "same_signature": true,
+    "source": {
+      "read_first_entries": 4,
+      "read_first_files": 4,
+      "read_ratio": 9,
+      "read_tokens": 404,
+      "repo_tokens": 4427,
+      "selected": [
+        "source",
+        "tests"
+      ]
+    },
+    "weak_flags": []
+  },
+  "public_results": [
+    {
+      "duration_ms": 392,
+      "expected": [
+        "automation",
+        "source",
+        "tests"
+      ],
+      "expected_ok": true,
+      "head": "621e4974ca25",
+      "max_ratio": 75,
+      "name": "sampleproject-ci",
+      "prompt": "ci is red",
+      "read_first_entries": 7,
+      "read_first_files": 8,
+      "read_ratio": 67,
+      "read_tokens": 2226,
+      "reasons": {
+        "automation": [
+          "paired with CI/build failure debugging"
+        ],
+        "source": [
+          "paired with CI/build failure debugging"
+        ],
+        "tests": [
+          "paired with CI/build failure debugging"
+        ]
+      },
+      "reduction": 33,
+      "repo": "pypa/sampleproject",
+      "repo_files": 12,
+      "repo_text_files": 12,
+      "repo_tokens": 3347,
+      "selected": [
+        "automation",
+        "source",
+        "tests"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 349,
+      "expected": [
+        "source",
+        "tests"
+      ],
+      "expected_ok": true,
+      "head": "23953c0c8752",
+      "max_ratio": 40,
+      "name": "requests-tests",
+      "prompt": "why are tests failing",
+      "read_first_entries": 4,
+      "read_first_files": 60,
+      "read_ratio": 27,
+      "read_tokens": 103662,
+      "reasons": {
+        "source": [
+          "paired with tests for failure debugging"
+        ],
+        "tests": [
+          "task matched keywords: tests"
+        ]
+      },
+      "reduction": 73,
+      "repo": "psf/requests",
+      "repo_files": 130,
+      "repo_text_files": 122,
+      "repo_tokens": 386898,
+      "selected": [
+        "source",
+        "tests"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 670,
+      "expected": [
+        "source",
+        "tests"
+      ],
+      "expected_ok": true,
+      "head": "679a7a0eccbd",
+      "max_ratio": 65,
+      "name": "click-shell-completion",
+      "prompt": "fix shell completion bug",
+      "read_first_entries": 4,
+      "read_first_files": 48,
+      "read_ratio": 59,
+      "read_tokens": 210136,
+      "reasons": {
+        "source": [
+          "starter code area for unclassified task"
+        ],
+        "tests": [
+          "starter code area for unclassified task"
+        ]
+      },
+      "reduction": 41,
+      "repo": "pallets/click",
+      "repo_files": 150,
+      "repo_text_files": 145,
+      "repo_tokens": 357834,
+      "selected": [
+        "source",
+        "tests"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 390,
+      "expected": [
+        "automation",
+        "source",
+        "tests"
+      ],
+      "expected_ok": true,
+      "head": "b5addb64f016",
+      "max_ratio": 85,
+      "name": "httpx-build",
+      "prompt": "build failed",
+      "read_first_entries": 8,
+      "read_first_files": 73,
+      "read_ratio": 79,
+      "read_tokens": 196619,
+      "reasons": {
+        "automation": [
+          "task matched keywords: build"
+        ],
+        "source": [
+          "paired with CI/build failure debugging"
+        ],
+        "tests": [
+          "paired with CI/build failure debugging"
+        ]
+      },
+      "reduction": 21,
+      "repo": "encode/httpx",
+      "repo_files": 125,
+      "repo_text_files": 111,
+      "repo_tokens": 247669,
+      "selected": [
+        "automation",
+        "source",
+        "tests"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 384,
+      "expected": [
+        "source"
+      ],
+      "expected_ok": true,
+      "head": "af32d247cac3",
+      "max_ratio": 25,
+      "name": "browserquest-mobile",
+      "prompt": "fix mobile controls bug on touch devices",
+      "read_first_entries": 4,
+      "read_first_files": 62,
+      "read_ratio": 16,
+      "read_tokens": 98218,
+      "reasons": {
+        "source": [
+          "task matched keywords: mobile, touch"
+        ]
+      },
+      "reduction": 84,
+      "repo": "mozilla/BrowserQuest",
+      "repo_files": 452,
+      "repo_text_files": 169,
+      "repo_tokens": 602166,
+      "selected": [
+        "source"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 380,
+      "expected": [
+        "source",
+        "sprites"
+      ],
+      "expected_ok": true,
+      "head": "af32d247cac3",
+      "max_ratio": 25,
+      "name": "browserquest-sprites",
+      "prompt": "fix missing sprite asset loading bug",
+      "read_first_entries": 6,
+      "read_first_files": 133,
+      "read_ratio": 17,
+      "read_tokens": 103580,
+      "reasons": {
+        "source": [
+          "task matched keywords: loading"
+        ],
+        "sprites": [
+          "task matched keywords: sprite"
+        ]
+      },
+      "reduction": 83,
+      "repo": "mozilla/BrowserQuest",
+      "repo_files": 452,
+      "repo_text_files": 169,
+      "repo_tokens": 602166,
+      "selected": [
+        "source",
+        "sprites"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 345,
+      "expected": [
+        "source"
+      ],
+      "expected_ok": true,
+      "head": "af32d247cac3",
+      "max_ratio": 25,
+      "name": "browserquest-websocket",
+      "prompt": "debug websocket login connect failure",
+      "read_first_entries": 4,
+      "read_first_files": 62,
+      "read_ratio": 16,
+      "read_tokens": 98218,
+      "reasons": {
+        "source": [
+          "task matched keywords: websocket"
+        ]
+      },
+      "reduction": 84,
+      "repo": "mozilla/BrowserQuest",
+      "repo_files": 452,
+      "repo_text_files": 169,
+      "repo_tokens": 602166,
+      "selected": [
+        "source"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 433,
+      "expected": [
+        "source"
+      ],
+      "expected_ok": true,
+      "head": "34dac209ffb6",
+      "max_ratio": 20,
+      "name": "gin-middleware",
+      "prompt": "fix middleware panic bug",
+      "read_first_entries": 12,
+      "read_first_files": 11,
+      "read_ratio": 4,
+      "read_tokens": 8815,
+      "reasons": {
+        "source": [
+          "task matched keywords: middleware, panic"
+        ]
+      },
+      "reduction": 96,
+      "repo": "gin-gonic/gin",
+      "repo_files": 130,
+      "repo_text_files": 130,
+      "repo_tokens": 217612,
+      "selected": [
+        "source"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 308,
+      "expected": [
+        "source"
+      ],
+      "expected_ok": true,
+      "head": "18e5985b8a9d",
+      "max_ratio": 55,
+      "name": "express-router",
+      "prompt": "fix router middleware error handling",
+      "read_first_entries": 2,
+      "read_first_files": 6,
+      "read_ratio": 9,
+      "read_tokens": 15523,
+      "reasons": {
+        "source": [
+          "task matched keywords: middleware, router"
+        ]
+      },
+      "reduction": 91,
+      "repo": "expressjs/express",
+      "repo_files": 213,
+      "repo_text_files": 209,
+      "repo_tokens": 177823,
+      "selected": [
+        "source"
+      ],
+      "weak_flags": []
+    },
+    {
+      "duration_ms": 265,
+      "expected": [
+        "source"
+      ],
+      "expected_ok": true,
+      "head": "95dc6454d5ca",
+      "max_ratio": 45,
+      "name": "fd-rust-filter",
+      "prompt": "fix regex filter bug",
+      "read_first_entries": 3,
+      "read_first_files": 21,
+      "read_ratio": 30,
+      "read_tokens": 41801,
+      "reasons": {
+        "source": [
+          "task matched keywords: filter, regex"
+        ]
+      },
+      "reduction": 70,
+      "repo": "sharkdp/fd",
+      "repo_files": 57,
+      "repo_text_files": 56,
+      "repo_tokens": 138608,
+      "selected": [
+        "source"
+      ],
+      "weak_flags": []
+    }
+  ],
+  "subject_head": "d3cf9a783ace",
+  "weak_public_results": [],
+  "workdir": "C:\\Users\\99yoo\\AppData\\Local\\Temp\\context-pack-benchmark-kcg8tf73"
+}

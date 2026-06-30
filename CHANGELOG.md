@@ -4,6 +4,20 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.2.20] - 2026-06-30
+
+### Added
+
+- Added `scripts/benchmark_context_pack.py`, a reproducible benchmark harness for public-repo first-run routing, text-budget ratios, slow-measure flags, and synthetic handoff replay.
+- Added benchmark result artifacts under `docs/benchmarks/` and refreshed English/Korean benchmark docs with 10 public scenarios plus handoff replay.
+
+### Changed
+
+- Improved first-run inference for Go repositories by detecting root `*.go`, top-level Go package directories, and `*_test.go` files.
+- Improved first-run inference for Rust filter/search tasks by adding Rust crate start paths and Rust-specific source keywords.
+- Skips known binary media/archive/font suffixes before text-budget reads and checks file size before reading, reducing cold-start work on media-heavy repos.
+- Refreshed README benchmark positioning to distinguish deterministic routing/token-budget evidence from independent-agent patch quality.
+
 ## [0.2.19] - 2026-06-30
 
 ### Changed

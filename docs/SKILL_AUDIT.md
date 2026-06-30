@@ -1,7 +1,7 @@
 # Context Pack Skill Audit
 
 Audit date: 2026-06-30
-Release target: `v0.2.19`
+Release target: `v0.2.20`
 
 ## Result
 

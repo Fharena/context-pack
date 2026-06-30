@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Fharena/context-pack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Fharena/context-pack/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Fharena/context-pack/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/Fharena/context-pack/actions/workflows/release.yml/badge.svg"></a>
-  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.19"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
+  <a href="https://github.com/Fharena/context-pack/releases/tag/v0.2.20"><img alt="Release" src="https://img.shields.io/github/v/release/Fharena/context-pack?display_name=tag"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
 </p>
@@ -37,17 +37,20 @@ This gets more useful as coding agents move across local IDEs, cloud worktrees, 
 
 Context Pack is now in public beta. The current release is CI-tested on Windows and Ubuntu with Python 3.11/3.12, packaged through the Node wrapper and Python wheel/sdist build path, and dogfooded on real public repositories before release.
 
-Read-only dogfood runs with no `.context-pack/` installed selected focused starting areas before broad reading:
+The current benchmark harness runs 10 public-repo scenarios plus a synthetic handoff replay. With no `.context-pack/` installed in the target repos, read-only dogfood runs selected focused starting areas before broad reading and produced no weak flags under the benchmark thresholds:
 
 | Repo | Prompt | Selected first | Approx first-read text |
 | --- | --- | --- | --- |
 | `psf/requests` | `why are tests failing` | `source, tests` | ~27% of repo text |
 | `pallets/click` | `fix shell completion bug` | `source, tests` | ~59% of repo text |
 | `encode/httpx` | `build failed` | `automation, source, tests` | ~79% of repo text |
+| `gin-gonic/gin` | `fix middleware panic bug` | `source` | ~4% of repo text |
+| `expressjs/express` | `fix router middleware error handling` | `source` | ~9% of repo text |
+| `sharkdp/fd` | `fix regex filter bug` | `source` | ~30% of repo text |
 
 In a separate A/B orientation run on [`mozilla/BrowserQuest`](https://github.com/mozilla/BrowserQuest), broad repo text was ~602.2k tokens. Context Pack first-read routing started three web game tasks from ~98.2k-103.6k tokens (`source` or `source, sprites`), about 16-17% of the repo text.
 
-Those numbers are intentionally honest: first-run inferred areas help orientation, but curated area docs matter for larger repos. See [benchmarks](docs/BENCHMARKS.md) for the full table, methodology, and limitations.
+The handoff replay benchmark also produced the same routing signature after a local clone. Those numbers are intentionally honest: first-run inferred areas help orientation, but curated area docs matter for larger repos, and this does not yet prove independent-agent patch quality. See [benchmarks](docs/BENCHMARKS.md) for the full table, methodology, weak spots found, and limitations.
 
 ## Who It Is For
 
@@ -578,4 +581,4 @@ GitHub Actions runs stdlib unit tests, JSON validation, packaged CLI checks, Pyt
 
 ## Release
 
-See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.19](https://github.com/Fharena/context-pack/releases/tag/v0.2.19).
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md). Current release: [v0.2.20](https://github.com/Fharena/context-pack/releases/tag/v0.2.20).
