@@ -7,33 +7,37 @@ paths:
   - docs/BENCHMARKS.md
   - docs/benchmarks/**
 tests:
+  - tests/test_benchmarks.py
+verify:
+  - python -m unittest tests.test_benchmarks -v
   - python scripts/benchmark_context_pack.py --public --fail-on-weak
-last_reviewed_head: 9b5789e04e19
+last_reviewed_head: c18bd9bcc69b
 ---
 
 # Docs And Adoption
 
 ## Read When
-- Changing onboarding, positioning, benchmark claims, demo output, or release notes.
+- Changing onboarding, positioning, benchmark claims, demo output, field reports, or release notes.
 
 ## Start With
 - `README.md`
 - `README.ko.md`
 - `docs/BENCHMARKS.md`
-- `docs/benchmarks/codex-ab-zoning-evidence.md`
+- `docs/benchmarks/codex-ab-v050-summary.md`
 - `scripts/benchmark_codex_ab.py`
 
 ## Contracts
-- English and Korean onboarding describe the same behavior.
+- English and Korean onboarding describe the same behavior and evidence.
 - The main README gives one primary install route per agent surface.
-- Approximate orientation ratios are never presented as billed tokens or patch-quality evidence.
-- Actual Codex A/B results separate cumulative total input, uncached input, commands, and tool output.
-- Mixed or negative benchmark results remain public; no universal token-saving claim is made from one task.
-- Internal audit notes do not crowd the public getting-started path.
+- Actual Codex results separate cumulative total input, uncached input, quality, commands, and latency.
+- Maintained v0.5.0 context is reported as 14/14 on four small author-run task sets, not universal proof.
+- The 11/14 transient result and token regressions remain visible beside successful results.
+- Claude Code and Cursor file generation is distinguished from runtime validation.
+- Approximate `chars/4` scope ratios are never presented as actual model tokens.
 
 ## Common Failure Modes
-- README examples drift from the packaged CLI.
-- A benchmark number is copied without its method or limitations.
+- A benchmark number is copied without method, task count, or limitations.
 - Cached cumulative input is presented as peak context occupancy or direct billing.
-- A benchmark accidentally runs a globally installed CLI instead of the engine under test.
-- Demo output shows a setup flow that normal first-run work no longer uses.
+- Failed runs disappear from public summaries.
+- The demo implies unconfigured repositories are modified or automatically routed.
+- A benchmark reuses a dirty work directory or a global engine.

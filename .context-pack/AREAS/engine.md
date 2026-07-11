@@ -5,46 +5,45 @@ paths:
   - plugins/context-pack/skills/context-pack/scripts/context_pack.py
   - src/context_pack/cli.py
 tests:
+  - tests/test_context_pack.py
+verify:
   - python -m unittest discover -s tests -v
-last_reviewed_head: 9b5789e04e19
+last_reviewed_head: c18bd9bcc69b
 ---
 
 # Engine
 
 ## Read When
-- Changing routing, Git snapshots, packs, checkpoints, doctor, installers, or hooks.
-- Debugging evidence retrieval, transient first-run behavior, stale fingerprints, Unicode paths, or review scope.
+- Changing routing, Git snapshots, Evidence, packs, checkpoints, doctor, installers, or hooks.
 
 ## Start With
 - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
 - `tests/test_context_pack.py`
 
 ## Search First
-- `render_agent_pack`
+- `resolve_pack_context`
 - `collect_evidence`
-- `render_pack`
+- `render_agent_pack`
 - `cmd_start`
 
 ## Contracts
 - The canonical engine remains Python stdlib-only.
-- `start` does not persist repo files before explicit `setup`; tiny unconfigured repos may skip packs.
-- Git parsing supports Unicode, spaces, renames, and NUL-delimited output.
+- Normal `start` never persists repository files before explicit `setup`.
+- Review routing reads context from the base commit; branch-only notes are untrusted.
+- Evidence always comes from current source and reports `strong`, `candidate`, or no confidence.
+- Candidate Evidence requires one targeted verification before editing.
+- Agent output is bounded and avoids generated context or managed agent docs as source Evidence.
 - Safe hooks invoke the exact install interpreter and fail open.
-- Normal `start` does not scan the full repo for text-budget statistics.
-- Task packs expose search terms and scopes; globs and directories are never bulk-read instructions.
-- Interactive transient packs print inline without writing repository or Git metadata files.
-- Packs explain deterministic routing but never replace source verification.
-- Agent evidence is bounded, line-numbered current source and avoids duplicate source copies.
+- Normal `start` does not scan the full repository for text-budget statistics.
 
 ## Common Failure Modes
-- First-run work unexpectedly creates `.context-pack/`, `AGENTS.md`, or `.gitignore`.
-- Context Pack metadata hides real product changes in review mode.
+- Branch-authored context biases a review.
+- A nearby task-word match is presented as a verified root cause.
+- Continuation invents a generic task and ignores `CURRENT.md`.
+- Context Pack metadata hides product changes or appears as source Evidence.
 - A Unix absolute hook path loses its leading slash.
-- A custom area name cannot receive a generic source/test/automation role.
-- A fallback start file points at an entire source or test directory.
-- An agent reopens an already inlined pack or reads an entire search scope.
-- Search-only routing adds a model turn without removing the next grep or file-read turn.
+- Search-only routing adds a model turn without removing later exploration.
 
 ## Do Not Start With
 - generated packs
-- checkpoint logs unless the bug concerns checkpoint history
+- checkpoint history unless the bug concerns handoff state

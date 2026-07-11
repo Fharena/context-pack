@@ -112,7 +112,15 @@ context-pack --help
 
 ## npm
 
-Preferred path: configure npm Trusted Publishing for package `@fharena/context-pack` and this workflow. Keep the npm trusted publisher environment in sync with the workflow environment, currently `npm`.
+The scoped package must exist on npm before its trusted publisher can be attached. For the first release, sign in and publish the already validated tarball manually. Then configure npm Trusted Publishing with:
+
+```text
+package: @fharena/context-pack
+organization/user: Fharena
+repository: context-pack
+workflow: release.yml
+environment: npm
+```
 
 The workflow grants `id-token: write` and runs `npm publish --access public`. npm trusted publishing adds provenance automatically for supported packages.
 

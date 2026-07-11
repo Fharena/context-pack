@@ -150,6 +150,11 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
+      - name: Require trusted-publishing npm CLI
+        run: |
+          npm install --global "npm@>=11.5.1"
+          npm --version
+
       - name: Validate npm package
         run: npm pack --dry-run
 

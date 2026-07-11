@@ -1,6 +1,6 @@
 {
   "name": "context-pack",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Repo-local source evidence and handoff context for coding agents.",
   "author": {
     "name": "Context Pack"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Context Pack",
-    "shortDescription": "Route agents to patch-ready repo evidence.",
-    "longDescription": "Context Pack gives coding agents a lightweight repo-local map and bounded source evidence before broad reading. First use is transient and does not modify the repository; explicit setup adds versioned area notes and handoff state for work that moves across sessions, agents, machines, or worktrees.",
+    "shortDescription": "Route agents to bounded repo evidence.",
+    "longDescription": "Context Pack gives coding agents a lightweight repo-local map, confidence-labeled source evidence, and base-safe review context before broad reading. An explicit transient preview does not modify the repository; setup adds versioned area notes and handoff state for work that moves across sessions, agents, machines, or worktrees.",
     "developerName": "Context Pack",
     "category": "Productivity",
     "capabilities": [

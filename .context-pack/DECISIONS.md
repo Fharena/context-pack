@@ -45,3 +45,19 @@ Published and local checkpoint logs rotate, generated state remains ignored, nor
 ## 2026-07-11: Packaged Resources Are Synchronized
 
 The canonical engine, skill, agent metadata, and plugin manifest remain readable source files. A deterministic sync script creates package resources, and CI fails when copies drift.
+
+## 2026-07-12: Automatic Routing Requires Maintained Context
+
+The installed skill automatically routes only when `.context-pack/manifest.json` exists. In v0.5.0 Codex A/B, inferred transient routing was correct in 11/14 runs and increased cumulative input on two task classes even when it often found the relevant file. Unconfigured repositories therefore use normal targeted search unless the user explicitly requests a transient preview or evaluation. Persistent setup remains explicit.
+
+## 2026-07-12: Review Context Comes From The Base
+
+A branch under review cannot establish the contracts used to judge itself. Review manifests and area notes come from the resolved base commit; current branch source supplies Evidence. If the base has no context library, branch-only context is ignored and routing falls back to deterministic inference.
+
+## 2026-07-12: Evidence Confidence Follows Provenance
+
+Configured symbol hits are `strong`, task-word or changed-file fallbacks are `candidate`, and no selective match yields no Evidence. Strong source may be edited directly when the defect is visible. Candidate source always requires a focused verification step. The product does not describe all snippets as patch-ready.
+
+## 2026-07-12: Portability Still Justifies One Generated Engine Copy
+
+The stdlib-only canonical script and packaged generated copy remain intentional for plugin and npm portability. Synchronization tests and a static top-level symbol audit guard drift and dead code. Splitting the engine solely to reduce line count would add import and packaging surfaces without evidence of user value, so modularization waits for a concrete ownership or testability boundary.

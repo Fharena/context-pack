@@ -64,7 +64,7 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.4.0"
+CONTEXT_PACK_VERSION = "0.5.0"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 SMALL_REPO_FILE_THRESHOLD = 24
 PUBLISHED_LOG_MAX_ENTRIES = 30
@@ -259,6 +259,8 @@ class EvidenceSnippet:
 class EvidenceResult:
     terms: list[str]
     snippets: list[EvidenceSnippet]
+    confidence: str
+    reason: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -377,6 +379,26 @@ def git_bytes(repo: Path, args: list[str]) -> bytes:
     if proc.returncode != 0:
         return b""
     return proc.stdout
+
+
+def resolve_commit(repo: Path, ref: str | None) -> str | None:
+    if not ref:
+        return None
+    return git_text(repo, ["rev-parse", "--verify", f"{ref}^{{commit}}"])
+
+
+def git_file_text(repo: Path, ref: str, path: str | Path) -> str | None:
+    commit = resolve_commit(repo, ref)
+    if not commit:
+        return None
+    object_name = f"{commit}:{path_text(path)}"
+    try:
+        proc = run(["git", "show", object_name], repo, text=False)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.decode("utf-8-sig", errors="surrogateescape")
 
 
 def decode_git_path(value: bytes) -> str:
@@ -773,10 +795,46 @@ def inferred_test_paths(repo: Path) -> tuple[list[str], list[str]]:
     return paths, start_files
 
 
+def inferred_verification_commands(repo: Path) -> list[str]:
+    commands: list[str] = []
+    package_json = repo / "package.json"
+    if package_json.is_file():
+        try:
+            package = json.loads(package_json.read_text(encoding="utf-8-sig"))
+        except (json.JSONDecodeError, OSError):
+            package = {}
+        test_script = (package.get("scripts") or {}).get("test") if isinstance(package, dict) else None
+        if test_script and "no test specified" not in str(test_script).lower():
+            commands.append("npm test")
+    if (repo / "go.mod").is_file():
+        commands.append("go test ./...")
+    if (repo / "Cargo.toml").is_file():
+        commands.append("cargo test")
+    if any((repo / name).is_file() for name in ("pytest.ini", "tox.ini", "conftest.py")):
+        commands.append("python -m pytest")
+    elif (repo / "tests").is_dir():
+        try:
+            has_unittest = any((repo / "tests").glob("test_*.py"))
+        except OSError:
+            has_unittest = False
+        if has_unittest:
+            commands.append("python -m unittest discover -s tests -v")
+    makefile = repo / "Makefile"
+    if makefile.is_file():
+        try:
+            has_test_target = any(line.startswith("test:") for line in makefile.read_text(encoding="utf-8").splitlines())
+        except (OSError, UnicodeDecodeError):
+            has_test_target = False
+        if has_test_target:
+            commands.append("make test")
+    return unique(commands)[:2]
+
+
 def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) -> dict[str, dict[str, Any]]:
     layout = layout or resolve_layout(repo)
     source_paths, source_start_files = inferred_source_paths(repo)
     test_paths, test_start_files = inferred_test_paths(repo)
+    verify_commands = inferred_verification_commands(repo)
     candidates = {
         "source": {
             "kind": "source",
@@ -785,6 +843,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "paths": source_paths,
             "start_files": source_start_files,
             "tests": ["tests/**", "test/**"],
+            "verify": verify_commands,
             "keywords": [
                 "source",
                 "implementation",
@@ -867,6 +926,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "paths": test_paths,
             "start_files": test_start_files,
             "tests": test_paths,
+            "verify": verify_commands,
             "keywords": ["test", "tests", "fixture", "validation", "ci"],
             "contracts": [
                 "Tests should exercise user-visible behavior, not only implementation details.",
@@ -909,6 +969,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "scripts/*.py",
             ],
             "tests": [".github/workflows/**"],
+            "verify": verify_commands,
             "keywords": ["automation", "ci", "release", "scripts", "packaging"],
             "contracts": [
                 "Automation should be reproducible outside the maintainer's machine.",
@@ -968,20 +1029,55 @@ def manifest_needs_write(path: Path, manifest: dict[str, Any]) -> bool:
     return current != manifest
 
 
+def parse_manifest(text: str, source: str, layout: ContextLayout) -> dict[str, Any]:
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON in {source}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise SystemExit(f"{source} must contain a JSON object")
+    data.setdefault("version", 1)
+    data.setdefault("areas", {})
+    return data
+
+
 def load_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
     layout = layout or resolve_layout(repo)
     path = repo / layout.manifest_path
     if not path.exists():
         return default_manifest(layout)
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in {layout.manifest_path}: {exc}") from exc
-    if not isinstance(data, dict):
-        raise SystemExit(f"{layout.manifest_path} must contain a JSON object")
-    data.setdefault("version", 1)
-    data.setdefault("areas", {})
-    return data
+    return parse_manifest(path.read_text(encoding="utf-8-sig"), path_text(layout.manifest_path), layout)
+
+
+def load_manifest_from_ref(repo: Path, layout: ContextLayout, ref: str) -> tuple[dict[str, Any], str] | None:
+    commit = resolve_commit(repo, ref)
+    if not commit:
+        return None
+    text = git_file_text(repo, commit, layout.manifest_path)
+    if text is None:
+        return None
+    source = f"{commit[:12]}:{path_text(layout.manifest_path)}"
+    return parse_manifest(text, source, layout), commit
+
+
+def resolve_pack_context(
+    repo: Path,
+    layout: ContextLayout,
+    args: argparse.Namespace,
+    *,
+    has_context_library: bool,
+) -> tuple[dict[str, Any], str | None, bool]:
+    mode = getattr(args, "mode", "work")
+    base = getattr(args, "base", None)
+    if mode == "review" and base:
+        trusted = load_manifest_from_ref(repo, layout, base)
+        if trusted:
+            manifest, commit = trusted
+            return manifest, commit, False
+        return inferred_manifest(repo, layout), None, True
+    if has_context_library:
+        return load_manifest(repo, layout), None, False
+    return inferred_manifest(repo, layout), None, True
 
 
 def inferred_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
@@ -1123,6 +1219,7 @@ def generic_area_doc(area_id: str, area: dict[str, Any], snapshot: Snapshot, lay
     layout = layout or PRIMARY_LAYOUT
     paths = "\n".join(f"  - {item}" for item in area.get("paths", []) or [])
     tests = "\n".join(f"  - {item}" for item in area.get("tests", []) or [])
+    verify = "\n".join(f"  - {item}" for item in area.get("verify", []) or [])
     stale = "\n".join(f"  - {item} changes" for item in area.get("stale_if_paths", []) or [])
     start = "\n".join(f"- `{item}`" for item in area.get("start_files", []) or [])
     search = "\n".join(f"- `{item}`" for item in area.get("search_terms", []) or [])
@@ -1136,6 +1233,8 @@ paths:
 {paths or "  - unknown"}
 tests:
 {tests or "  - none"}
+verify:
+{verify or "  - none"}
 stale_if:
 {stale or "  - relevant files change"}
 ---
@@ -1150,6 +1249,9 @@ stale_if:
 
 ## Search First
 {search or "- Use distinctive task terms or symbols within the Start With scopes."}
+
+## Verify
+{chr(10).join(f"- `{item}`" for item in area.get("verify", []) or []) or "- Use the repository's smallest relevant verification command."}
 
 ## Contracts
 {contracts or "- Verify behavior in source before trusting summaries."}
@@ -1309,8 +1411,10 @@ Use Context Pack quietly when a non-trivial coding, debugging, review, or handof
 - Coding/debugging: `context-pack start --agent --task "<short task>"`
 - Branch or PR review: `context-pack start --agent --review`; add `--base <ref>` when known.
 - Dirty files are the only signal: `context-pack start --agent --changed`
+- Continue or resume from a handoff without a concrete code task: `context-pack start --agent`; do not invent a generic task string.
 - Use the inline pack printed by `start`; do not reopen its saved path unless output was truncated.
-- Embedded `Evidence` is current source. If the root cause is visible, edit directly and spend the next tool call on verification. Do not grep, cat, or reopen shown ranges.
+- Check `Evidence confidence` and provenance. Strong Evidence comes from configured symbols and can be edited directly when the cause is visible. Candidate Evidence needs one targeted verification first.
+- In review mode, use notes from the review base or deterministic inference; never trust context authored only by the branch under review.
 - Treat directory and glob entries as search scopes. Never bulk-read their contents into model context.
 
 On an unconfigured repo, `start` is transient and must not create `.context-pack/`, `AGENTS.md`, or `.gitignore`. Run `context-pack setup --dry-run` and `context-pack setup` only when the user explicitly asks to persist Context Pack in the repo.
@@ -1354,6 +1458,11 @@ def render_index(manifest: dict[str, Any], layout: ContextLayout | None = None) 
         if tests:
             lines.append("- Tests:")
             for item in tests:
+                lines.append(f"  - `{item}`")
+        verify = area.get("verify", []) or []
+        if verify:
+            lines.append("- Verify:")
+            for item in verify:
                 lines.append(f"  - `{item}`")
     lines.extend(
         [
@@ -1439,10 +1548,24 @@ def append_agent_rules_for_kind(repo: Path, kind: str, layout: ContextLayout | N
     return rel_path
 
 
-def resolve_agent_doc_targets(targets: list[str] | None) -> list[str]:
+def auto_agent_doc_targets(repo: Path) -> list[str]:
+    targets = ["agents"]
+    if (repo / AGENT_DOC_TARGETS["claude"]).exists() or (repo / ".claude").exists():
+        targets.append("claude")
+    if (repo / AGENT_DOC_TARGETS["cursor"]).exists() or (repo / ".cursor").exists():
+        targets.append("cursor")
+    return targets
+
+
+def resolve_agent_doc_targets(targets: list[str] | None, repo: Path | None = None) -> list[str]:
     requested = targets or ["all"]
     resolved: list[str] = []
     for item in requested:
+        if item == "auto":
+            for target in auto_agent_doc_targets(repo or Path.cwd()):
+                if target not in resolved:
+                    resolved.append(target)
+            continue
         if item == "all":
             for default in DEFAULT_AGENT_DOC_TARGETS:
                 if default not in resolved:
@@ -1563,7 +1686,7 @@ def setup_apply_command(args: argparse.Namespace) -> str:
         parts.append("--infer-areas")
     elif getattr(args, "infer_areas", None) is False:
         parts.append("--no-infer-areas")
-    if args.agent_docs != "all":
+    if args.agent_docs != "auto":
         parts.extend(["--agent-docs", args.agent_docs])
     if args.git_hooks != "off":
         parts.extend(["--git-hooks", args.git_hooks])
@@ -1576,10 +1699,10 @@ def cmd_setup_dry_run(args: argparse.Namespace, repo: Path, snapshot: Snapshot, 
 
     agent_docs: list[tuple[str, Path]] = []
     if args.agent_docs != "none":
-        targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
+        targets = [args.agent_docs]
         agent_docs = [
             (setup_agent_doc_action(repo, kind), AGENT_DOC_TARGETS[kind])
-            for kind in resolve_agent_doc_targets(targets)
+            for kind in resolve_agent_doc_targets(targets, repo)
         ]
 
     print(f"Context Pack setup dry run for {repo}")
@@ -1622,7 +1745,7 @@ def cmd_install_agent_docs(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = resolve_layout(repo)
-    written = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(args.target)]
+    written = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(args.target, repo)]
     if not args.quiet:
         print(f"Installed Context Pack agent docs in {repo}")
         for rel_path in written:
@@ -1652,8 +1775,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
 
     agent_docs: list[Path] = []
     if args.agent_docs != "none":
-        targets = ["all"] if args.agent_docs == "all" else [args.agent_docs]
-        agent_docs = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(targets)]
+        targets = [args.agent_docs]
+        agent_docs = [append_agent_rules_for_kind(repo, kind, layout) for kind in resolve_agent_doc_targets(targets, repo)]
 
     if args.git_hooks != "off":
         hook_args = argparse.Namespace(repo=str(repo), quiet=True, mode=args.git_hooks)
@@ -1815,12 +1938,21 @@ def cmd_start(args: argparse.Namespace) -> int:
     layout = resolve_layout(repo)
     had_context = (repo / layout.manifest_path).exists()
     transient = not had_context
-    manifest = load_manifest(repo, layout) if had_context else inferred_manifest(repo, layout)
-    repo_file_total = len(repo_files(repo)) if transient or not args.agent else 0
 
     mode = "work"
     changed = False
     pack_reason = ""
+    effective_task = args.task
+    if (
+        args.agent
+        and had_context
+        and not args.review
+        and not args.base
+        and not args.task
+        and not args.changed
+        and not snapshot.dirty_files
+    ):
+        effective_task = handoff_task(repo, layout)
 
     if args.review or args.base:
         mode = "review"
@@ -1828,10 +1960,10 @@ def cmd_start(args: argparse.Namespace) -> int:
         pack_reason = "review"
         args.mode = mode
         review_base_inferred = maybe_infer_review_base(args, repo, snapshot)
-    elif args.task:
+    elif effective_task:
         review_base_inferred = False
         changed = args.changed or (transient and bool(snapshot.dirty_files))
-        pack_reason = "task"
+        pack_reason = "task" if args.task else "handoff"
     elif args.changed or snapshot.dirty_files:
         review_base_inferred = False
         changed = True
@@ -1839,11 +1971,21 @@ def cmd_start(args: argparse.Namespace) -> int:
     else:
         review_base_inferred = False
 
+    manifest, context_ref, inferred_context = resolve_pack_context(
+        repo,
+        layout,
+        args,
+        has_context_library=had_context,
+    )
+    context_transient = transient or (mode == "review" and inferred_context)
+    repo_file_total = len(repo_files(repo)) if transient or not args.agent else 0
+
     small_repo_skip = transient and not args.output and repo_file_total <= SMALL_REPO_FILE_THRESHOLD
     pack_generated = bool(pack_reason) and not small_repo_skip
     max_areas = min(args.max_areas, AGENT_MAX_AREAS) if args.agent else args.max_areas
     selected: list[AreaSelection] = []
     pack_content = ""
+    value_skip = False
     inline_transient = transient and not args.output and not args.quiet
     if args.output:
         output_path = Path(args.output)
@@ -1857,7 +1999,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     if pack_generated:
         pack_args = argparse.Namespace(
             repo=str(repo),
-            task=args.task,
+            task=effective_task,
             changed=changed,
             base=args.base,
             output=str(output_path),
@@ -1871,10 +2013,18 @@ def cmd_start(args: argparse.Namespace) -> int:
             agent=args.agent,
             manifest=manifest,
             layout=layout,
-            transient=transient,
+            transient=context_transient,
+            context_ref=context_ref,
+            inferred_context=inferred_context,
         )
         changed_files = resolve_changed_files(repo, snapshot, pack_args)
-        matches = selected_area_matches(manifest, changed_files=changed_files, task=args.task, repo=repo)
+        matches = selected_area_matches(
+            manifest,
+            changed_files=changed_files,
+            task=effective_task,
+            repo=repo,
+            context_ref=context_ref,
+        )
         selected = matches[:max_areas]
         if inline_transient:
             pack_content = render_pack(
@@ -1885,10 +2035,12 @@ def cmd_start(args: argparse.Namespace) -> int:
                 layout=layout,
                 related_selections=matches[max_areas:],
                 changed_files=changed_files,
-                task=args.task,
+                task=effective_task,
                 mode=mode,
                 include_text_budget=args.text_budget,
-                transient=True,
+                transient=context_transient,
+                context_ref=context_ref,
+                inferred_context=inferred_context,
                 compact=args.agent,
                 include_evidence=args.agent,
                 max_read_first=args.max_read_first,
@@ -1901,11 +2053,17 @@ def cmd_start(args: argparse.Namespace) -> int:
                 return result
             pack_content = read_text(output_path)
 
+    if args.agent and inline_transient and pack_generated and "## Evidence" not in pack_content:
+        pack_generated = False
+        value_skip = True
+
     if args.agent and not args.quiet:
         if pack_generated:
             print(pack_content.rstrip())
         elif small_repo_skip:
             print(f"Context Pack skipped: unconfigured repo has {repo_file_total} files; direct reading is cheaper.")
+        elif value_skip:
+            print("Context Pack skipped: transient routing found no selective source evidence; use one targeted search instead.")
         elif had_context:
             print(f"Read `{normalize_path(layout.current_path)}` and `{normalize_path(layout.index_path)}`.")
         else:
@@ -2067,7 +2225,12 @@ def area_role(area_id: str, area: dict[str, Any]) -> str:
     return ""
 
 
-def area_routing_text(repo: Path | None, area_id: str, area: dict[str, Any]) -> tuple[set[str], set[str]]:
+def area_routing_text(
+    repo: Path | None,
+    area_id: str,
+    area: dict[str, Any],
+    context_ref: str | None = None,
+) -> tuple[set[str], set[str]]:
     strong_parts = [area_id, area.get("kind", "")]
     strong_parts.extend(area.get("keywords", []) or [])
     strong_parts.extend(area.get("search_terms", []) or [])
@@ -2075,9 +2238,12 @@ def area_routing_text(repo: Path | None, area_id: str, area: dict[str, Any]) -> 
     for field in ("paths", "start_files"):
         support_parts.extend(area.get(field, []) or [])
     if repo is not None:
-        doc = area_doc_path(repo, area)
-        if doc.is_file():
-            markdown = read_text(doc)
+        if context_ref:
+            markdown = area_doc_text(repo, area, context_ref)
+        else:
+            doc = area_doc_path(repo, area)
+            markdown = read_text(doc) if doc.is_file() else ""
+        if markdown:
             for heading in ("Read When", "Start With", "Search First"):
                 support_parts.extend(extract_section_bullets(markdown, heading))
     return tokenize(" ".join(str(item) for item in strong_parts)), tokenize(" ".join(str(item) for item in support_parts))
@@ -2093,6 +2259,7 @@ def selected_area_matches(
     changed_files: list[str],
     task: str | None,
     repo: Path | None = None,
+    context_ref: str | None = None,
 ) -> list[AreaSelection]:
     areas = manifest.get("areas") or {}
     selections: list[AreaSelection] = []
@@ -2120,7 +2287,7 @@ def selected_area_matches(
             reasons.append(f"changed files matched: {shown}" + (f" (+{more} more)" if more > 0 else ""))
 
         if route_tokens:
-            strong_tokens, support_tokens = area_routing_text(repo, area_id, area)
+            strong_tokens, support_tokens = area_routing_text(repo, area_id, area, context_ref)
             strong_overlap = route_tokens & strong_tokens
             support_overlap = (route_tokens & support_tokens) - strong_overlap
             if strong_overlap or support_overlap:
@@ -2267,6 +2434,46 @@ def extract_section_bullets(markdown: str, heading: str) -> list[str]:
     return bullets
 
 
+def extract_section_items(markdown: str, heading: str) -> list[str]:
+    target = "## " + heading.lower()
+    in_section = False
+    items: list[str] = []
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if stripped.lower() == target:
+            in_section = True
+            continue
+        if in_section and stripped.startswith("## "):
+            break
+        if not in_section:
+            continue
+        if stripped.startswith("- "):
+            items.append(stripped[2:].strip())
+            continue
+        prefix, separator, value = stripped.partition(". ")
+        if separator and prefix.isdigit() and value:
+            items.append(value.strip())
+    return items
+
+
+def handoff_task(repo: Path, layout: ContextLayout) -> str | None:
+    text = read_text(repo / layout.current_path)
+    values = extract_section_items(text, "Active Goal") + extract_section_items(text, "Next Actions")
+    placeholders = (
+        "keep this short",
+        "generate or consult a context pack",
+        "not recorded",
+    )
+    useful = [
+        " ".join(value.split())
+        for value in values
+        if value and not any(marker in value.casefold() for marker in placeholders)
+    ]
+    if not useful:
+        return None
+    return " ".join(unique_text(useful)[:3])[:600].rstrip()
+
+
 def unique(items: Iterable[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -2381,7 +2588,12 @@ def files_for_evidence_entries(repo: Path, entries: Iterable[str], repo_file_lis
 
 def is_generated_context_path(path: str) -> bool:
     normalized = normalize_path(path)
-    return normalized.startswith(".context-pack/") or normalized.startswith(".codex/")
+    agent_docs = {path_text(item) for item in AGENT_DOC_TARGETS.values()}
+    return (
+        normalized.startswith(".context-pack/")
+        or normalized.startswith(".codex/")
+        or normalized in agent_docs
+    )
 
 
 def read_evidence_lines(path: Path) -> tuple[list[str], int] | None:
@@ -2452,6 +2664,13 @@ def collect_evidence(
 ) -> EvidenceResult:
     configured_terms = configured_search_terms(areas, selections)
     fallback_terms = fallback_task_search_terms(task)
+    if not fallback_terms and changed_files:
+        fallback_terms = unique_text(
+            token
+            for path in changed_files
+            for token in ordered_tokens(Path(path).stem)
+            if len(token) >= 4
+        )[:EVIDENCE_MAX_TERMS]
     repo_file_list = repo_files(repo)
 
     preferred_entries: list[str] = list(changed_files)
@@ -2544,8 +2763,10 @@ def collect_evidence(
         candidates.sort(key=lambda item: (-item[0], item[2], item[3], item[1]))
         return accepted, candidates
 
+    evidence_source = "configured"
     accepted_terms, candidates = find_hits(configured_terms, configured=True)
     if not candidates and fallback_terms:
+        evidence_source = "fallback"
         accepted_terms, candidates = find_hits(fallback_terms, configured=False)
 
     snippets: list[EvidenceSnippet] = []
@@ -2582,9 +2803,20 @@ def collect_evidence(
     selected_terms = unique([snippet.term for snippet in snippets] + accepted_terms)[:EVIDENCE_MAX_TERMS]
     if not selected_terms:
         selected_terms = configured_terms or fallback_terms
+    if snippets and evidence_source == "configured":
+        confidence = "strong"
+        reason = "configured symbols matched bounded current-source regions"
+    elif snippets:
+        confidence = "candidate"
+        reason = "task terms matched bounded current-source regions"
+    else:
+        confidence = "none"
+        reason = "no selective current-source match was found within the evidence budget"
     return EvidenceResult(
         terms=selected_terms,
         snippets=snippets,
+        confidence=confidence,
+        reason=reason,
     )
 
 
@@ -2720,6 +2952,25 @@ def area_doc_path(repo: Path, area: dict[str, Any]) -> Path:
     return repo / normalize_path(area.get("doc", ""))
 
 
+def area_doc_text(repo: Path, area: dict[str, Any], context_ref: str | None = None) -> str:
+    rel = normalize_path(area.get("doc", ""))
+    if not rel:
+        return ""
+    if context_ref:
+        return git_file_text(repo, context_ref, rel) or ""
+    return read_text(repo / rel)
+
+
+def context_provenance(mode: str, context_ref: str | None, inferred_context: bool) -> str:
+    if mode == "review" and context_ref:
+        return f"Notes and routing: review base `{context_ref[:12]}`; Evidence: current source under review."
+    if mode == "review" and inferred_context:
+        return "Notes and routing: deterministic inference only; branch-authored context docs ignored; Evidence: current source under review."
+    if inferred_context:
+        return "Notes and routing: transient deterministic inference; Evidence: current source."
+    return "Notes and routing: tracked working-tree context; Evidence: current source."
+
+
 def stale_warning(repo: Path, snapshot: Snapshot, area_id: str, area: dict[str, Any], changed_files: list[str]) -> str | None:
     doc = area_doc_path(repo, area)
     if not doc.exists():
@@ -2756,6 +3007,7 @@ def render_agent_pack(
     tests: list[str],
     warnings: list[str],
     evidence: EvidenceResult | None,
+    provenance: str,
 ) -> str:
     visible_scopes = unique(search_scopes)[:AGENT_MAX_SCOPES]
     visible_changed = unique(changed_files)[:8]
@@ -2777,13 +3029,19 @@ def render_agent_pack(
             lines.append("- Search: " + ", ".join(f"`{term}`" for term in terms[:EVIDENCE_MAX_TERMS]))
         if visible_scopes:
             lines.append("- Scopes: " + ", ".join(f"`{scope}`" for scope in visible_scopes))
+        if evidence:
+            lines.append(f"- Evidence confidence: `{evidence.confidence}` ({evidence.reason})")
 
         if snippets:
+            if evidence and evidence.confidence == "strong":
+                evidence_rule = "Configured symbols matched current source. Edit directly if the cause is visible; do not reopen these ranges."
+            else:
+                evidence_rule = "Task terms produced candidate current-source regions. Verify before editing and expand only if needed."
             lines.extend(
                 [
                     "",
                     "## Evidence",
-                    "- Current source, patch-ready. If the cause is visible, edit directly; do not reopen these ranges.",
+                    f"- {evidence_rule}",
                 ]
             )
             for snippet in snippets:
@@ -2824,7 +3082,12 @@ def render_agent_pack(
                     f"- Repo: `{snapshot.repo_root}`; branch: `{snapshot.branch}`; "
                     f"HEAD: `{snapshot.head[:12]}`; dirty: {len(snapshot.dirty_files)}; hash: `{snapshot.diff_hash}`"
                 ),
-                "- Expand only when Evidence is insufficient; otherwise use the next tool call for editing or verification.",
+                f"- {provenance}",
+                (
+                    "- Use the next tool call for editing or verification when strong Evidence is sufficient; otherwise expand with a targeted search."
+                    if evidence and evidence.confidence == "strong" and snippets
+                    else "- Expand with one targeted search before editing when Evidence is candidate or absent."
+                ),
             ]
         )
         return "\n".join(lines).rstrip() + "\n"
@@ -2855,6 +3118,8 @@ def render_pack(
     mode: str,
     include_text_budget: bool = False,
     transient: bool = False,
+    context_ref: str | None = None,
+    inferred_context: bool = False,
     compact: bool = False,
     include_evidence: bool = False,
     max_read_first: int = 12,
@@ -2869,6 +3134,7 @@ def render_pack(
     read_first: list[str] = []
     read_later: list[str] = []
     tests: list[str] = []
+    verify: list[str] = []
     contracts: list[str] = []
     failures: list[str] = []
     warnings: list[str] = []
@@ -2886,18 +3152,18 @@ def render_pack(
         target.extend(path for path in changed if matches_any(path, area.get("paths", []) or []))
         if primary:
             tests.extend(area.get("tests", []) or [])
+            verify.extend(area.get("verify", []) or [])
             area_contracts = area.get("contracts", []) or []
             area_failures = area.get("failure_modes", []) or []
             contracts.extend(area_contracts)
             failures.extend(area_failures)
 
-        doc = area_doc_path(repo, area)
-        text = read_text(doc)
+        text = area_doc_text(repo, area, context_ref)
         if primary:
             extend_distinct_text(contracts, extract_section_bullets(text, "Contracts"))
             extend_distinct_text(failures, extract_section_bullets(text, "Common Failure Modes"))
 
-        if not transient:
+        if not transient and not context_ref:
             warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
             if warning:
                 warnings.append(warning)
@@ -2924,7 +3190,7 @@ def render_pack(
                 changed_files=changed,
                 task=task,
             )
-            if include_evidence and task
+            if include_evidence and (task or changed)
             else None
         )
         return render_agent_pack(
@@ -2935,9 +3201,14 @@ def render_pack(
             changed_files=changed,
             contracts=rank_task_text(contracts, task, min(max_contracts, AGENT_MAX_CONTRACTS)),
             failures=rank_task_text(failures, task, min(max_failure_modes, AGENT_MAX_FAILURE_MODES)),
-            tests=verification_commands(tests, task, AGENT_MAX_TESTS),
+            tests=(
+                rank_task_text(verify, task, AGENT_MAX_TESTS)
+                if verify
+                else verification_commands(tests, task, AGENT_MAX_TESTS)
+            ),
             warnings=warnings,
             evidence=evidence,
+            provenance=context_provenance(mode, context_ref, inferred_context),
         )
 
     read_first_unique = unique(read_first)
@@ -2982,6 +3253,9 @@ def render_pack(
         f"- Branch: {snapshot.branch}",
         f"- HEAD: {snapshot.head}",
         f"- Dirty diff hash: {snapshot.diff_hash}",
+        "",
+        "## Context Provenance",
+        f"- {context_provenance(mode, context_ref, inferred_context)}",
         "",
         "## Scope Reduction",
         f"- Repo files considered: {repo_file_total if repo_file_total else 'unknown'}",
@@ -3066,6 +3340,12 @@ def render_pack(
     if not failures_visible:
         lines.append("- none recorded")
 
+    lines.extend(["", "## Verify"])
+    for item in unique(verify):
+        lines.append(f"- `{item}`")
+    if not verify:
+        lines.append("- none recorded")
+
     lines.extend(["", "## Tests"])
     for item in unique(tests):
         lines.append(f"- `{item}`")
@@ -3095,10 +3375,30 @@ def build_pack(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = getattr(args, "layout", None) or resolve_layout(repo, for_write=True)
-    transient = bool(getattr(args, "transient", False))
-    manifest = getattr(args, "manifest", None) or load_manifest(repo, layout)
+    if getattr(args, "mode", "work") == "review":
+        maybe_infer_review_base(args, repo, snapshot)
+    has_context_library = (repo / layout.manifest_path).exists()
+    manifest = getattr(args, "manifest", None)
+    context_ref = getattr(args, "context_ref", None)
+    inferred_context = bool(getattr(args, "inferred_context", False))
+    if manifest is None:
+        manifest, context_ref, inferred_context = resolve_pack_context(
+            repo,
+            layout,
+            args,
+            has_context_library=has_context_library,
+        )
+    transient = bool(getattr(args, "transient", False)) or (
+        getattr(args, "mode", "work") == "review" and inferred_context
+    )
     changed = resolve_changed_files(repo, snapshot, args)
-    matches = selected_area_matches(manifest, changed_files=changed, task=args.task, repo=repo)
+    matches = selected_area_matches(
+        manifest,
+        changed_files=changed,
+        task=args.task,
+        repo=repo,
+        context_ref=context_ref,
+    )
     max_areas = getattr(args, "max_areas", 4) or len(matches)
     primary = matches[:max_areas]
     related = matches[max_areas:]
@@ -3115,6 +3415,8 @@ def build_pack(args: argparse.Namespace) -> int:
         mode=args.mode,
         include_text_budget=bool(getattr(args, "text_budget", False)),
         transient=transient,
+        context_ref=context_ref,
+        inferred_context=inferred_context,
         compact=bool(getattr(args, "agent", False)),
         include_evidence=bool(getattr(args, "agent", False)),
         max_read_first=getattr(args, "max_read_first", 12),
@@ -3155,13 +3457,22 @@ def cmd_measure(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     layout = resolve_layout(repo)
     has_context_library = (repo / layout.manifest_path).exists()
-    manifest = load_manifest(repo, layout)
-    if not has_context_library:
-        manifest = inferred_manifest(repo, layout)
     args.mode = "review" if getattr(args, "review", False) or getattr(args, "base", None) else "work"
     review_base_inferred = maybe_infer_review_base(args, repo, snapshot) if args.mode == "review" else False
+    manifest, context_ref, inferred_context = resolve_pack_context(
+        repo,
+        layout,
+        args,
+        has_context_library=has_context_library,
+    )
     changed = resolve_changed_files(repo, snapshot, args)
-    matches = selected_area_matches(manifest, changed_files=changed, task=args.task, repo=repo)
+    matches = selected_area_matches(
+        manifest,
+        changed_files=changed,
+        task=args.task,
+        repo=repo,
+        context_ref=context_ref,
+    )
     max_areas = getattr(args, "max_areas", 4) or len(matches)
     primary = matches[:max_areas]
     related = matches[max_areas:]
@@ -3176,7 +3487,9 @@ def cmd_measure(args: argparse.Namespace) -> int:
         task=args.task,
         mode=args.mode,
         include_text_budget=True,
-        transient=not has_context_library,
+        transient=not has_context_library or (args.mode == "review" and inferred_context),
+        context_ref=context_ref,
+        inferred_context=inferred_context,
         max_read_first=getattr(args, "max_read_first", 12),
         max_contracts=getattr(args, "max_contracts", 12),
         max_failure_modes=getattr(args, "max_failure_modes", 10),
@@ -3455,6 +3768,56 @@ def broad_area_warnings(repo: Path, manifest: dict[str, Any], layout: ContextLay
     return warnings
 
 
+def search_term_health_warnings(repo: Path, manifest: dict[str, Any]) -> list[str]:
+    repo_file_list = repo_files(repo)
+    warnings: list[str] = []
+    owners: dict[str, list[str]] = {}
+    for area_id, area in sorted((manifest.get("areas") or {}).items()):
+        terms = unique_text(area.get("search_terms", []) or [])
+        if not terms:
+            continue
+        for term in terms:
+            owners.setdefault(term.casefold(), []).append(area_id)
+
+        entries = area.get("start_files", []) or area.get("paths", []) or []
+        candidates = files_for_evidence_entries(repo, entries, repo_file_list)[:EVIDENCE_MAX_FILES]
+        counts = {term: 0 for term in terms}
+        file_counts = {term: 0 for term in terms}
+        scanned_bytes = 0
+        for rel in candidates:
+            result = read_evidence_lines(repo / rel)
+            if result is None:
+                continue
+            lines, size = result
+            if scanned_bytes + size > EVIDENCE_MAX_SCAN_BYTES:
+                break
+            scanned_bytes += size
+            text = "\n".join(lines).casefold()
+            for term in terms:
+                count = text.count(term.casefold())
+                if count:
+                    counts[term] += count
+                    file_counts[term] += 1
+
+        for term in terms:
+            if counts[term] == 0:
+                warnings.append(f"area {area_id} search term {term!r} has no match in its evidence scopes")
+                continue
+            broad_limit = 100 if term_is_symbolic(term) else EVIDENCE_BROAD_HIT_LIMIT
+            too_many_files = file_counts[term] > 12 or (not term_is_symbolic(term) and file_counts[term] > 4)
+            if counts[term] > broad_limit or too_many_files:
+                warnings.append(
+                    f"area {area_id} search term {term!r} is broad "
+                    f"({counts[term]} matches across {file_counts[term]} files)"
+                )
+
+    for term, area_ids in sorted(owners.items()):
+        unique_areas = sorted(set(area_ids))
+        if len(unique_areas) > 1:
+            warnings.append(f"search term {term!r} is shared by areas {', '.join(unique_areas)}")
+    return warnings
+
+
 def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -3478,6 +3841,7 @@ def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[
             if not area.get("paths"):
                 warnings.append(f"area {area_id} has no path patterns")
         warnings.extend(broad_area_warnings(repo, manifest, layout))
+        warnings.extend(search_term_health_warnings(repo, manifest))
 
     gitignore = repo / ".gitignore"
     if gitignore.exists():
@@ -4114,9 +4478,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--agent-docs",
-        choices=["all", "agents", "claude", "cursor", "none"],
-        default="all",
-        help="Agent docs to install during setup",
+        choices=["auto", "all", "agents", "claude", "cursor", "none"],
+        default="auto",
+        help="Agent docs to install; auto writes AGENTS.md and refreshes detected Claude/Cursor rules",
     )
     p.add_argument(
         "--git-hooks",
@@ -4152,8 +4516,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--target",
         action="append",
-        choices=["all", *AGENT_DOC_TARGETS.keys()],
-        help="Agent docs to update: all, agents, claude, or cursor. Repeat to select multiple targets.",
+        choices=["auto", "all", *AGENT_DOC_TARGETS.keys()],
+        help="Agent docs to update: auto, all, agents, claude, or cursor. Repeat to select multiple targets.",
     )
     p.set_defaults(func=cmd_install_agent_docs)
 
@@ -4211,8 +4575,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--fix", action="store_true", help="Repair missing setup files before validating")
     p.add_argument(
         "--agent-docs",
-        choices=["all", "agents", "claude", "cursor", "none"],
-        default="all",
+        choices=["auto", "all", "agents", "claude", "cursor", "none"],
+        default="auto",
         help="Agent docs to install when --fix repairs setup",
     )
     p.set_defaults(func=cmd_doctor)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import collections
 import contextlib
 import importlib.util
 import io
@@ -37,6 +39,31 @@ def load_engine():
 class ContextPackTests(unittest.TestCase):
     def setUp(self) -> None:
         self.engine = load_engine()
+
+    def test_engine_has_no_unreferenced_top_level_symbols(self) -> None:
+        tree = ast.parse(ENGINE.read_text(encoding="utf-8"))
+        definitions = {
+            node.name: node.lineno
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        }
+        constants: dict[str, int] = {}
+        for node in tree.body:
+            target = None
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target = node.targets[0]
+            elif isinstance(node, ast.AnnAssign):
+                target = node.target
+            if isinstance(target, ast.Name) and target.id.isupper():
+                constants[target.id] = node.lineno
+        loads = collections.Counter(
+            node.id
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+        )
+
+        unused = [(name, line) for name, line in {**definitions, **constants}.items() if loads[name] == 0]
+        self.assertEqual(unused, [])
 
     def test_init_checkpoint_and_doctor_without_git(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -195,6 +222,48 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- .context-pack/INDEX.md", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
+    def test_agent_start_inlines_handoff_route_and_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text(
+                "def choose_runtime():\n    return 'cpu'\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/runtime.md",
+                "description": "Runtime selection and fallback behavior.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "search_terms": ["choose_runtime"],
+                "keywords": ["runtime", "selector"],
+                "tests": [],
+                "verify": ["python -m py_compile src/runtime.py"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/runtime.md").write_text("# Runtime\n", encoding="utf-8")
+            (repo / ".context-pack/CURRENT.md").write_text(
+                "# Current Handoff\n\n## Active Goal\n- Finish the runtime selector fallback.\n\n"
+                "## Next Actions\n1. Inspect choose_runtime and verify the smallest fix.\n",
+                encoding="utf-8",
+            )
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(["start", "--agent", "--repo", str(repo)])
+
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("`runtime`", text)
+            self.assertIn("Evidence confidence: `strong`", text)
+            self.assertIn("choose_runtime", text)
+            self.assertIn("python -m py_compile src/runtime.py", text)
+            self.assertNotIn("Read `.context-pack/CURRENT.md`", text)
+
     def test_legacy_codex_layout_still_routes_until_migrated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -286,7 +355,10 @@ class ContextPackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
 
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            self.assertEqual(
+                self.engine.main(["setup", "--repo", str(repo), "--agent-docs", "all", "--quiet"]),
+                0,
+            )
 
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
@@ -297,6 +369,27 @@ class ContextPackTests(unittest.TestCase):
                 (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8"),
             )
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 0)
+
+    def test_setup_auto_avoids_unused_agent_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            self.assertTrue((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / "CLAUDE.md").exists())
+            self.assertFalse((repo / ".cursor").exists())
+
+    def test_setup_auto_refreshes_detected_agent_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "CLAUDE.md").write_text("# Existing Claude guidance\n", encoding="utf-8")
+            (repo / ".cursor").mkdir()
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            self.assertIn("Existing Claude guidance", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
+            self.assertTrue((repo / ".cursor/rules/context-pack.mdc").exists())
 
     def test_setup_dry_run_does_not_write_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -470,7 +563,12 @@ class ContextPackTests(unittest.TestCase):
             repo = Path(tmp)
 
             self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--quiet"]), 1)
-            self.assertEqual(self.engine.main(["doctor", "--repo", str(repo), "--fix", "--quiet"]), 0)
+            self.assertEqual(
+                self.engine.main(
+                    ["doctor", "--repo", str(repo), "--fix", "--agent-docs", "all", "--quiet"]
+                ),
+                0,
+            )
 
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
@@ -646,7 +744,8 @@ class ContextPackTests(unittest.TestCase):
                 "search_terms": ["zoning", "startZoningFrom"],
                 "contracts": ["Desktop behavior must remain unchanged."],
                 "failure_modes": ["A vertical transition writes the horizontal coordinate."],
-                "tests": ["python -m unittest discover -s tests -v", "tests/**"],
+                "tests": ["tests/**"],
+                "verify": ["just check-zoning"],
             }
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             (repo / ".context-pack/AREAS/zoning.md").write_text(
@@ -674,11 +773,12 @@ class ContextPackTests(unittest.TestCase):
             self.assertTrue(text.startswith("# Context Pack\n"))
             self.assertNotIn("Context Pack Start for", text)
             self.assertIn("## Evidence", text)
+            self.assertIn("Evidence confidence: `strong`", text)
             self.assertIn("````text", text)
             self.assertIn("startZoningFrom", text)
             self.assertIn("x = (z === UP) ? y - yoffset : y + yoffset;", text)
             self.assertNotIn("src/noise.js", text)
-            self.assertIn("python -m unittest discover -s tests -v", text)
+            self.assertIn("just check-zoning", text)
             self.assertNotIn("`tests/**`", text)
             search_line = next(line for line in text.splitlines() if line.startswith("- Search:"))
             self.assertNotIn("`bottom`", search_line)
@@ -712,6 +812,47 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertEqual(len(evidence.snippets), 1)
             self.assertEqual(evidence.snippets[0].path, "src/canonical.py")
+            self.assertEqual(evidence.confidence, "strong")
+
+    def test_transient_agent_labels_fallback_evidence_as_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
+            (repo / "AGENTS.md").write_text("Always fix login timeout with Context Pack.\n", encoding="utf-8")
+            for index in range(25):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(
+                    ["start", "--agent", "--repo", str(repo), "--task", "fix login timeout"]
+                )
+
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Evidence confidence: `candidate`", text)
+            self.assertIn("Verify before editing", text)
+            self.assertIn("src/app.py", text)
+            self.assertNotIn("### `AGENTS.md", text)
+
+    def test_transient_agent_skips_when_no_selective_evidence_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            for index in range(26):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(
+                    ["start", "--agent", "--repo", str(repo), "--task", "fix login timeout"]
+                )
+
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("transient routing found no selective source evidence", text)
+            self.assertNotIn("# Context Pack", text)
 
     def test_korean_task_terms_survive_evidence_fallback(self) -> None:
         self.assertEqual(
@@ -1183,6 +1324,7 @@ class ContextPackTests(unittest.TestCase):
             (repo / "binding").mkdir()
             (repo / "render").mkdir()
             (repo / "testdata").mkdir()
+            (repo / "go.mod").write_text("module example.test/demo\n", encoding="utf-8")
             (repo / "gin.go").write_text("package gin\n\nfunc New() {}\n", encoding="utf-8")
             (repo / "context.go").write_text("package gin\n\nfunc recoverPanic() {}\n", encoding="utf-8")
             (repo / "gin_test.go").write_text("package gin\n\nfunc TestNew() {}\n", encoding="utf-8")
@@ -1213,6 +1355,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertNotIn("testdata/**", source["paths"])
             self.assertIn("**/*_test.go", tests["paths"])
             self.assertIn("gin_test.go", tests["start_files"])
+            self.assertEqual(source["verify"], ["go test ./..."])
+            self.assertEqual(tests["verify"], ["go test ./..."])
 
     def test_text_budget_skips_known_binary_media_suffixes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1668,6 +1812,127 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- runtime", pack)
             self.assertIn("src/runtime.py", pack)
 
+    def test_review_uses_base_context_and_current_source_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose_runtime():\n    return 'cpu'\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["runtime"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/runtime.md",
+                "description": "Runtime selection.",
+                "paths": ["src/runtime.py"],
+                "start_files": ["src/runtime.py"],
+                "search_terms": ["choose_runtime"],
+                "tests": [],
+                "keywords": ["runtime"],
+                "contracts": ["Base contract stays trusted."],
+            }
+            manifest["areas"]["unrelated"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/unrelated.md",
+                "description": "An unrelated subsystem.",
+                "paths": ["src/unrelated.py"],
+                "start_files": ["src/unrelated.py"],
+                "search_terms": ["unrelated_symbol"],
+                "tests": [],
+                "keywords": ["unrelated"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
+                "# Runtime\n\n## Contracts\n- Base area note stays trusted.\n",
+                encoding="utf-8",
+            )
+            (repo / ".context-pack/AREAS/unrelated.md").write_text(
+                "# Unrelated\n\n## Read When\n- Working on unrelated_symbol.\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "base context"], cwd=repo, check=True, capture_output=True)
+
+            subprocess.run(["git", "checkout", "-b", "feature/runtime"], cwd=repo, check=True, capture_output=True)
+            (repo / "src/runtime.py").write_text("def choose_runtime():\n    return 'gpu'\n", encoding="utf-8")
+            manifest["areas"]["runtime"]["contracts"] = ["Branch-authored context controls the review."]
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/runtime.md").write_text(
+                "# Runtime\n\n## Contracts\n- Branch-authored note controls the review.\n",
+                encoding="utf-8",
+            )
+            (repo / ".context-pack/AREAS/unrelated.md").write_text(
+                "# Unrelated\n\n## Read When\n- Reviewing a security override.\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "feature changes context"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(
+                    [
+                        "start",
+                        "--agent",
+                        "--repo",
+                        str(repo),
+                        "--review",
+                        "--base",
+                        "main",
+                        "--task",
+                        "security override",
+                    ]
+                )
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Base contract stays trusted.", text)
+            self.assertIn("Base area note stays trusted.", text)
+            self.assertNotIn("Branch-authored context controls the review.", text)
+            self.assertNotIn("Branch-authored note controls the review.", text)
+            self.assertNotIn("`unrelated`", text)
+            self.assertIn("Notes and routing: review base", text)
+            self.assertIn("2:     return 'gpu'", text)
+
+    def test_review_ignores_branch_context_when_base_has_no_context_library(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            (repo / "src/runtime.py").write_text("def choose_runtime():\n    return 'cpu'\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "base without context"], cwd=repo, check=True, capture_output=True)
+
+            subprocess.run(["git", "checkout", "-b", "feature/runtime"], cwd=repo, check=True, capture_output=True)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            (repo / "src/runtime.py").write_text("def choose_runtime():\n    return 'gpu'\n", encoding="utf-8")
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["source"]["contracts"] = ["Branch context says the change is safe."]
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "feature adds context"], cwd=repo, check=True, capture_output=True)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(
+                    ["start", "--agent", "--repo", str(repo), "--review", "--base", "main"]
+                )
+
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("branch-authored context docs ignored", text)
+            self.assertNotIn("Branch context says the change is safe.", text)
+            self.assertIn("Evidence confidence: `candidate`", text)
+            self.assertIn("choose_runtime", text)
+
     def test_git_hook_install_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1747,6 +2012,27 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertEqual(errors, [])
             self.assertTrue(any("repository-wide path pattern" in item for item in warnings))
+
+    def test_doctor_warns_about_missing_and_broad_search_terms(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            for index in range(30):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["source"]["search_terms"] = ["missing_symbol", "VALUE"]
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = self.engine.main(["doctor", "--repo", str(repo), "--strict"])
+
+            text = output.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("search term 'missing_symbol' has no match", text)
+            self.assertIn("search term 'VALUE' is broad", text)
 
     def test_install_codex_copies_plugin_and_updates_marketplace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1836,7 +2122,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("focused repo context", plugin["interface"]["defaultPrompt"][0])
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("quiet orientation", skill)
-            self.assertIn("prints a transient pack without writing repository files", skill)
+            self.assertIn("normal targeted code search", skill)
+            self.assertIn("transient preview without writing repository files", skill)
             self.assertIn("explicitly asks to install", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
             self.assertIn("setup --dry-run", skill)
@@ -2107,10 +2394,12 @@ class ContextPackTests(unittest.TestCase):
     def test_demo_gif_script_matches_current_product_flow(self) -> None:
         text = DEMO_GIF_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("User: Fix the login timeout.", text)
-        self.assertIn("Context library: transient", text)
-        self.assertIn("repo files stay untouched", text)
-        self.assertIn("Evidence: exact source ranges with line numbers", text)
-        self.assertIn("broad reading is likely cheaper", text)
+        self.assertIn("Context library: .context-pack/", text)
+        self.assertIn("Unconfigured repo? Use normal targeted search.", text)
+        self.assertIn("Transient preview remains an explicit CLI option.", text)
+        self.assertIn("Evidence: configured symbol, current source", text)
+        self.assertIn("Confidence: strong", text)
+        self.assertIn("Candidate evidence? Verify with one focused search.", text)
         self.assertIn("context-pack setup --dry-run", text)
         self.assertIn("context-pack start --agent --task", text)
         self.assertIn("context-pack start --agent --review --base main", text)
@@ -2118,7 +2407,8 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Tiny obvious edits can skip Context Pack", text)
         self.assertIn(".context-pack/manifest.json", text)
         self.assertIn("No duplicate CLI preamble or full-file read", text)
-        self.assertIn("39.1% less median total input", text)
+        self.assertIn("maintained context: 14/14 correct", text)
+        self.assertIn("transient: 11/14, no longer the default", text)
         self.assertIn("not Context Pack metadata", text)
         self.assertIn("checkpoint --pack", text)
         self.assertIn("Next session starts from the same map.", text)
@@ -2144,7 +2434,9 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("transient", text)
             self.assertIn("24", text)
             self.assertIn("chars/4", text)
-            self.assertIn("39.1%", text)
+            self.assertIn("14/14", text)
+            self.assertIn("11/14", text)
+            self.assertIn("37.5%", text)
             self.assertNotIn("C:/", text)
             self.assertLessEqual(len(text.splitlines()), 220)
         self.assertIn("not RAG", english)

@@ -22,6 +22,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 import shlex
 import shutil
 import statistics
@@ -37,8 +38,9 @@ ENGINE_PATH = ROOT / "plugins/context-pack/skills/context-pack/scripts/context_p
 REPO_URL = "https://github.com/mozilla/BrowserQuest.git"
 SCENARIOS: dict[str, dict[str, Any]] = {
     "touch": {
+        "operation": "fix",
         "title": "precise mobile touch regression",
-        "task": "mobile single-finger tap regression",
+        "task": "fix mobile single-finger tap regression",
         "target_file": "client/js/main.js",
         "good_code": "event.originalEvent.touches[0]",
         "bad_code": "event.originalEvent.touches[1]",
@@ -64,11 +66,12 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             "Browser touch wrappers and desktop mouse events expose coordinates through different object shapes.",
             "A local event-adaptation bug causes broad renderer or map changes.",
         ],
-        "tests": ["node --check client/js/main.js"],
+        "verify": ["node --check client/js/main.js"],
     },
     "zoning": {
+        "operation": "fix",
         "title": "domain-routed mobile edge transition regression",
-        "task": "phone bottom-edge camera transition",
+        "task": "fix phone bottom-edge camera transition",
         "target_file": "client/js/game.js",
         "good_code": "y = (z === Types.Orientations.UP) ? c.y - yoffset : c.y + yoffset;",
         "bad_code": "x = (z === Types.Orientations.UP) ? c.y - yoffset : c.y + yoffset;",
@@ -95,18 +98,78 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             "Mobile shortcut and desktop animation paths drift in coordinate behavior.",
             "A mobile-only zoning fix changes the desktop updater path unnecessarily.",
         ],
-        "tests": ["node --check client/js/game.js"],
+        "verify": ["node --check client/js/game.js"],
     },
+}
+
+SCENARIOS["review-zoning"] = {
+    **SCENARIOS["zoning"],
+    "operation": "review",
+    "title": "branch review of a mobile edge transition regression",
+    "task": "review mobile zoning changes",
+    "prompt": (
+        "Review the current branch against main. Do not edit any files. Identify concrete correctness "
+        "regressions in the branch, prioritizing user-visible behavior. Report the relevant file and "
+        "explain the failure mechanism concisely."
+    ),
+    "review_location_terms": ["2134", "2136", "startZoningFrom", "c.setPosition", "yoffset", "c.y"],
+    "review_transition_terms": ["vertical", "top", "bottom", "up/down", "upward", "downward", "upper", "lower"],
+    "review_impact_terms": ["horizontal", "sideways", "wrong location", "wrong map", "incorrect location", "y unchanged", "y position unchanged"],
+}
+
+SCENARIOS["continuation-zoning"] = {
+    **SCENARIOS["zoning"],
+    "operation": "continuation",
+    "title": "session continuation for an unfinished mobile transition fix",
+    "task": "continue unfinished mobile zoning work",
+    "prompt": (
+        "Continue the unfinished work described by the repository handoff. Complete the smallest pending "
+        "code fix and verify it. If no handoff is available, inspect recent project history to determine "
+        "what remains unfinished."
+    ),
 }
 
 
 def transient_rules(scenario: dict[str, Any]) -> str:
+    operation = scenario.get("operation", "fix")
+    if operation == "review":
+        command = "context-pack start --agent --review --base main"
+        next_step = f"Run `{command}`. Use base-sourced notes and current-source Evidence, then complete the review without editing."
+    elif operation == "continuation":
+        command = "context-pack start --agent"
+        next_step = f"Run `{command}`. If no persistent handoff exists, inspect recent project history and continue normally."
+    else:
+        command = f'context-pack start --agent --task "{scenario["task"]}"'
+        next_step = (
+            "First try one targeted source-code search in likely code directories, excluding agent instructions, "
+            "context metadata, generated files, and vendored assets. If it localizes an "
+            f"exact source range, continue without Context Pack. Only if it stays broad, run `{command}` and use "
+            "its inline Evidence first."
+        )
     return f"""# Agent Instructions
 
-For this non-trivial bug, run `context-pack start --agent --task "{scenario['task']}"` before broad
-repository reading. Use its inline Evidence first and search only the listed terms and scopes if
-needed. Then verify source behavior and continue the requested fix. Do not persist Context Pack
-setup in this repository.
+For this non-trivial task, use this orientation rule before broad repository reading. {next_step}
+Search only listed terms and scopes when expansion is needed. Do not persist Context Pack setup in
+this repository.
+"""
+
+
+def continuation_handoff(scenario: dict[str, Any]) -> str:
+    return f"""# Current Handoff
+
+## Active Goal
+- Resume the unfinished mobile bottom-edge transition regression without changing desktop zoning.
+
+## Read First
+1. `.context-pack/AREAS/{scenario['area_id']}.md`
+2. Use the area's configured symbols to inspect current source.
+
+## Next Actions
+1. Reproduce the sideways camera jump in the mobile zoning shortcut.
+2. Make the smallest coordinate fix and run `{scenario['verify'][0]}`.
+
+## Watch Outs
+- Generated maps and renderer behavior are out of scope.
 """
 
 
@@ -116,14 +179,14 @@ def curated_area_doc(scenario: dict[str, Any]) -> str:
     search = "\n".join(f"- `{item}`" for item in scenario["search_terms"])
     contracts = "\n".join(f"- {item}" for item in scenario["contracts"])
     failures = "\n".join(f"- {item}" for item in scenario["failure_modes"])
-    tests = "\n".join(f"  - {item}" for item in scenario["tests"])
+    verify = "\n".join(f"  - {item}" for item in scenario["verify"])
     return f"""---
 id: {scenario['area_id']}
 status: active
 paths:
 {paths}
-tests:
-{tests}
+verify:
+{verify}
 ---
 
 # {scenario['area_title']}
@@ -243,7 +306,8 @@ def curated_manifest(scenario: dict[str, Any]) -> dict[str, Any]:
                 "contracts": scenario["contracts"],
                 "failure_modes": scenario["failure_modes"],
                 "stale_if_paths": scenario["paths"],
-                "tests": scenario["tests"],
+                "tests": [],
+                "verify": scenario["verify"],
             },
             "overview": {
                 "kind": "overview",
@@ -261,6 +325,41 @@ def curated_manifest(scenario: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def install_condition_context(
+    target: Path,
+    condition: str,
+    context_pack: list[str],
+    scenario: dict[str, Any],
+) -> None:
+    if condition == "transient":
+        (target / "AGENTS.md").write_text(transient_rules(scenario), encoding="utf-8", newline="\n")
+        commit_all(target, "benchmark: add transient orientation rule")
+        return
+    if condition != "curated":
+        return
+
+    run(
+        [*context_pack, "setup", "--repo", str(target), "--agent-docs", "agents", "--no-infer-areas", "--quiet"],
+        target,
+    )
+    manifest_path = target / ".context-pack/manifest.json"
+    manifest_path.write_text(
+        json.dumps(curated_manifest(scenario), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    area_path = target / f".context-pack/AREAS/{scenario['area_id']}.md"
+    area_path.write_text(curated_area_doc(scenario), encoding="utf-8", newline="\n")
+    run([*context_pack, "refresh", "--repo", str(target), "--quiet"], target)
+    if scenario.get("operation") == "continuation":
+        (target / ".context-pack/CURRENT.md").write_text(
+            continuation_handoff(scenario),
+            encoding="utf-8",
+            newline="\n",
+        )
+    commit_all(target, "benchmark: add curated context pack")
+
+
 def prepare_trial(
     source: Path,
     target: Path,
@@ -271,6 +370,14 @@ def prepare_trial(
     run(["git", "clone", "--quiet", str(source), str(target)], source.parent, timeout=180)
     git(target, "config", "user.name", "Context Pack Benchmark")
     git(target, "config", "user.email", "benchmark@example.invalid")
+    git(target, "branch", "-M", "main")
+
+    operation = str(scenario.get("operation", "fix"))
+    if operation == "review":
+        install_condition_context(target, condition, context_pack, scenario)
+        git(target, "checkout", "-b", "benchmark-work")
+    elif operation == "continuation":
+        git(target, "checkout", "-b", "benchmark-work")
 
     target_file = target / str(scenario["target_file"])
     source_text = target_file.read_text(encoding="utf-8")
@@ -280,27 +387,14 @@ def prepare_trial(
     if count != 1:
         raise RuntimeError(f"Expected one seed location in {scenario['target_file']}, found {count}")
     target_file.write_text(source_text.replace(good_code, bad_code, 1), encoding="utf-8", newline="\n")
-    git(target, "add", str(scenario["target_file"]))
-    git(target, "commit", "--amend", "--no-edit")
+    if operation in {"review", "continuation"}:
+        commit_all(target, "benchmark: seed unfinished mobile regression")
+    else:
+        git(target, "add", str(scenario["target_file"]))
+        git(target, "commit", "--amend", "--no-edit")
 
-    if condition == "transient":
-        (target / "AGENTS.md").write_text(transient_rules(scenario), encoding="utf-8", newline="\n")
-        commit_all(target, "benchmark: add transient orientation rule")
-    elif condition == "curated":
-        run(
-            [*context_pack, "setup", "--repo", str(target), "--agent-docs", "agents", "--no-infer-areas", "--quiet"],
-            target,
-        )
-        manifest_path = target / ".context-pack/manifest.json"
-        manifest_path.write_text(
-            json.dumps(curated_manifest(scenario), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-            newline="\n",
-        )
-        area_path = target / f".context-pack/AREAS/{scenario['area_id']}.md"
-        area_path.write_text(curated_area_doc(scenario), encoding="utf-8", newline="\n")
-        run([*context_pack, "refresh", "--repo", str(target), "--quiet"], target)
-        commit_all(target, "benchmark: add curated context pack")
+    if operation != "review":
+        install_condition_context(target, condition, context_pack, scenario)
     return git(target, "rev-parse", "HEAD").stdout.strip()
 
 
@@ -336,6 +430,78 @@ def parse_events(stdout: str) -> tuple[dict[str, int], str, list[str], int, int,
             tool_output_chars += output_chars
             max_tool_output_chars = max(max_tool_output_chars, output_chars)
     return usage, final_message, commands, event_count, tool_output_chars, max_tool_output_chars
+
+
+def changed_files_since(repo: Path, seed_head: str) -> list[str]:
+    args = ["diff", "--name-only", "-z"]
+    if seed_head:
+        args.append(seed_head)
+    args.append("--")
+    tracked = git(repo, *args, check=False).stdout.split("\0")
+    untracked = git(repo, "ls-files", "--others", "--exclude-standard", "-z", check=False).stdout.split("\0")
+    return sorted({item for item in tracked + untracked if item})
+
+
+def review_finding_matches(final_message: str, scenario: dict[str, Any]) -> bool:
+    text = final_message.casefold().replace("`", "")
+    path_text = text.replace("\\", "/")
+    target = Path(str(scenario["target_file"])).as_posix().casefold()
+    if target not in path_text:
+        return False
+    denial_patterns = (
+        r"\b(?:there is|there's|this is)\s+(?:no|not)\b",
+        r"\b(?:no|not)\s+(?:an?\s+|actual\s+)?(?:defect|bug|regression|issue|finding)\b",
+        r"\b(?:does not|doesn't|did not|didn't)\b.{0,24}\bassign\w*\b",
+        r"\bunrelated\b.{0,24}\b(?:observation|note|finding|only)\b",
+        r"\b(?:observation|note)\s+only\b",
+    )
+    if any(re.search(pattern, text) for pattern in denial_patterns):
+        return False
+    if not re.search(r"\bassign\w*\b", text) or not re.search(r"\bx\b", text) or not re.search(r"\by\b", text):
+        return False
+    required_groups = (
+        scenario.get("review_location_terms", []),
+        scenario.get("review_transition_terms", []),
+        scenario.get("review_impact_terms", []),
+    )
+    return all(any(str(term).casefold() in text for term in group) for group in required_groups)
+
+
+def context_pack_was_invoked(commands: list[str]) -> bool:
+    return any("context-pack" in command.casefold() for command in commands)
+
+
+def unexpected_trial_result(condition: str, trial: int, exc: Exception) -> dict[str, Any]:
+    return {
+        "id": f"{condition}-{trial}",
+        "condition": condition,
+        "trial": trial,
+        "status": "error",
+        "error": f"unexpected {type(exc).__name__}: {exc}",
+        "return_code": -1,
+        "duration_seconds": 0.0,
+        "seed_head": "",
+        "usage": {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_output_tokens": 0,
+            "uncached_input_tokens": 0,
+            "total_tokens": 0,
+        },
+        "quality": {
+            "fixed": False,
+            "minimal_patch": False,
+            "changed_files": [],
+            "operation": "unknown",
+        },
+        "context_pack_invoked": False,
+        "command_count": 0,
+        "first_target_command": 0,
+        "tool_output_chars": 0,
+        "max_tool_output_chars": 0,
+        "event_count": 0,
+    }
 
 
 def trial_result(
@@ -409,22 +575,39 @@ def trial_result(
     target_file = Path(str(scenario["target_file"]))
     target_path = repo / target_file
     target_text = target_path.read_text(encoding="utf-8") if target_path.is_file() else ""
-    changed_files = []
+    changed_files: list[str] = []
     if (repo / ".git").exists():
-        changed_files = [line for line in git(repo, "diff", "--name-only", check=False).stdout.splitlines() if line]
-    fixed = str(scenario["good_code"]) in target_text and str(scenario["bad_code"]) not in target_text
-    minimal = changed_files == [target_file.as_posix()]
-    command_text = "\n".join(commands).lower()
+        changed_files = changed_files_since(repo, seed_head)
+    operation = str(scenario.get("operation", "fix"))
+    if operation == "review":
+        fixed = review_finding_matches(final_message, scenario)
+        minimal = not changed_files
+    else:
+        fixed = str(scenario["good_code"]) in target_text and str(scenario["bad_code"]) not in target_text
+        minimal = changed_files == [target_file.as_posix()]
+    normalized_target = target_file.as_posix().casefold()
+    first_target_command = next(
+        (
+            index
+            for index, command in enumerate(commands, start=1)
+            if normalized_target in command.replace("\\", "/").casefold()
+        ),
+        0,
+    )
     public_error = (error or (stderr.strip()[-500:] if return_code else "")).replace(str(repo), "<trial-repo>")
 
     (artifact / "events.jsonl").write_text(stdout, encoding="utf-8", newline="\n")
     (artifact / "stderr.log").write_text(stderr, encoding="utf-8", newline="\n")
     (artifact / "final.md").write_text(final_message, encoding="utf-8", newline="\n")
     if (repo / ".git").exists():
-        diff = git(repo, "diff", "--", check=False).stdout
+        diff_args = ["diff"]
+        if seed_head:
+            diff_args.append(seed_head)
+        diff_args.append("--")
+        diff = git(repo, *diff_args, check=False).stdout
         (artifact / "patch.diff").write_text(diff, encoding="utf-8", newline="\n")
 
-    return {
+    result = {
         "id": run_id,
         "condition": condition,
         "trial": trial,
@@ -442,13 +625,21 @@ def trial_result(
             "fixed": fixed,
             "minimal_patch": minimal,
             "changed_files": changed_files,
+            "operation": operation,
         },
-        "context_pack_invoked": "context-pack" in command_text,
+        "context_pack_invoked": context_pack_was_invoked(commands),
         "command_count": len(commands),
+        "first_target_command": first_target_command,
         "tool_output_chars": tool_output_chars,
         "max_tool_output_chars": max_tool_output_chars,
         "event_count": event_count,
     }
+    (artifact / "result.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return result
 
 
 def metric_values(results: list[dict[str, Any]], condition: str, key: str) -> list[float]:
@@ -477,6 +668,9 @@ def summarize(results: list[dict[str, Any]], conditions: list[str]) -> dict[str,
         uncached = metric_values(results, condition, "uncached_input_tokens")
         durations = [float(item["duration_seconds"]) for item in rows if item["status"] == "ok"]
         command_counts = result_values(results, condition, "command_count")
+        first_target_commands = [
+            value for value in result_values(results, condition, "first_target_command") if value > 0
+        ]
         tool_outputs = result_values(results, condition, "tool_output_chars")
         max_tool_outputs = result_values(results, condition, "max_tool_output_chars")
         median_tokens = statistics.median(tokens) if tokens else 0
@@ -495,6 +689,9 @@ def summarize(results: list[dict[str, Any]], conditions: list[str]) -> dict[str,
             "uncached_input_tokens_max": round(max(uncached), 1) if uncached else 0,
             "duration_seconds_median": round(statistics.median(durations), 3) if durations else 0,
             "command_count_median": round(statistics.median(command_counts), 1) if command_counts else 0,
+            "first_target_command_median": round(statistics.median(first_target_commands), 1)
+            if first_target_commands
+            else 0,
             "tool_output_chars_median": round(statistics.median(tool_outputs), 1) if tool_outputs else 0,
             "max_tool_output_chars": round(max(max_tool_outputs), 1) if max_tool_outputs else 0,
             "input_reduction_vs_baseline_percent": round((1 - median_tokens / baseline_median) * 100, 1)
@@ -558,14 +755,14 @@ def render_markdown(data: dict[str, Any]) -> str:
             "",
             "## Agent Loop",
             "",
-            "| Condition | Median commands | Median tool output chars | Largest single tool output |",
-            "| --- | ---: | ---: | ---: |",
+            "| Condition | Median commands | First target-file command | Median tool output chars | Largest single tool output |",
+            "| --- | ---: | ---: | ---: | ---: |",
         ]
     )
     for condition in data["conditions"]:
         item = data["summary"][condition]
         lines.append(
-            f"| {condition} | {item['command_count_median']:.1f} | "
+            f"| {condition} | {item['command_count_median']:.1f} | {item['first_target_command_median']:.1f} | "
             f"{item['tool_output_chars_median']:,.0f} | {item['max_tool_output_chars']:,.0f} |"
         )
     lines.extend(
@@ -573,8 +770,8 @@ def render_markdown(data: dict[str, Any]) -> str:
             "",
             "## Runs",
             "",
-            "| Run | Condition | Status | Input | Cached | Output | Commands | Tool chars | Time | Fixed | Minimal |",
-            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+            "| Run | Condition | Status | Input | Cached | Output | Commands | First target | Tool chars | Time | Fixed | Minimal |",
+            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
         ]
     )
     for item in sorted(data["results"], key=lambda row: (row["condition"], row["trial"])):
@@ -583,6 +780,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         lines.append(
             f"| {item['id']} | {item['condition']} | {item['status']} | {usage['input_tokens']:,} | "
             f"{usage['cached_input_tokens']:,} | {usage['output_tokens']:,} | {item['command_count']} | "
+            f"{item['first_target_command']} | "
             f"{item['tool_output_chars']:,} | {item['duration_seconds']:.1f}s | "
             f"{'yes' if quality['fixed'] else 'no'} | {'yes' if quality['minimal_patch'] else 'no'} |"
         )
@@ -600,6 +798,16 @@ def render_markdown(data: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def prepare_workdir(value: str | None) -> tuple[Path, bool]:
+    if value:
+        workdir = Path(value).resolve()
+        if workdir.exists() and any(workdir.iterdir()):
+            raise ValueError(f"benchmark workdir must be new or empty: {workdir}")
+        workdir.mkdir(parents=True, exist_ok=True)
+        return workdir, False
+    return Path(tempfile.mkdtemp(prefix="context-pack-codex-ab-")), True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -637,10 +845,12 @@ def main(argv: list[str] | None = None) -> int:
     context_pack = discover_context_pack(args.context_pack)
     scenario = SCENARIOS[args.scenario]
     prompt = args.prompt or str(scenario["prompt"])
-    workdir = Path(args.workdir).resolve() if args.workdir else Path(tempfile.mkdtemp(prefix="context-pack-codex-ab-"))
-    workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        workdir, cleanup = prepare_workdir(args.workdir)
+    except ValueError as exc:
+        parser.error(str(exc))
     tool_bin = install_context_pack_shim(workdir, context_pack)
-    cleanup = not args.keep_workdir and not args.workdir
+    cleanup = cleanup and not args.keep_workdir
     runs_dir = workdir / "runs"
     artifacts_dir = workdir / "artifacts"
     runs_dir.mkdir(exist_ok=True)
@@ -681,7 +891,18 @@ def main(argv: list[str] | None = None) -> int:
                 for condition, trial in jobs
             }
             for future in concurrent.futures.as_completed(futures):
-                result = future.result()
+                condition, trial = futures[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = unexpected_trial_result(condition, trial, exc)
+                    artifact = artifacts_dir / result["id"]
+                    artifact.mkdir(parents=True, exist_ok=True)
+                    (artifact / "result.json").write_text(
+                        json.dumps(result, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8",
+                        newline="\n",
+                    )
                 results.append(result)
                 usage = result["usage"]
                 print(

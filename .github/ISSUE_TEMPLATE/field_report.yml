@@ -1,0 +1,125 @@
+name: Field report
+description: Share a real Context Pack task, including weak or negative results.
+title: "[Field report]: "
+labels: ["field-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing Context Pack. Do not include private source, prompts, credentials, or proprietary output.
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Coding agent
+      options:
+        - Codex
+        - Claude Code
+        - Cursor
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Context Pack version
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: context_mode
+    attributes:
+      label: Context mode
+      options:
+        - Explicit transient preview
+        - Auto-inferred persistent setup
+        - Manually curated areas
+        - Review against a base branch
+        - Session continuation or handoff
+    validations:
+      required: true
+  - type: dropdown
+    id: repo_size
+    attributes:
+      label: Approximate repository size
+      options:
+        - Under 25 files
+        - 25-250 files
+        - 251-2,000 files
+        - Over 2,000 files
+    validations:
+      required: true
+  - type: dropdown
+    id: task_type
+    attributes:
+      label: Task type
+      options:
+        - Precise bug fix
+        - Domain-routed bug fix
+        - Failing tests or CI
+        - Branch or PR review
+        - Session continuation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: first_file
+    attributes:
+      label: Did the first Context Pack route reach a relevant file or source range?
+      options:
+        - Yes
+        - Partly
+        - No
+        - Context Pack correctly skipped itself
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Compared with your normal agent workflow
+      options:
+        - Clearly better
+        - Slightly better
+        - About the same
+        - Worse
+    validations:
+      required: true
+  - type: input
+    id: first_relevant_time
+    attributes:
+      label: Approximate time to first relevant file or range
+      description: A rough observation is enough, for example 20 seconds or 3 agent commands.
+      placeholder: "3 commands"
+  - type: dropdown
+    id: task_result
+    attributes:
+      label: Was the final task result correct?
+      options:
+        - Yes
+        - Partly
+        - No
+        - Not evaluated
+    validations:
+      required: true
+  - type: input
+    id: maintenance
+    attributes:
+      label: Context maintenance required
+      description: Number of manual area, symbol, or handoff corrections during the trial.
+      placeholder: "0"
+  - type: dropdown
+    id: reuse
+    attributes:
+      label: Would you keep it enabled for this repository?
+      options:
+        - Yes
+        - Maybe after fixes
+        - No
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What helped or failed?
+      description: Describe routing quality, unnecessary commands, stale context, or setup friction without sharing private code.
+    validations:
+      required: true

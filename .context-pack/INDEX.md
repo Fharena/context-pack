@@ -31,6 +31,9 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `src/context_pack/bundled/openai.yaml`
   - `src/context_pack/bundled/plugin.json`
 - Tests:
+  - `tests/test_context_pack.py`
+  - `scripts/validate_packaged_cli.py`
+- Verify:
   - `python scripts/sync_packaged_assets.py --check`
   - `python scripts/validate_packaged_cli.py`
   - `python -m build`
@@ -44,8 +47,9 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `README.md`
   - `README.ko.md`
   - `docs/BENCHMARKS.md`
-  - `docs/benchmarks/codex-ab-zoning-confirm.md`
+  - `docs/benchmarks/codex-ab-v050-summary.md`
   - `scripts/benchmark_codex_ab.py`
+  - `scripts/benchmark_context_pack.py`
 - Matches:
   - `README.md`
   - `README.ko.md`
@@ -61,6 +65,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `scripts/benchmark_codex_ab.py`
   - `scripts/benchmark_context_pack.py`
 - Tests:
+  - `tests/test_benchmarks.py`
+- Verify:
   - `python scripts/benchmark_context_pack.py --public --fail-on-weak`
 
 ### engine
@@ -75,6 +81,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `src/context_pack/cli.py`
   - `src/context_pack/bundled/context_pack.py`
 - Tests:
+  - `tests/test_context_pack.py`
+- Verify:
   - `python -m unittest discover -s tests -v`
 
 ### overview
@@ -104,6 +112,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `plugins/context-pack/skills/context-pack/SKILL.md`
   - `plugins/context-pack/skills/context-pack/agents/openai.yaml`
 - Tests:
+  - `tests/test_context_pack.py`
+- Verify:
   - `python scripts/sync_packaged_assets.py --check`
   - `python -m unittest discover -s tests -v`
 
@@ -117,6 +127,9 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `tests/test_context_pack.py`
   - `tests/test_benchmarks.py`
 - Tests:
+  - `tests/test_context_pack.py`
+  - `tests/test_benchmarks.py`
+- Verify:
   - `python -m unittest discover -s tests -v`
 
 ## Generated Packs

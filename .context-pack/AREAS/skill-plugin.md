@@ -6,8 +6,11 @@ paths:
   - plugins/context-pack/skills/context-pack/SKILL.md
   - plugins/context-pack/skills/context-pack/agents/openai.yaml
 tests:
+  - tests/test_context_pack.py
+verify:
   - python scripts/sync_packaged_assets.py --check
-last_reviewed_head: 9b5789e04e19
+  - python -m unittest discover -s tests -v
+last_reviewed_head: c18bd9bcc69b
 ---
 
 # Skill And Plugin
@@ -22,13 +25,14 @@ last_reviewed_head: 9b5789e04e19
 
 ## Contracts
 - The agent interprets natural-language task, review, continuation, and handoff intent.
-- The CLI receives explicit operations rather than maintaining a second phrase classifier.
-- Normal orientation may be transient; persistent setup requires an explicit request.
-- The skill remains concise background guidance and skips tiny obvious work.
-- Agents use compact current-source Evidence directly instead of reopening shown ranges.
+- The CLI receives explicit operations rather than maintaining a phrase classifier.
+- Configured repositories may route automatically before broad reading.
+- Unconfigured repositories use normal targeted search unless the user explicitly requests a transient preview or evaluation.
+- Persistent setup and Git hooks require explicit requests.
+- The skill stays concise and skips obvious or already-localized work.
 
 ## Common Failure Modes
 - Every trivial edit turns into Context Pack ceremony.
-- Plugin copy promises lifecycle automation that the skill cannot guarantee.
+- Inferred transient routing finds a related file but distracts from the defect.
+- Plugin copy promises lifecycle automation the skill cannot guarantee.
 - Canonical and packaged skill resources drift.
-- Agent instructions turn one verification command into several avoidable model turns.

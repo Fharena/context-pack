@@ -59,7 +59,7 @@ def base_frame() -> Image.Image:
     d.ellipse((88, 58, 102, 72), fill=YELLOW)
     d.ellipse((112, 58, 126, 72), fill=GREEN)
     d.text((148, 53), "context-pack demo", fill=MUTED, font=SMALL_FONT)
-    d.text((64, 98), "Agents get patch-ready evidence before broad reading.", fill=TEXT, font=TITLE_FONT)
+    d.text((64, 98), "Maintained context narrows work before broad reading.", fill=TEXT, font=TITLE_FONT)
     return img
 
 
@@ -75,20 +75,20 @@ def draw_lines(img: Image.Image, lines: list[tuple[str, str]], *, start_y: int =
 SCENES: list[list[tuple[str, str]]] = [
     [
         ("User: Fix the login timeout.", BLUE),
-        ("Agent: orient before broad repo reading.", TEXT),
+        ("Configured repo: orient before broad reading.", TEXT),
         ("Runs quietly: context-pack start --agent --task \"login timeout\"", MUTED),
-        ("Context library: transient", YELLOW),
-        ("Selected areas: source, tests", GREEN),
-        ("Pack prints inline; repo files stay untouched", TEXT),
-        ("Evidence: exact source ranges with line numbers", YELLOW),
+        ("Context library: .context-pack/", YELLOW),
+        ("Selected area: auth", GREEN),
+        ("Evidence: configured symbol, current source", TEXT),
+        ("Confidence: strong", GREEN),
     ],
     [
-        ("Tiny repo? Context Pack gets out of the way.", BLUE),
-        ("$ context-pack start --task \"fix button bug\"", MUTED),
-        ("No pack generated: broad reading is likely cheaper.", YELLOW),
+        ("Unconfigured repo? Use normal targeted search.", BLUE),
+        ("No implicit transient routing or setup.", YELLOW),
         ("No .context-pack/", GREEN),
         ("No AGENTS.md", GREEN),
         ("No .gitignore changes", GREEN),
+        ("Transient preview remains an explicit CLI option.", MUTED),
     ],
     [
         ("Persist only when the user asks.", BLUE),
@@ -97,7 +97,7 @@ SCENES: list[list[tuple[str, str]]] = [
         ("Plan:", TEXT),
         ("- create .context-pack/manifest.json", GREEN),
         ("- create source/tests area docs", GREEN),
-        ("- install AGENTS.md / CLAUDE.md / Cursor rules", GREEN),
+        ("- install AGENTS.md + detected agent rules", GREEN),
     ],
     [
         ("$ context-pack setup", BLUE),
@@ -113,17 +113,17 @@ SCENES: list[list[tuple[str, str]]] = [
         ("Area: auth  |  Search: login_timeout", BLUE),
         ("## Evidence", TEXT),
         ("src/auth.py:41-58", GREEN),
-        ("Current source, bounded and patch-ready", YELLOW),
+        ("Confidence: strong  |  Provenance: base context", YELLOW),
         ("No duplicate CLI preamble or full-file read", MUTED),
     ],
     [
-        ("Root cause visible in Evidence? Edit directly.", BLUE),
-        ("Do not grep or reopen the shown range.", GREEN),
+        ("Strong and visible? Edit directly.", BLUE),
+        ("Candidate evidence? Verify with one focused search.", YELLOW),
         ("Then run the area verification command.", TEXT),
-        ("BrowserQuest A/B, 5 runs per arm:", YELLOW),
-        ("- 39.1% less median total input", GREEN),
-        ("- 91.0% less median tool output", GREEN),
-        ("Both conditions: 5/5 correct minimal patches", MUTED),
+        ("BrowserQuest v0.5.0, four task classes:", YELLOW),
+        ("- maintained context: 14/14 correct", GREEN),
+        ("- median total input: 16.5-37.5% less", GREEN),
+        ("- transient: 11/14, no longer the default", MUTED),
     ],
     [
         ("Review branch against main.", BLUE),

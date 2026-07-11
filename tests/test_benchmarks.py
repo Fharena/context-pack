@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,89 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BenchmarkTests(unittest.TestCase):
+    def test_prepare_workdir_rejects_nonempty_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            workdir = Path(temp) / "benchmark"
+            workdir.mkdir()
+            (workdir / "existing.txt").write_text("old run", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "must be new or empty"):
+                benchmark_codex_ab.prepare_workdir(str(workdir))
+
+    def make_browserquest_fixture(self, root: Path) -> Path:
+        source = root / "source"
+        (source / "client/js").mkdir(parents=True)
+        scenario = benchmark_codex_ab.SCENARIOS["zoning"]
+        (source / "client/js/game.js").write_text(
+            "function zoning() {\n    " + scenario["good_code"] + "\n}\n",
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "init"], cwd=source, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Benchmark Test"], cwd=source, check=True)
+        subprocess.run(["git", "config", "user.email", "benchmark@example.invalid"], cwd=source, check=True)
+        subprocess.run(["git", "add", "."], cwd=source, check=True)
+        subprocess.run(["git", "commit", "-m", "fixture"], cwd=source, check=True, capture_output=True)
+        return source
+
+    def test_changed_files_since_includes_committed_and_untracked_edits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.make_browserquest_fixture(Path(tmp))
+            seed_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
+            game = repo / "client/js/game.js"
+            game.write_text(game.read_text(encoding="utf-8") + "// committed edit\n", encoding="utf-8")
+            subprocess.run(["git", "add", "client/js/game.js"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "agent hides edit"], cwd=repo, check=True, capture_output=True)
+            (repo / "unexpected.txt").write_text("untracked", encoding="utf-8")
+
+            self.assertEqual(
+                benchmark_codex_ab.changed_files_since(repo, seed_head),
+                ["client/js/game.js", "unexpected.txt"],
+            )
+
+    def test_review_quality_requires_specific_positive_failure_mechanism(self) -> None:
+        scenario = benchmark_codex_ab.SCENARIOS["review-zoning"]
+        correct = (
+            "client/js/game.js:2134 assigns the vertical camera coordinate to x instead of y. "
+            "c.setPosition therefore leaves the Y position unchanged and jumps horizontally."
+        )
+
+        self.assertTrue(benchmark_codex_ab.review_finding_matches(correct, scenario))
+        self.assertFalse(
+            benchmark_codex_ab.review_finding_matches(
+                "There is no sideways bug in client/js/game.js.",
+                scenario,
+            )
+        )
+        self.assertFalse(
+            benchmark_codex_ab.review_finding_matches(
+                "client/js/game.js contains an unrelated horizontal coordinate observation.",
+                scenario,
+            )
+        )
+        denial_with_all_signals = (
+            "There is no defect in client/js/game.js:2134: the vertical path assigns x instead of y "
+            "and would cause a horizontal jump."
+        )
+        unrelated_with_all_signals = (
+            "Unrelated observation only: client/js/game.js:2134 assigns the vertical coordinate to x "
+            "instead of y and causes a horizontal jump."
+        )
+        self.assertFalse(benchmark_codex_ab.review_finding_matches(denial_with_all_signals, scenario))
+        self.assertFalse(benchmark_codex_ab.review_finding_matches(unrelated_with_all_signals, scenario))
+
+    def test_context_pack_invocation_and_unexpected_result_are_serializable(self) -> None:
+        self.assertTrue(
+            benchmark_codex_ab.context_pack_was_invoked(
+                ['context-pack start --agent --task "fix zoning"']
+            )
+        )
+        self.assertFalse(benchmark_codex_ab.context_pack_was_invoked(["rg zoning client/js"]))
+
+        result = benchmark_codex_ab.unexpected_trial_result("curated", 2, NameError("missing"))
+        self.assertEqual(result["status"], "error")
+        self.assertFalse(result["quality"]["fixed"])
+        self.assertIn("NameError", json.dumps(result))
+
     def test_codex_benchmark_defaults_to_working_tree_engine(self) -> None:
         command = benchmark_codex_ab.discover_context_pack(None)
 
@@ -32,6 +116,59 @@ class BenchmarkTests(unittest.TestCase):
             text = candidates[0].read_text(encoding="utf-8")
             self.assertIn(str(benchmark_codex_ab.ENGINE_PATH), text)
             self.assertIn(sys.executable, text)
+
+    def test_review_benchmark_places_curated_context_on_base(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = self.make_browserquest_fixture(root)
+            target = root / "review"
+            scenario = benchmark_codex_ab.SCENARIOS["review-zoning"]
+
+            benchmark_codex_ab.prepare_trial(
+                source,
+                target,
+                "curated",
+                [sys.executable, str(benchmark_codex_ab.ENGINE_PATH)],
+                scenario,
+            )
+
+            base_manifest = subprocess.check_output(
+                ["git", "show", "main:.context-pack/manifest.json"],
+                cwd=target,
+                text=True,
+            )
+            self.assertIn("mobile-zoning", base_manifest)
+            self.assertEqual(
+                subprocess.check_output(["git", "branch", "--show-current"], cwd=target, text=True).strip(),
+                "benchmark-work",
+            )
+            current = (target / scenario["target_file"]).read_text(encoding="utf-8")
+            base = subprocess.check_output(
+                ["git", "show", f"main:{scenario['target_file']}"],
+                cwd=target,
+                text=True,
+            )
+            self.assertIn(scenario["bad_code"], current)
+            self.assertIn(scenario["good_code"], base)
+
+    def test_continuation_benchmark_writes_curated_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = self.make_browserquest_fixture(root)
+            target = root / "continuation"
+            scenario = benchmark_codex_ab.SCENARIOS["continuation-zoning"]
+
+            benchmark_codex_ab.prepare_trial(
+                source,
+                target,
+                "curated",
+                [sys.executable, str(benchmark_codex_ab.ENGINE_PATH)],
+                scenario,
+            )
+
+            handoff = (target / ".context-pack/CURRENT.md").read_text(encoding="utf-8")
+            self.assertIn("unfinished", handoff.lower())
+            self.assertIn(scenario["verify"][0], handoff)
 
     def test_codex_jsonl_usage_and_commands_are_parsed(self) -> None:
         events = [
@@ -83,6 +220,7 @@ class BenchmarkTests(unittest.TestCase):
                 "quality": {"fixed": True, "minimal_patch": True},
                 "context_pack_invoked": condition == "curated",
                 "command_count": 4 if condition == "baseline" else 3,
+                "first_target_command": 3 if condition == "baseline" else 1,
                 "tool_output_chars": 50_000 if condition == "baseline" else 20_000,
                 "max_tool_output_chars": 30_000 if condition == "baseline" else 12_000,
             }
@@ -102,26 +240,30 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(summary["curated"]["uncached_reduction_vs_baseline_percent"], 37.5)
         self.assertEqual(summary["curated"]["duration_change_vs_baseline_percent"], -13.3)
         self.assertEqual(summary["curated"]["command_count_median"], 3)
+        self.assertEqual(summary["curated"]["first_target_command_median"], 1)
         self.assertEqual(summary["curated"]["tool_output_chars_median"], 20_000)
         self.assertEqual(summary["curated"]["max_tool_output_chars"], 12_000)
 
-    def test_public_evidence_numbers_match_generated_aggregate(self) -> None:
-        data = json.loads(
-            (ROOT / "docs/benchmarks/codex-ab-zoning-evidence.json").read_text(encoding="utf-8")
-        )
-        baseline = data["summary"]["baseline"]
-        curated = data["summary"]["curated"]
-        tool_reduction = round(
-            (1 - curated["tool_output_chars_median"] / baseline["tool_output_chars_median"]) * 100,
-            1,
-        )
-        expected = (
-            f"{baseline['input_tokens_median']:,.0f}",
-            f"{curated['input_tokens_median']:,.0f}",
-            f"{curated['input_reduction_vs_baseline_percent']:.1f}%",
-            f"{curated['uncached_reduction_vs_baseline_percent']:.1f}%",
-            f"{tool_reduction:.1f}%",
-        )
+    def test_public_evidence_numbers_match_generated_aggregates(self) -> None:
+        names = ("touch", "zoning", "review", "continuation")
+        data = [
+            json.loads(
+                (ROOT / f"docs/benchmarks/codex-ab-v050-{name}.json").read_text(encoding="utf-8")
+            )
+            for name in names
+        ]
+        total_runs = sum(result["summary"]["baseline"]["runs"] for result in data)
+        expected = {
+            f"{sum(result['summary'][condition]['fixed_runs'] for result in data)}/{total_runs}"
+            for condition in ("baseline", "transient", "curated")
+        }
+        for result in data:
+            curated = result["summary"]["curated"]
+            expected.add(f"{curated['input_reduction_vs_baseline_percent']:.1f}%")
+            expected.add(f"{curated['uncached_reduction_vs_baseline_percent']:.1f}%")
+            transient_change = result["summary"]["transient"]["input_reduction_vs_baseline_percent"]
+            if transient_change < 0:
+                expected.add(f"{abs(transient_change):.1f}%")
 
         for path in ("README.md", "README.ko.md", "docs/BENCHMARKS.md", "docs/BENCHMARKS.ko.md"):
             text = (ROOT / path).read_text(encoding="utf-8")

@@ -11,32 +11,35 @@
 <!-- context-pack:fingerprint:end -->
 
 ## Active Goal
-- Context Pack `v0.4.0` is published with compact evidence-first agent output, bounded source snippets, reproducible Codex CLI A/B evidence, synchronized packages, and downloadable GitHub release assets.
+- Context Pack `v0.5.0` is a validated release candidate with base-safe review context, confidence-labeled Evidence, handoff-derived continuation, explicit verification commands, and four-class Codex CLI A/B evidence.
 
 ## Read First
 1. `.context-pack/INDEX.md`
-2. `docs/BENCHMARKS.md` and `docs/benchmarks/codex-ab-zoning-evidence.md` for current evidence
-3. The relevant `.context-pack/AREAS/*.md`
+2. `docs/BENCHMARKS.md` and `docs/benchmarks/codex-ab-v050-summary.md` for current evidence
+3. `docs/releases/v0.5.0.md` for the release boundary
+4. The relevant `.context-pack/AREAS/*.md`
 
 ## Next Actions
-1. Configure PyPI/npm trusted publishing before enabling registry publication; GitHub release assets remain the current distribution.
-2. Expand actual A/B to precise bugs, domain-routed bugs, reviews, and continuation with 10-20 paired trials per arm.
-3. Gather independent installation and routing feedback before making broader token, latency, or patch-quality claims.
+1. Commit and push `v0.5.0`, verify GitHub CI, publish the tag/release, and verify release assets.
+2. Complete first-package registration and trusted-publisher setup on PyPI/npm; GitHub environments and OIDC workflow jobs already exist.
+3. Gather independent field reports and run Claude Code/Cursor runtime checks before broad compatibility or productivity claims.
 
 ## Watch Outs
-- Current five-run A/B measured one curated BrowserQuest task: median total input -39.1%, uncached input -67.0%, and tool output -91.0%, with correct minimal patches in both 5/5 arms; command count +25.0% and duration +14.3% show that token reduction does not guarantee lower latency.
+- Maintained context and baseline were both correct in 14/14 author-run BrowserQuest trials, with maintained per-scenario median total input 16.5%-37.5% lower and uncached input 41.6%-48.7% lower.
+- Experimental transient routing was correct in 11/14 and increased median total input by 14.1% on the domain task and 41.3% on continuation. It is no longer an automatic skill default.
 - Codex CLI reports cumulative input, not peak context-window occupancy; cached-token pricing is provider-specific.
-- One seeded BrowserQuest bug with maintained symbols and a verification command is insufficient for a universal token, cost, or patch-quality claim.
+- Tests cover Claude/Cursor instruction files, but their runtime CLIs were unavailable for this release environment.
+- PyPI/npm names are currently unregistered and npm authentication is absent; do not claim registry publication until account-side setup succeeds.
 
 ## Last Verified
-- `python -m unittest discover -s tests -v` (83 passed)
-- `python scripts/validate_packaged_cli.py` (v0.4.0 npm tarball install plus transient Evidence/configured/review/checkpoint flow passed)
+- `python -m unittest discover -s tests -v` (98 passed)
+- `python scripts/validate_packaged_cli.py` (v0.5.0 npm tarball install plus transient/configured/review/checkpoint/install-codex flow passed)
 - `python scripts/sync_packaged_assets.py --check`
-- Actual Codex CLI A/B: baseline/curated both 5/5 correct minimal patches; release engine SHA `85c13db7b111`; aggregate JSON and Markdown committed
+- Actual Codex CLI A/B: maintained 14/14, baseline 14/14, transient 11/14 across four task classes; engine SHA `a355e2e8f6d`; aggregate JSON and Markdown ready
+- Final evaluator re-scored and scope-checked all 42 saved trials, including committed and untracked edit detection; public JSON matched.
 - `python scripts/benchmark_context_pack.py --public --fail-on-weak ...` (10/10 routing scenarios passed; clone replay matched)
-- `python -m build` and `python -m twine check dist/context_pack-0.4.0*` passed.
+- `python -m build` and `python -m twine check dist/context_pack-0.5.0*` passed; wheel installed in an isolated venv.
 - `npm pack --dry-run` passed with 9 intended files.
 - Skill and plugin validators passed.
-- GitHub CI run `29162621139` passed on Ubuntu/Windows with Python 3.11/3.12.
-- GitHub release run `29162703130` built and uploaded wheel, sdist, and npm tarball assets for `v0.4.0`; PyPI/npm publication was intentionally skipped pending trusted-publisher setup.
+- Independent Codex release review found three trust/evaluator issues; all were reproduced, fixed, regression-tested, and re-reviewed. The final adversarial denial case was also fixed and re-scored.
 - `git diff --check`

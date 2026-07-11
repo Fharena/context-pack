@@ -1,6 +1,6 @@
 {
   "name": "@fharena/context-pack",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Agent-first repo context for coding agents.",
   "license": "MIT",
   "bin": {
@@ -18,7 +18,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Fharena/context-pack.git"
+    "url": "https://github.com/Fharena/context-pack.git"
   },
   "bugs": {
     "url": "https://github.com/Fharena/context-pack/issues"

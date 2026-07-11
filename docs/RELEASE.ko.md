@@ -112,7 +112,15 @@ context-pack --help
 
 ## npm
 
-추천 경로는 package `@fharena/context-pack`에 npm Trusted Publishing을 설정하는 것입니다. npm trusted publisher의 environment는 workflow와 맞춰야 하며, 현재 workflow environment는 `npm`입니다.
+Scoped package가 npm에 먼저 존재해야 trusted publisher를 연결할 수 있습니다. 첫 릴리스는 로그인한 뒤 이미 검증한 tarball을 수동 배포하고, 그다음 아래 값으로 npm Trusted Publishing을 설정합니다.
+
+```text
+package: @fharena/context-pack
+organization/user: Fharena
+repository: context-pack
+workflow: release.yml
+environment: npm
+```
 
 workflow는 `id-token: write` 권한을 받고 `npm publish --access public`을 실행합니다. npm Trusted Publishing이 지원되는 package에서는 provenance가 자동으로 붙습니다.
 

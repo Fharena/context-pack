@@ -4,6 +4,33 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-12
+
+### Added
+
+- Added base-commit context loading for reviews so branch-authored manifests and notes cannot bias the review route; current-branch source is still used for Evidence.
+- Added `strong`, `candidate`, and absent Evidence confidence with provenance and explicit verification guidance.
+- Added handoff-derived continuation routing when `start --agent` has no concrete task.
+- Added per-area `verify` commands, repository verification inference, and `doctor` diagnostics for missing, duplicated, or overly broad search symbols.
+- Expanded actual Codex CLI A/B coverage to precise fixes, domain-routed fixes, branch review, and session continuation, including first-target-command and quality checks.
+- Added a field-report issue form and clean-workdir enforcement for benchmark runs.
+
+### Changed
+
+- Reserved automatic Context Pack routing for configured repositories. Unconfigured repositories now use ordinary targeted search unless the user explicitly requests a transient preview or evaluation.
+- Made `setup --agent-docs auto` the default: `AGENTS.md` is managed while Claude/Cursor files are refreshed only when detected; `all` remains explicit.
+- Updated public evidence to report all four v0.5.0 task classes: maintained context and baseline were both correct in 14/14 runs while transient was correct in 11/14, with 16.5%-37.5% lower median total input and 41.6%-48.7% lower median uncached input for maintained context per scenario.
+- Reframed the demo and docs around maintained context, confidence, provenance, and current validation status instead of universal patch-ready claims.
+
+### Fixed
+
+- Excluded generated Context Pack and managed agent-instruction files from source Evidence.
+- Prevented review mode from trusting context introduced only by the branch under review.
+- Prevented continuation mode from discarding a useful handoff by inventing a generic task string.
+- Prevented benchmark workspace reuse from silently mixing old patches and new measurements.
+- Made benchmark quality checks include committed and untracked edits, tightened review finding semantics, and persist every trial before aggregate rendering.
+- Added regression coverage for configured/custom verification commands, review provenance, no-base context, symbol health, candidate evidence, and detected agent docs.
+
 ## [0.4.0] - 2026-07-12
 
 ### Added

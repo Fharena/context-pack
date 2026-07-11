@@ -25,7 +25,7 @@
       "search_terms": [
         "render_agent_pack",
         "collect_evidence",
-        "render_pack",
+        "resolve_pack_context",
         "cmd_start"
       ],
       "paths": [
@@ -60,6 +60,9 @@
         "Search-only routing adds a model turn without removing the next grep or file-read turn."
       ],
       "tests": [
+        "tests/test_context_pack.py"
+      ],
+      "verify": [
         "python -m unittest discover -s tests -v"
       ]
     },
@@ -128,6 +131,10 @@
         "Release assets are built from a different revision than the tag."
       ],
       "tests": [
+        "tests/test_context_pack.py",
+        "scripts/validate_packaged_cli.py"
+      ],
+      "verify": [
         "python scripts/sync_packaged_assets.py --check",
         "python scripts/validate_packaged_cli.py",
         "python -m build",
@@ -175,8 +182,9 @@
         "README.md",
         "README.ko.md",
         "docs/BENCHMARKS.md",
-        "docs/benchmarks/codex-ab-zoning-confirm.md",
-        "scripts/benchmark_codex_ab.py"
+        "docs/benchmarks/codex-ab-v050-summary.md",
+        "scripts/benchmark_codex_ab.py",
+        "scripts/benchmark_context_pack.py"
       ],
       "stale_if_paths": [
         "README.md",
@@ -189,7 +197,8 @@
       "contracts": [
         "English and Korean onboarding describe the same product behavior.",
         "Benchmark claims distinguish approximate orientation budgets from billed tokens and patch quality.",
-        "Actual Codex usage reports total and uncached input, command count, and tool output separately and does not claim universal token savings.",
+        "Actual Codex usage reports total and uncached input, quality, command count, tool output, and latency separately and does not claim universal token savings.",
+        "Negative transient results remain visible beside maintained-context results.",
         "The main README keeps one primary install path per agent surface and links details instead of repeating them."
       ],
       "failure_modes": [
@@ -198,6 +207,9 @@
         "Internal audit notes crowd out the five-minute getting-started path."
       ],
       "tests": [
+        "tests/test_benchmarks.py"
+      ],
+      "verify": [
         "python scripts/benchmark_context_pack.py --public --fail-on-weak"
       ]
     },
@@ -235,16 +247,20 @@
       "contracts": [
         "The agent interprets natural-language task, review, continuation, and handoff intent.",
         "The CLI receives explicit operations and does not maintain a duplicate phrase classifier.",
-        "Normal work may use transient start; persistent setup requires an explicit configuration request.",
+        "Configured repositories may use Context Pack automatically; unconfigured repositories use normal code search unless a transient preview is explicitly requested.",
         "Skill instructions stay short enough to be cheap background guidance.",
         "Agents use compact current-source Evidence directly instead of reopening shown ranges."
       ],
       "failure_modes": [
         "The skill turns every small task into Context Pack ceremony.",
         "The plugin promises automatic lifecycle behavior that the skill cannot enforce.",
-        "Packaged skill content drifts from the canonical SKILL.md."
+        "Packaged skill content drifts from the canonical SKILL.md.",
+        "An inferred transient route finds a related file but distracts the agent from the actual defect."
       ],
       "tests": [
+        "tests/test_context_pack.py"
+      ],
+      "verify": [
         "python scripts/sync_packaged_assets.py --check",
         "python -m unittest discover -s tests -v"
       ]
@@ -289,6 +305,10 @@
         "Source imports pass while installed package entrypoints fail."
       ],
       "tests": [
+        "tests/test_context_pack.py",
+        "tests/test_benchmarks.py"
+      ],
+      "verify": [
         "python -m unittest discover -s tests -v"
       ]
     },

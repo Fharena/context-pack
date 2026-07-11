@@ -1,0 +1,383 @@
+{
+  "codex_version": "codex-cli 0.144.0-alpha.4",
+  "conditions": [
+    "baseline",
+    "transient",
+    "curated"
+  ],
+  "context_pack_engine_sha256": "a355e2e8f6d2418f8cbaa22948f8c911fc27447d47fc18d90208e7100b34acab",
+  "context_pack_version": "context-pack 0.5.0",
+  "generated_at": "2026-07-12T04:57:08+09:00",
+  "max_workers": 2,
+  "model": "gpt-5.6-sol",
+  "prompt": "Players report that mobile single-finger taps no longer move the character after recent compatibility work, while desktop clicks still work. Find and fix the smallest root cause. Do not modify generated or vendored assets. Inspect and verify locally as far as this legacy repository permits. In the final answer, briefly state the changed file and verification.",
+  "reasoning_effort": "low",
+  "repo": "mozilla/BrowserQuest",
+  "results": [
+    {
+      "command_count": 3,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 45.996,
+      "error": "",
+      "event_count": 15,
+      "first_target_command": 2,
+      "id": "baseline-1",
+      "max_tool_output_chars": 18206,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "2ed836008e09",
+      "status": "ok",
+      "tool_output_chars": 24824,
+      "trial": 1,
+      "usage": {
+        "cached_input_tokens": 76544,
+        "input_tokens": 89655,
+        "output_tokens": 791,
+        "reasoning_output_tokens": 47,
+        "total_tokens": 90446,
+        "uncached_input_tokens": 13111
+      }
+    },
+    {
+      "command_count": 4,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 37.166,
+      "error": "",
+      "event_count": 16,
+      "first_target_command": 3,
+      "id": "baseline-2",
+      "max_tool_output_chars": 7983,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "a27dfebc5c0e",
+      "status": "ok",
+      "tool_output_chars": 19417,
+      "trial": 2,
+      "usage": {
+        "cached_input_tokens": 84480,
+        "input_tokens": 96119,
+        "output_tokens": 834,
+        "reasoning_output_tokens": 41,
+        "total_tokens": 96953,
+        "uncached_input_tokens": 11639
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 33.78,
+      "error": "",
+      "event_count": 15,
+      "first_target_command": 2,
+      "id": "baseline-3",
+      "max_tool_output_chars": 30972,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "54d55dd40517",
+      "status": "ok",
+      "tool_output_chars": 36001,
+      "trial": 3,
+      "usage": {
+        "cached_input_tokens": 85760,
+        "input_tokens": 104202,
+        "output_tokens": 778,
+        "reasoning_output_tokens": 43,
+        "total_tokens": 104980,
+        "uncached_input_tokens": 18442
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 39.972,
+      "error": "",
+      "event_count": 14,
+      "first_target_command": 2,
+      "id": "curated-1",
+      "max_tool_output_chars": 3317,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "e52664293c18",
+      "status": "ok",
+      "tool_output_chars": 4721,
+      "trial": 1,
+      "usage": {
+        "cached_input_tokens": 47104,
+        "input_tokens": 53911,
+        "output_tokens": 641,
+        "reasoning_output_tokens": 40,
+        "total_tokens": 54552,
+        "uncached_input_tokens": 6807
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 45.342,
+      "error": "",
+      "event_count": 14,
+      "first_target_command": 2,
+      "id": "curated-2",
+      "max_tool_output_chars": 3317,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "0ffa37887ac2",
+      "status": "ok",
+      "tool_output_chars": 5035,
+      "trial": 2,
+      "usage": {
+        "cached_input_tokens": 60160,
+        "input_tokens": 67823,
+        "output_tokens": 694,
+        "reasoning_output_tokens": 54,
+        "total_tokens": 68517,
+        "uncached_input_tokens": 7663
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 35.169,
+      "error": "",
+      "event_count": 14,
+      "first_target_command": 2,
+      "id": "curated-3",
+      "max_tool_output_chars": 3317,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "90f59f7d591b",
+      "status": "ok",
+      "tool_output_chars": 4216,
+      "trial": 3,
+      "usage": {
+        "cached_input_tokens": 61184,
+        "input_tokens": 69869,
+        "output_tokens": 620,
+        "reasoning_output_tokens": 35,
+        "total_tokens": 70489,
+        "uncached_input_tokens": 8685
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "transient",
+      "context_pack_invoked": false,
+      "duration_seconds": 36.09,
+      "error": "",
+      "event_count": 14,
+      "first_target_command": 2,
+      "id": "transient-1",
+      "max_tool_output_chars": 7340,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "5b5009b80a33",
+      "status": "ok",
+      "tool_output_chars": 13155,
+      "trial": 1,
+      "usage": {
+        "cached_input_tokens": 65280,
+        "input_tokens": 74558,
+        "output_tokens": 787,
+        "reasoning_output_tokens": 36,
+        "total_tokens": 75345,
+        "uncached_input_tokens": 9278
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "transient",
+      "context_pack_invoked": false,
+      "duration_seconds": 38.347,
+      "error": "",
+      "event_count": 15,
+      "first_target_command": 2,
+      "id": "transient-2",
+      "max_tool_output_chars": 7441,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "8dd148dc56f2",
+      "status": "ok",
+      "tool_output_chars": 13597,
+      "trial": 2,
+      "usage": {
+        "cached_input_tokens": 62208,
+        "input_tokens": 74564,
+        "output_tokens": 834,
+        "reasoning_output_tokens": 44,
+        "total_tokens": 75398,
+        "uncached_input_tokens": 12356
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "transient",
+      "context_pack_invoked": false,
+      "duration_seconds": 39.79,
+      "error": "",
+      "event_count": 15,
+      "first_target_command": 2,
+      "id": "transient-3",
+      "max_tool_output_chars": 7441,
+      "quality": {
+        "changed_files": [
+          "client/js/main.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true,
+        "operation": "fix"
+      },
+      "return_code": 0,
+      "seed_head": "b9a0513cb9cd",
+      "status": "ok",
+      "tool_output_chars": 12952,
+      "trial": 3,
+      "usage": {
+        "cached_input_tokens": 62208,
+        "input_tokens": 74077,
+        "output_tokens": 771,
+        "reasoning_output_tokens": 39,
+        "total_tokens": 74848,
+        "uncached_input_tokens": 11869
+      }
+    }
+  ],
+  "scenario": "touch",
+  "scenario_title": "precise mobile touch regression",
+  "seed": {
+    "file": "client/js/main.js",
+    "from": "event.originalEvent.touches[0]",
+    "to": "event.originalEvent.touches[1]"
+  },
+  "source_head": "af32d247cac3495ca430d0effbb88dd5f3250b2c",
+  "summary": {
+    "baseline": {
+      "command_count_median": 3.0,
+      "context_pack_invocations": 0,
+      "duration_change_vs_baseline_percent": 0.0,
+      "duration_seconds_median": 37.166,
+      "first_target_command_median": 2.0,
+      "fixed_runs": 3,
+      "input_reduction_vs_baseline_percent": 0.0,
+      "input_tokens_max": 104202.0,
+      "input_tokens_mean": 96658.7,
+      "input_tokens_median": 96119.0,
+      "input_tokens_min": 89655.0,
+      "max_tool_output_chars": 30972.0,
+      "minimal_patch_runs": 3,
+      "runs": 3,
+      "successful_runs": 3,
+      "tool_output_chars_median": 24824.0,
+      "uncached_input_tokens_max": 18442.0,
+      "uncached_input_tokens_median": 13111.0,
+      "uncached_input_tokens_min": 11639.0,
+      "uncached_reduction_vs_baseline_percent": 0.0
+    },
+    "curated": {
+      "command_count_median": 3.0,
+      "context_pack_invocations": 3,
+      "duration_change_vs_baseline_percent": 7.5,
+      "duration_seconds_median": 39.972,
+      "first_target_command_median": 2.0,
+      "fixed_runs": 3,
+      "input_reduction_vs_baseline_percent": 29.4,
+      "input_tokens_max": 69869.0,
+      "input_tokens_mean": 63867.7,
+      "input_tokens_median": 67823.0,
+      "input_tokens_min": 53911.0,
+      "max_tool_output_chars": 3317.0,
+      "minimal_patch_runs": 3,
+      "runs": 3,
+      "successful_runs": 3,
+      "tool_output_chars_median": 4721.0,
+      "uncached_input_tokens_max": 8685.0,
+      "uncached_input_tokens_median": 7663.0,
+      "uncached_input_tokens_min": 6807.0,
+      "uncached_reduction_vs_baseline_percent": 41.6
+    },
+    "transient": {
+      "command_count_median": 3.0,
+      "context_pack_invocations": 0,
+      "duration_change_vs_baseline_percent": 3.2,
+      "duration_seconds_median": 38.347,
+      "first_target_command_median": 2.0,
+      "fixed_runs": 3,
+      "input_reduction_vs_baseline_percent": 22.4,
+      "input_tokens_max": 74564.0,
+      "input_tokens_mean": 74399.7,
+      "input_tokens_median": 74558.0,
+      "input_tokens_min": 74077.0,
+      "max_tool_output_chars": 7441.0,
+      "minimal_patch_runs": 3,
+      "runs": 3,
+      "successful_runs": 3,
+      "tool_output_chars_median": 13155.0,
+      "uncached_input_tokens_max": 12356.0,
+      "uncached_input_tokens_median": 11869.0,
+      "uncached_input_tokens_min": 9278.0,
+      "uncached_reduction_vs_baseline_percent": 9.5
+    }
+  },
+  "trials_per_condition": 3
+}

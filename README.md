@@ -59,6 +59,13 @@ context-pack setup
 ```
 
 `setup` preserves existing text outside managed blocks in `AGENTS.md`, `CLAUDE.md`, and Cursor project rules.
+By default it always manages `AGENTS.md` and refreshes Claude/Cursor files only when those agent files already exist. Use `--agent-docs all` to create all three explicitly.
+
+| Surface | v0.5.0 validation |
+| --- | --- |
+| Codex | Skill/plugin install, packaged CLI, and real CLI A/B runs |
+| Claude Code | `CLAUDE.md` generation and preservation tests; runtime CLI not available in this release environment |
+| Cursor | `.cursor/rules/*.mdc` generation and preservation tests; runtime CLI not available in this release environment |
 
 ## Normal UX
 
@@ -77,14 +84,16 @@ The CLI does not need to classify review or handoff prose. The agent already und
 
 `start` and `setup` are different operations.
 
-On an unconfigured Git repo, `start` runs in transient mode:
+On an unconfigured Git repo, the installed skill uses normal targeted code search. It does not invoke Context Pack or create files implicitly.
+
+The CLI still offers an explicit transient preview through `context-pack start --task "..."`. That preview:
 
 - infers source, tests, docs, automation, and assets in memory;
 - prints compact, bounded source evidence inline without writing it to the repository;
 - does not create `.context-pack/`, `AGENTS.md`, or `.gitignore`;
 - skips pack generation when the repo has 24 files or fewer and broad reading is likely cheaper.
 
-The skill first tries a targeted search in unconfigured repos and uses transient routing only when the task remains broad. Only explicit `setup` creates persistent repository files.
+Transient routing is useful for evaluating setup, but the v0.5.0 A/B found it unreliable as an automatic default. Only explicit `setup` creates the maintained context library that the skill can trust and reuse.
 
 ## Persistent Library
 
@@ -161,20 +170,18 @@ Area notes remain hints. Embedded `Evidence` is extracted from the current sourc
 
 ## Evidence And Limits
 
-Context Pack has an actual Codex CLI A/B harness, not only a `chars/4` routing proxy. In the v0.4.0 five-run BrowserQuest zoning benchmark, baseline and evidence-first curated Context Pack both produced the correct minimal patch in 5/5 runs.
+Context Pack has an actual Codex CLI A/B harness, not only a `chars/4` routing proxy. v0.5.0 tested maintained context on four BrowserQuest workflows with the same model, prompts, pinned source revision, and isolated working-tree engine.
 
-| Median | Baseline | Curated Context Pack | Change |
-| --- | ---: | ---: | ---: |
-| Total input tokens | 111,828 | 68,075 | 39.1% less |
-| Uncached input tokens | 20,948 | 6,905 | 67.0% less |
-| Commands | 4 | 5 | 25.0% more |
-| Tool output chars | 47,809 | 4,298 | 91.0% less |
-| Duration | 38.2s | 43.7s | 14.3% slower |
-| Total-input range | 101,287-247,516 | 53,486-82,548 | lower and tighter |
+| Task | Baseline correct | Maintained correct | Median total input | Median uncached input | Median time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Precise bug (3/arm) | 3/3 | 3/3 | 29.4% less | 41.6% less | 7.5% slower |
+| Domain-routed bug (5/arm) | 5/5 | 5/5 | 37.5% less | 44.1% less | 11.6% faster |
+| Branch review (3/arm) | 3/3 | 3/3 | 16.5% less | 44.1% less | 9.9% slower |
+| Session continuation (3/arm) | 3/3 | 3/3 | 21.3% less | 48.7% less | 3.2% faster |
 
-The largest single tool output was 1,048,576 characters for baseline and 3,364 for curated. Token and tool-output reductions did not produce a latency reduction in this batch. This is evidence for one maintained area on one seeded JavaScript bug, not a universal billing, latency, or productivity claim. Total input is cumulative across model turns, and curated context includes task-relevant symbols, contracts, and a verification command. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and the [machine-readable v0.4.0 result](docs/benchmarks/codex-ab-zoning-evidence.json).
+Maintained Context Pack and baseline were both correct in **14/14** runs. The experimental transient policy was correct in **11/14**; on the domain and continuation tasks it used 14.1% and 41.3% more median total input. That negative result is why unconfigured repositories now use normal search by default.
 
-The previous search-only v0.3.0 result used 17.2% more median total input despite lowering uncached input. That failure drove evidence-first retrieval, compact agent output, and the benchmark PATH isolation used here.
+These are small, author-run samples on one pinned legacy JavaScript repository with seeded defects and maintained symbols. They do not prove universal token, billing, latency, or patch-quality gains. Total input is cumulative across turns; uncached input is not an invoice. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and the [v0.5.0 aggregate files](docs/benchmarks/codex-ab-v050-summary.md).
 
 The older deterministic benchmark still checks routing and clone replay. Its `chars/4` figures are search-scope estimates, not actual model usage.
 
