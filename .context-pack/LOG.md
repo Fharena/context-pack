@@ -20,3 +20,9 @@ Recent published checkpoints only; older history remains available in git.
 - Dirty files: .context-pack/CURRENT.md, docs/benchmarks/latest.json, docs/benchmarks/latest.md
 - Dirty diff hash: sha256:0e76faf22865ae3e58afafef
 - Verification: 83 unit/integration tests passed; the exact npm tarball passed transient Evidence, configured, review, checkpoint, and Codex install flows; wheel/sdist, twine, npm dry-run, skill/plugin validators, and 10 public routing scenarios passed; the five-run Codex A/B produced correct minimal patches in both arms with median total input -39.1%, uncached input -67.0%, tool output -91.0%, commands +25.0%, and duration +14.3% for curated runs.
+## 2026-07-12T03:02:49+09:00
+- Branch: main
+- HEAD: 01f4814d3a1e
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: GitHub CI run 29162621139 passed on Ubuntu/Windows with Python 3.11/3.12; release run 29162703130 rebuilt and uploaded wheel, sdist, and npm tarball assets to v0.4.0; PyPI/npm publication was intentionally skipped pending trusted-publisher setup.
