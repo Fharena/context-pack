@@ -62,6 +62,11 @@ def validate_transient_start(binary: pathlib.Path) -> None:
             "## Search First",
         ],
     )
+    agent_output = run_output(
+        [str(binary), "start", "--agent", "--repo", str(repo), "--task", "fix login timeout"],
+        ["# Context Pack", "## Evidence", "login_timeout"],
+    )
+    assert "Context Pack Start for" not in agent_output
 
     after = subprocess.check_output(["git", "status", "--porcelain=v1", "-uall"], cwd=repo, text=True)
     assert before == after

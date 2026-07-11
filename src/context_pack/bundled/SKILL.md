@@ -16,10 +16,10 @@ Use Context Pack as quiet orientation, then continue the user's actual task. Do 
 
 2. Choose the explicit operation from the user's intent:
 
-   - Coding or debugging: `start --task "<short task>"`
-   - Branch or PR review: `start --review`; add `--base <ref>` when known
-   - Dirty files are the only signal: `start --changed`
-   - Resume a configured project with no clear task: `start`
+   - Coding or debugging: `start --agent --task "<short task>"`
+   - Branch or PR review: `start --agent --review`; add `--base <ref>` when known
+   - Dirty files are the only signal: `start --agent --changed`
+   - Resume a configured project with no clear task: `start --agent`
 
 3. Run `context-pack <operation>` in the target repo. If the CLI is unavailable, run:
 
@@ -30,8 +30,8 @@ Use Context Pack as quiet orientation, then continue the user's actual task. Do 
    Do not use a target repo's similarly named script unless that repo is Context Pack itself.
 
 4. Use the inline pack printed by `start`. Do not reopen its saved path unless command output was truncated.
-5. Follow `Search First` before opening full files. Use targeted search and bounded snippets; treat globs and directories as scopes, never bulk-read requests.
-6. Verify source behavior and perform the requested work.
+5. Treat embedded `Evidence` as current source. If the root cause is visible, edit directly and spend the next tool call on verification. Do not grep, cat, or reopen shown ranges.
+6. Search only the listed terms and scopes when Evidence is insufficient, then perform the requested work. Never bulk-read a glob or directory.
 
 ## Persistence
 
@@ -44,13 +44,13 @@ Treat first use and installation as different actions.
 
 ## Handoff
 
-After meaningful work in a configured repo, run:
+Checkpoint only when durable work should survive a session boundary:
 
 ```bash
-context-pack checkpoint --pack
+context-pack checkpoint --pack --quiet
 ```
 
-This updates ignored local state. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git. Do not checkpoint an unconfigured repo.
+This updates ignored local state. Skip it for ordinary intermediate turns. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git. Do not checkpoint an unconfigured repo.
 
 ## Limits
 

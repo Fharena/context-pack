@@ -59,7 +59,7 @@ def base_frame() -> Image.Image:
     d.ellipse((88, 58, 102, 72), fill=YELLOW)
     d.ellipse((112, 58, 126, 72), fill=GREEN)
     d.text((148, 53), "context-pack demo", fill=MUTED, font=SMALL_FONT)
-    d.text((64, 98), "Agents get a map before repo-wide reading.", fill=TEXT, font=TITLE_FONT)
+    d.text((64, 98), "Agents get patch-ready evidence before broad reading.", fill=TEXT, font=TITLE_FONT)
     return img
 
 
@@ -76,11 +76,11 @@ SCENES: list[list[tuple[str, str]]] = [
     [
         ("User: Fix the login timeout.", BLUE),
         ("Agent: orient before broad repo reading.", TEXT),
-        ("Runs quietly: context-pack start --task \"fix login timeout\"", MUTED),
+        ("Runs quietly: context-pack start --agent --task \"login timeout\"", MUTED),
         ("Context library: transient", YELLOW),
         ("Selected areas: source, tests", GREEN),
         ("Pack prints inline; repo files stay untouched", TEXT),
-        ("Search first: targeted terms + bounded scopes", YELLOW),
+        ("Evidence: exact source ranges with line numbers", YELLOW),
     ],
     [
         ("Tiny repo? Context Pack gets out of the way.", BLUE),
@@ -108,26 +108,26 @@ SCENES: list[list[tuple[str, str]]] = [
         ("- Tiny obvious edits can skip Context Pack", YELLOW),
     ],
     [
-        ("Generated work pack:", TEXT),
-        (".context-pack/packs/CONTEXT_PACK.md", BLUE),
-        ("Selected areas: source, tests", GREEN),
-        ("Scope reduction: start from 2 areas, not the whole repo", YELLOW),
-        ("Text-budget scanning stays off unless measure is used", MUTED),
-        ("Pack is printed inline in the same tool response.", TEXT),
+        ("# Context Pack", YELLOW),
+        ("## Route", TEXT),
+        ("Area: auth  |  Search: login_timeout", BLUE),
+        ("## Evidence", TEXT),
+        ("src/auth.py:41-58", GREEN),
+        ("Current source, bounded and patch-ready", YELLOW),
+        ("No duplicate CLI preamble or full-file read", MUTED),
     ],
     [
-        ("# Context Pack", YELLOW),
-        ("Mode: work", TEXT),
-        ("## Search First", TEXT),
-        ("Terms: login, timeout", BLUE),
-        ("Scopes: src/*.py, tests/test_*.py", BLUE),
-        ("Inspect matching regions, not whole files", GREEN),
-        ("## Read First", TEXT),
-        ("- exact changed files only", MUTED),
+        ("Root cause visible in Evidence? Edit directly.", BLUE),
+        ("Do not grep or reopen the shown range.", GREEN),
+        ("Then run the area verification command.", TEXT),
+        ("BrowserQuest A/B, 5 runs per arm:", YELLOW),
+        ("- 39.1% less median total input", GREEN),
+        ("- 91.0% less median tool output", GREEN),
+        ("Both conditions: 5/5 correct minimal patches", MUTED),
     ],
     [
         ("Review branch against main.", BLUE),
-        ("Agent runs: context-pack start --review --base main", MUTED),
+        ("Agent runs: context-pack start --agent --review --base main", MUTED),
         ("Pack includes:", TEXT),
         ("- changed product files, not Context Pack metadata", GREEN),
         ("- relevant contracts and tests", GREEN),
@@ -135,7 +135,7 @@ SCENES: list[list[tuple[str, str]]] = [
     ],
     [
         ("User: leave this easy to resume later.", BLUE),
-        ("Agent runs: context-pack checkpoint --pack", MUTED),
+        ("Agent runs: context-pack checkpoint --pack --quiet", MUTED),
         ("Local checkpoint updated at .context-pack/local/LOCAL.md", GREEN),
         ("Context pack: .context-pack/packs/CONTEXT_PACK.md", TEXT),
         ("Tracked handoff stays clean unless --publish is used.", YELLOW),

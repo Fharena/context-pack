@@ -1,6 +1,6 @@
 interface:
   display_name: "Context Pack"
-  short_description: "Route agents to focused repo context"
-  default_prompt: "Use $context-pack to orient from the smallest useful repo context, then continue the task."
+  short_description: "Route agents to patch-ready repo evidence"
+  default_prompt: "Use $context-pack to load the smallest useful source evidence, then continue the task."
 policy:
   allow_implicit_invocation: true

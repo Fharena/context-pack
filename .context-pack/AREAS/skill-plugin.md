@@ -25,8 +25,10 @@ last_reviewed_head: 9b5789e04e19
 - The CLI receives explicit operations rather than maintaining a second phrase classifier.
 - Normal orientation may be transient; persistent setup requires an explicit request.
 - The skill remains concise background guidance and skips tiny obvious work.
+- Agents use compact current-source Evidence directly instead of reopening shown ranges.
 
 ## Common Failure Modes
 - Every trivial edit turns into Context Pack ceremony.
 - Plugin copy promises lifecycle automation that the skill cannot guarantee.
 - Canonical and packaged skill resources drift.
+- Agent instructions turn one verification command into several avoidable model turns.

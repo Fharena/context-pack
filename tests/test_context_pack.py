@@ -518,7 +518,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertFalse(cursor.startswith("\n"))
             self.assertIn("Use Context Pack quietly", agents)
             self.assertIn("The user does not need to name the tool", agents)
-            self.assertIn("context-pack start --review", agents)
+            self.assertIn("context-pack start --agent --review", agents)
             self.assertIn("start` is transient", agents)
             self.assertIn("must not create `.context-pack/`", agents)
             self.assertIn("explicitly asks to persist", agents)
@@ -611,6 +611,130 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("`src/cli.py`", search_section)
             self.assertNotIn("`src/cli.py`", read_section)
             self.assertIn("Do not bulk-read", search_section)
+
+    def test_agent_start_returns_compact_bounded_source_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/game.js").write_text(
+                """var Game = {
+    startZoningFrom: function(x, y) {
+        var z = this.zoningOrientation,
+            xoffset = 10,
+            yoffset = 10;
+        if(z === UP || z === DOWN) {
+            x = (z === UP) ? y - yoffset : y + yoffset;
+        }
+        camera.setPosition(x, y);
+    }
+};
+""",
+                encoding="utf-8",
+            )
+            (repo / "src/noise.js").write_text("noise\n" * 5000, encoding="utf-8")
+            self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
+
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["zoning"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/zoning.md",
+                "description": "Phone edge camera transitions.",
+                "keywords": ["phone", "edge", "camera", "transition"],
+                "paths": ["src/**"],
+                "start_files": ["src/game.js"],
+                "search_terms": ["zoning", "startZoningFrom"],
+                "contracts": ["Desktop behavior must remain unchanged."],
+                "failure_modes": ["A vertical transition writes the horizontal coordinate."],
+                "tests": ["python -m unittest discover -s tests -v", "tests/**"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/zoning.md").write_text(
+                "---\nid: zoning\nlast_reviewed_head: unknown\nstatus: active\n---\n# Zoning\n",
+                encoding="utf-8",
+            )
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    self.engine.main(
+                        [
+                            "start",
+                            "--agent",
+                            "--repo",
+                            str(repo),
+                            "--task",
+                            "phone bottom edge camera transition",
+                        ]
+                    ),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertTrue(text.startswith("# Context Pack\n"))
+            self.assertNotIn("Context Pack Start for", text)
+            self.assertIn("## Evidence", text)
+            self.assertIn("````text", text)
+            self.assertIn("startZoningFrom", text)
+            self.assertIn("x = (z === UP) ? y - yoffset : y + yoffset;", text)
+            self.assertNotIn("src/noise.js", text)
+            self.assertIn("python -m unittest discover -s tests -v", text)
+            self.assertNotIn("`tests/**`", text)
+            search_line = next(line for line in text.splitlines() if line.startswith("- Search:"))
+            self.assertNotIn("`bottom`", search_line)
+            self.assertLessEqual(len(text), self.engine.AGENT_PACK_MAX_CHARS + 1)
+
+            saved = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            self.assertEqual(saved.rstrip(), text.rstrip())
+
+    def test_evidence_deduplicates_packaged_source_copies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            source = "def route_request():\n    return 'focused'\n"
+            (repo / "src/canonical.py").write_text(source, encoding="utf-8")
+            (repo / "src/bundled.py").write_text(source, encoding="utf-8")
+            area = {
+                "kind": "source",
+                "start_files": ["src/canonical.py", "src/bundled.py"],
+                "paths": ["src/**"],
+                "search_terms": ["route_request"],
+            }
+            selection = self.engine.AreaSelection("engine", 8, ["test"], [])
+
+            evidence = self.engine.collect_evidence(
+                repo,
+                {"engine": area},
+                [selection],
+                changed_files=[],
+                task="fix request routing",
+            )
+
+            self.assertEqual(len(evidence.snippets), 1)
+            self.assertEqual(evidence.snippets[0].path, "src/canonical.py")
+
+    def test_korean_task_terms_survive_evidence_fallback(self) -> None:
+        self.assertEqual(
+            self.engine.fallback_task_search_terms("로그인 오류 고쳐줘"),
+            ["로그인"],
+        )
+
+    def test_verification_commands_allow_command_globs_but_reject_paths(self) -> None:
+        commands = self.engine.verification_commands(
+            [
+                "tests/**",
+                "pytest.ini",
+                "python -m twine check dist/*",
+                "node --check client/js/game.js",
+            ],
+            "release package",
+            3,
+        )
+
+        self.assertEqual(
+            commands,
+            ["python -m twine check dist/*", "node --check client/js/game.js"],
+        )
 
     def test_measure_reports_scope_without_writing_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1232,6 +1356,40 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(self.engine.main(["pack", "--repo", str(repo), "--task", "cli command bug", "--quiet"]), 0)
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("- cli", pack)
+
+    def test_routing_does_not_select_areas_from_contract_or_failure_prose(self) -> None:
+        manifest = {
+            "areas": {
+                "engine": {
+                    "kind": "source",
+                    "description": "Core implementation.",
+                    "keywords": ["routing"],
+                    "paths": ["src/**"],
+                },
+                "distribution": {
+                    "kind": "automation",
+                    "description": "Packaging and release automation.",
+                    "keywords": ["package"],
+                    "paths": ["scripts/**"],
+                    "contracts": ["The package must preserve routing logic."],
+                    "failure_modes": ["Routing metadata drifts during release."],
+                },
+                "overview": {
+                    "kind": "overview",
+                    "description": "Project orientation.",
+                    "keywords": ["overview"],
+                    "paths": ["README.md"],
+                },
+            }
+        }
+
+        matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="reduce routing waste",
+        )
+
+        self.assertEqual([item.area_id for item in matches], ["engine"])
 
     def test_task_keyword_scoring_ignores_stop_words(self) -> None:
         manifest = {
@@ -1951,15 +2109,16 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("User: Fix the login timeout.", text)
         self.assertIn("Context library: transient", text)
         self.assertIn("repo files stay untouched", text)
-        self.assertIn("Search first: targeted terms + bounded scopes", text)
+        self.assertIn("Evidence: exact source ranges with line numbers", text)
         self.assertIn("broad reading is likely cheaper", text)
         self.assertIn("context-pack setup --dry-run", text)
-        self.assertIn("context-pack start --task", text)
-        self.assertIn("context-pack start --review --base main", text)
-        self.assertIn("fix login timeout", text)
+        self.assertIn("context-pack start --agent --task", text)
+        self.assertIn("context-pack start --agent --review --base main", text)
+        self.assertIn("login timeout", text)
         self.assertIn("Tiny obvious edits can skip Context Pack", text)
         self.assertIn(".context-pack/manifest.json", text)
-        self.assertIn("Text-budget scanning stays off unless measure is used", text)
+        self.assertIn("No duplicate CLI preamble or full-file read", text)
+        self.assertIn("39.1% less median total input", text)
         self.assertIn("not Context Pack metadata", text)
         self.assertIn("checkpoint --pack", text)
         self.assertIn("Next session starts from the same map.", text)
@@ -1977,14 +2136,15 @@ class ContextPackTests(unittest.TestCase):
         korean = (ROOT / "README.ko.md").read_text(encoding="utf-8")
 
         for text in (english, korean):
-            self.assertIn("context-pack start --task", text)
-            self.assertIn("context-pack start --review", text)
+            self.assertIn("context-pack start --agent --task", text)
+            self.assertIn("context-pack start --agent --review", text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("`.context-pack/`", text)
             self.assertIn("setup --dry-run", text)
             self.assertIn("transient", text)
             self.assertIn("24", text)
             self.assertIn("chars/4", text)
+            self.assertIn("39.1%", text)
             self.assertNotIn("C:/", text)
             self.assertLessEqual(len(text.splitlines()), 220)
         self.assertIn("not RAG", english)

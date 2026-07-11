@@ -22,6 +22,7 @@ import json
 import os
 from pathlib import Path
 import random
+import shlex
 import shutil
 import statistics
 import subprocess
@@ -63,6 +64,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             "Browser touch wrappers and desktop mouse events expose coordinates through different object shapes.",
             "A local event-adaptation bug causes broad renderer or map changes.",
         ],
+        "tests": ["node --check client/js/main.js"],
     },
     "zoning": {
         "title": "domain-routed mobile edge transition regression",
@@ -93,6 +95,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             "Mobile shortcut and desktop animation paths drift in coordinate behavior.",
             "A mobile-only zoning fix changes the desktop updater path unnecessarily.",
         ],
+        "tests": ["node --check client/js/game.js"],
     },
 }
 
@@ -100,9 +103,9 @@ SCENARIOS: dict[str, dict[str, Any]] = {
 def transient_rules(scenario: dict[str, Any]) -> str:
     return f"""# Agent Instructions
 
-For this non-trivial bug, run `context-pack start --task "{scenario['task']}"` before broad
-repository reading. Use the inline pack without reopening it, follow Search First with bounded
-matches, then verify source behavior and continue the requested fix. Do not persist Context Pack
+For this non-trivial bug, run `context-pack start --agent --task "{scenario['task']}"` before broad
+repository reading. Use its inline Evidence first and search only the listed terms and scopes if
+needed. Then verify source behavior and continue the requested fix. Do not persist Context Pack
 setup in this repository.
 """
 
@@ -113,13 +116,14 @@ def curated_area_doc(scenario: dict[str, Any]) -> str:
     search = "\n".join(f"- `{item}`" for item in scenario["search_terms"])
     contracts = "\n".join(f"- {item}" for item in scenario["contracts"])
     failures = "\n".join(f"- {item}" for item in scenario["failure_modes"])
+    tests = "\n".join(f"  - {item}" for item in scenario["tests"])
     return f"""---
 id: {scenario['area_id']}
 status: active
 paths:
 {paths}
 tests:
-  - none
+{tests}
 ---
 
 # {scenario['area_title']}
@@ -189,6 +193,21 @@ def discover_context_pack(explicit: str | None) -> list[str]:
     return [sys.executable, str(ENGINE_PATH)]
 
 
+def install_context_pack_shim(workdir: Path, command: list[str]) -> Path:
+    tool_bin = workdir / "context-pack-bin"
+    tool_bin.mkdir(parents=True, exist_ok=True)
+    if os.name == "nt":
+        shim = tool_bin / "context-pack.cmd"
+        invocation = subprocess.list2cmdline(command)
+        shim.write_text(f"@echo off\r\n{invocation} %*\r\n", encoding="utf-8", newline="")
+    else:
+        shim = tool_bin / "context-pack"
+        invocation = shlex.join(command)
+        shim.write_text(f"#!/bin/sh\nexec {invocation} \"$@\"\n", encoding="utf-8", newline="\n")
+        shim.chmod(0o755)
+    return tool_bin
+
+
 def prepare_source(workdir: Path, source: str | None) -> Path:
     if source:
         source_path = Path(source).resolve()
@@ -224,7 +243,7 @@ def curated_manifest(scenario: dict[str, Any]) -> dict[str, Any]:
                 "contracts": scenario["contracts"],
                 "failure_modes": scenario["failure_modes"],
                 "stale_if_paths": scenario["paths"],
-                "tests": [],
+                "tests": scenario["tests"],
             },
             "overview": {
                 "kind": "overview",
@@ -285,7 +304,7 @@ def prepare_trial(
     return git(target, "rev-parse", "HEAD").stdout.strip()
 
 
-def parse_events(stdout: str) -> tuple[dict[str, int], str, list[str], int]:
+def parse_events(stdout: str) -> tuple[dict[str, int], str, list[str], int, int, int]:
     usage = {
         "input_tokens": 0,
         "cached_input_tokens": 0,
@@ -295,6 +314,8 @@ def parse_events(stdout: str) -> tuple[dict[str, int], str, list[str], int]:
     final_message = ""
     commands: list[str] = []
     event_count = 0
+    tool_output_chars = 0
+    max_tool_output_chars = 0
     for raw in stdout.splitlines():
         try:
             event = json.loads(raw)
@@ -311,7 +332,10 @@ def parse_events(stdout: str) -> tuple[dict[str, int], str, list[str], int]:
             final_message = str(item.get("text", ""))
         elif item.get("type") == "command_execution":
             commands.append(str(item.get("command", "")))
-    return usage, final_message, commands, event_count
+            output_chars = len(str(item.get("aggregated_output", "")))
+            tool_output_chars += output_chars
+            max_tool_output_chars = max(max_tool_output_chars, output_chars)
+    return usage, final_message, commands, event_count, tool_output_chars, max_tool_output_chars
 
 
 def trial_result(
@@ -324,6 +348,7 @@ def trial_result(
     artifacts_dir: Path,
     codex: Path,
     context_pack: list[str],
+    tool_bin: Path,
     model: str,
     reasoning: str,
     prompt: str,
@@ -367,6 +392,7 @@ def trial_result(
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
+            env={**os.environ, "PATH": str(tool_bin) + os.pathsep + os.environ.get("PATH", "")},
         )
         return_code = proc.returncode
         stdout = proc.stdout
@@ -379,7 +405,7 @@ def trial_result(
         error = f"{type(exc).__name__}: {exc}"
 
     duration = time.perf_counter() - started
-    usage, final_message, commands, event_count = parse_events(stdout)
+    usage, final_message, commands, event_count, tool_output_chars, max_tool_output_chars = parse_events(stdout)
     target_file = Path(str(scenario["target_file"]))
     target_path = repo / target_file
     target_text = target_path.read_text(encoding="utf-8") if target_path.is_file() else ""
@@ -419,6 +445,8 @@ def trial_result(
         },
         "context_pack_invoked": "context-pack" in command_text,
         "command_count": len(commands),
+        "tool_output_chars": tool_output_chars,
+        "max_tool_output_chars": max_tool_output_chars,
         "event_count": event_count,
     }
 
@@ -426,6 +454,14 @@ def trial_result(
 def metric_values(results: list[dict[str, Any]], condition: str, key: str) -> list[float]:
     return [
         float(item["usage"][key])
+        for item in results
+        if item["condition"] == condition and item["status"] == "ok"
+    ]
+
+
+def result_values(results: list[dict[str, Any]], condition: str, key: str) -> list[float]:
+    return [
+        float(item.get(key, 0))
         for item in results
         if item["condition"] == condition and item["status"] == "ok"
     ]
@@ -440,6 +476,9 @@ def summarize(results: list[dict[str, Any]], conditions: list[str]) -> dict[str,
         tokens = metric_values(results, condition, "input_tokens")
         uncached = metric_values(results, condition, "uncached_input_tokens")
         durations = [float(item["duration_seconds"]) for item in rows if item["status"] == "ok"]
+        command_counts = result_values(results, condition, "command_count")
+        tool_outputs = result_values(results, condition, "tool_output_chars")
+        max_tool_outputs = result_values(results, condition, "max_tool_output_chars")
         median_tokens = statistics.median(tokens) if tokens else 0
         summary[condition] = {
             "runs": len(rows),
@@ -455,6 +494,9 @@ def summarize(results: list[dict[str, Any]], conditions: list[str]) -> dict[str,
             "uncached_input_tokens_min": round(min(uncached), 1) if uncached else 0,
             "uncached_input_tokens_max": round(max(uncached), 1) if uncached else 0,
             "duration_seconds_median": round(statistics.median(durations), 3) if durations else 0,
+            "command_count_median": round(statistics.median(command_counts), 1) if command_counts else 0,
+            "tool_output_chars_median": round(statistics.median(tool_outputs), 1) if tool_outputs else 0,
+            "max_tool_output_chars": round(max(max_tool_outputs), 1) if max_tool_outputs else 0,
             "input_reduction_vs_baseline_percent": round((1 - median_tokens / baseline_median) * 100, 1)
             if tokens and baseline_median
             else 0,
@@ -514,10 +556,25 @@ def render_markdown(data: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## Agent Loop",
+            "",
+            "| Condition | Median commands | Median tool output chars | Largest single tool output |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+    )
+    for condition in data["conditions"]:
+        item = data["summary"][condition]
+        lines.append(
+            f"| {condition} | {item['command_count_median']:.1f} | "
+            f"{item['tool_output_chars_median']:,.0f} | {item['max_tool_output_chars']:,.0f} |"
+        )
+    lines.extend(
+        [
+            "",
             "## Runs",
             "",
-            "| Run | Condition | Status | Input | Cached | Output | Time | Fixed | Minimal |",
-            "| --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |",
+            "| Run | Condition | Status | Input | Cached | Output | Commands | Tool chars | Time | Fixed | Minimal |",
+            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
         ]
     )
     for item in sorted(data["results"], key=lambda row: (row["condition"], row["trial"])):
@@ -525,7 +582,8 @@ def render_markdown(data: dict[str, Any]) -> str:
         quality = item["quality"]
         lines.append(
             f"| {item['id']} | {item['condition']} | {item['status']} | {usage['input_tokens']:,} | "
-            f"{usage['cached_input_tokens']:,} | {usage['output_tokens']:,} | {item['duration_seconds']:.1f}s | "
+            f"{usage['cached_input_tokens']:,} | {usage['output_tokens']:,} | {item['command_count']} | "
+            f"{item['tool_output_chars']:,} | {item['duration_seconds']:.1f}s | "
             f"{'yes' if quality['fixed'] else 'no'} | {'yes' if quality['minimal_patch'] else 'no'} |"
         )
     lines.extend(
@@ -581,6 +639,7 @@ def main(argv: list[str] | None = None) -> int:
     prompt = args.prompt or str(scenario["prompt"])
     workdir = Path(args.workdir).resolve() if args.workdir else Path(tempfile.mkdtemp(prefix="context-pack-codex-ab-"))
     workdir.mkdir(parents=True, exist_ok=True)
+    tool_bin = install_context_pack_shim(workdir, context_pack)
     cleanup = not args.keep_workdir and not args.workdir
     runs_dir = workdir / "runs"
     artifacts_dir = workdir / "artifacts"
@@ -612,6 +671,7 @@ def main(argv: list[str] | None = None) -> int:
                     artifacts_dir=artifacts_dir,
                     codex=codex,
                     context_pack=context_pack,
+                    tool_bin=tool_bin,
                     model=args.model,
                     reasoning=args.reasoning_effort,
                     prompt=prompt,

@@ -4,6 +4,29 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-12
+
+### Added
+
+- Added `start --agent`, a compact evidence-first path that extracts at most two bounded, line-numbered source regions from strong configured symbols.
+- Added hard evidence budgets, duplicate snippet suppression, task-ranked guardrails, and one high-value verification command.
+- Extended the Codex A/B harness with command counts, total and peak tool-output characters, and a PATH shim that forces trials to use the exact working-tree engine.
+- Added packaged npm validation for transient evidence-first output and regression tests for evidence bounds, duplicate packaged sources, and routing-prose contamination.
+
+### Changed
+
+- Limited agent routing to two primary areas, four scopes, three contracts, two failure modes, and one verification command while keeping the explanatory CLI output compatible.
+- Stopped using contract and failure-mode prose to select areas; those notes are ranked only after routing.
+- Made configured search symbols outrank broad task words, and use task terms only as a fallback when no configured symbols exist.
+- Updated agent rules to edit directly when the root cause is visible in current-source Evidence and to checkpoint only at meaningful session boundaries.
+- Replaced the previous mixed search-only benchmark headline with a five-run v0.4.0 result: 5/5 correct minimal patches in both arms, with 39.1% lower median total input and 91.0% lower median tool output for curated evidence-first runs on the measured task; command count and latency increased, so no latency claim is made.
+
+### Fixed
+
+- Removed duplicated start preambles from agent-facing output and suppressed equivalent snippets from canonical and bundled source copies.
+- Avoided a redundant configured-repo file listing in agent mode and duplicate contract/failure bullets from manifest and area documents.
+- Fixed benchmark contamination where a globally installed older Context Pack CLI could run instead of the engine under test.
+
 ## [0.3.0] - 2026-07-11
 
 ### Added

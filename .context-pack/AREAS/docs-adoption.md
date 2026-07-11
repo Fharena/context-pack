@@ -20,14 +20,14 @@ last_reviewed_head: 9b5789e04e19
 - `README.md`
 - `README.ko.md`
 - `docs/BENCHMARKS.md`
-- `docs/benchmarks/codex-ab-zoning-confirm.md`
+- `docs/benchmarks/codex-ab-zoning-evidence.md`
 - `scripts/benchmark_codex_ab.py`
 
 ## Contracts
 - English and Korean onboarding describe the same behavior.
 - The main README gives one primary install route per agent surface.
 - Approximate orientation ratios are never presented as billed tokens or patch-quality evidence.
-- Actual Codex A/B results separate cumulative total input from newly processed uncached input.
+- Actual Codex A/B results separate cumulative total input, uncached input, commands, and tool output.
 - Mixed or negative benchmark results remain public; no universal token-saving claim is made from one task.
 - Internal audit notes do not crowd the public getting-started path.
 
@@ -35,4 +35,5 @@ last_reviewed_head: 9b5789e04e19
 - README examples drift from the packaged CLI.
 - A benchmark number is copied without its method or limitations.
 - Cached cumulative input is presented as peak context occupancy or direct billing.
+- A benchmark accidentally runs a globally installed CLI instead of the engine under test.
 - Demo output shows a setup flow that normal first-run work no longer uses.

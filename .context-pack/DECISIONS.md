@@ -18,9 +18,21 @@ First-run routing uses generic area roles and bounded entry-point globs. Public 
 
 `chars/4` numbers describe approximate first-read text scope only. They are never billed-token, answer-consistency, or patch-quality claims. Independent-agent A/B testing is a separate proof milestone.
 
-## 2026-07-11: Actual Token Evidence Must Stay Mixed
+## 2026-07-11: Actual Token Evidence Must Stay Honest
 
-Codex CLI A/B uses reported cumulative input and derives uncached input separately. The first current-code confirmation reduced median uncached input and the worst total-input run, but increased median total input and latency. Until broader paired trials disagree, the product does not claim universal token or cost savings.
+Codex CLI A/B uses reported cumulative input and derives uncached input separately. The first search-only confirmation reduced median uncached input and the worst total-input run, but increased median total input and latency. Later evidence-first runs may improve those numbers, but one curated task never becomes a universal token or cost claim.
+
+## 2026-07-12: Route To Current Source Evidence
+
+Agent mode returns at most two bounded, line-numbered regions from changed files or configured start files. Strong configured symbols run before task-word fallback. When the root cause is visible, agents edit directly instead of reopening the same range. Contracts and failure modes are ranked after area selection and cannot route unrelated work.
+
+## 2026-07-12: Optimize Model Turns, Not Pack Size Alone
+
+The search-only pack reduced raw exploration but added a model turn, increasing cumulative input. Agent output therefore removes duplicate preambles, limits primary areas and guardrails, exposes one verification command, and measures command count and tool-output size alongside tokens. Prompt-cache hits are not treated as removed context.
+
+## 2026-07-12: Benchmarks Must Pin The Engine Under Test
+
+Agent A/B trials place the working-tree Context Pack command on an isolated PATH. A global CLI is never trusted because version drift can add failed retries and invalidate usage comparisons. Every public aggregate records the exact engine SHA.
 
 ## 2026-07-11: Search Scopes Are Not Read Lists
 

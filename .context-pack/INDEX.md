@@ -65,7 +65,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
 
 ### engine
 - Doc: `.context-pack/AREAS/engine.md`
-- Read when: Deterministic Git snapshot, transient routing, packs, checkpoints, doctor, installers, and hooks.
+- Read when: Deterministic Git snapshot, compact evidence routing, packs, checkpoints, doctor, installers, and hooks.
 - Start with:
   - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
   - `tests/test_context_pack.py`

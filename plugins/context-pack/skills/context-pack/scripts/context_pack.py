@@ -52,7 +52,7 @@ LEGACY_LOCAL_PATH = LEGACY_HANDOFF_DIR / "LOCAL.md"
 LEGACY_PACK_PATH = LEGACY_PACKS_DIR / "CONTEXT_PACK.md"
 AGENTS_PATH = Path("AGENTS.md")
 AGENT_DOC_TARGETS = {
-    "agents": Path("AGENTS.md"),
+    "agents": AGENTS_PATH,
     "claude": Path("CLAUDE.md"),
     "cursor": Path(".cursor/rules/context-pack.mdc"),
 }
@@ -64,13 +64,30 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.3.0"
+CONTEXT_PACK_VERSION = "0.4.0"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 SMALL_REPO_FILE_THRESHOLD = 24
 PUBLISHED_LOG_MAX_ENTRIES = 30
 LOCAL_LOG_MAX_ENTRIES = 20
 BROAD_AREA_MIN_FILES = 20
 BROAD_AREA_RATIO = 0.65
+AGENT_MAX_AREAS = 2
+AGENT_MAX_SCOPES = 4
+AGENT_MAX_CONTRACTS = 3
+AGENT_MAX_FAILURE_MODES = 2
+AGENT_MAX_TESTS = 1
+AGENT_PACK_MAX_CHARS = 8_000
+EVIDENCE_MAX_FILES = 160
+EVIDENCE_MAX_SCAN_BYTES = 6_000_000
+EVIDENCE_MAX_FILE_BYTES = 500_000
+EVIDENCE_MAX_TERMS = 6
+EVIDENCE_MAX_SNIPPETS = 2
+EVIDENCE_MAX_CHARS = 4_500
+EVIDENCE_MAX_LINE_CHARS = 220
+EVIDENCE_CONTEXT_BEFORE = 3
+EVIDENCE_CONTEXT_AFTER = 18
+EVIDENCE_CLUSTER_DISTANCE = 32
+EVIDENCE_BROAD_HIT_LIMIT = 30
 TEXT_BUDGET_BINARY_SUFFIXES = {
     ".7z",
     ".avif",
@@ -227,6 +244,21 @@ class AreaSelection:
     score: int
     reasons: list[str]
     matched_files: list[str]
+
+
+@dataclasses.dataclass
+class EvidenceSnippet:
+    path: str
+    start_line: int
+    end_line: int
+    term: str
+    text: str
+
+
+@dataclasses.dataclass
+class EvidenceResult:
+    terms: list[str]
+    snippets: list[EvidenceSnippet]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1274,18 +1306,18 @@ def agent_rules_body(layout: ContextLayout | None = None) -> str:
 
 Use Context Pack quietly when a non-trivial coding, debugging, review, or handoff request would otherwise require broad repo reading. The user does not need to name the tool.
 
-- Coding/debugging: `context-pack start --task "<short task>"`
-- Branch or PR review: `context-pack start --review`; add `--base <ref>` when known.
-- Dirty files are the only signal: `context-pack start --changed`
+- Coding/debugging: `context-pack start --agent --task "<short task>"`
+- Branch or PR review: `context-pack start --agent --review`; add `--base <ref>` when known.
+- Dirty files are the only signal: `context-pack start --agent --changed`
 - Use the inline pack printed by `start`; do not reopen its saved path unless output was truncated.
-- Follow `Search First` with targeted queries and bounded snippets before opening full files.
+- Embedded `Evidence` is current source. If the root cause is visible, edit directly and spend the next tool call on verification. Do not grep, cat, or reopen shown ranges.
 - Treat directory and glob entries as search scopes. Never bulk-read their contents into model context.
 
 On an unconfigured repo, `start` is transient and must not create `.context-pack/`, `AGENTS.md`, or `.gitignore`. Run `context-pack setup --dry-run` and `context-pack setup` only when the user explicitly asks to persist Context Pack in the repo.
 
 Skip pure Q&A, tiny obvious edits, already-known files, and small repos where `start` says broad reading is cheaper.
 
-After meaningful work in a configured repo, run `context-pack checkpoint --pack`. Use `--publish` only when the handoff should be committed and shared through git. Treat all context docs as routing hints, never as source of truth.
+Checkpoint only when durable work should survive a session boundary: `context-pack checkpoint --pack --quiet`. Skip it for ordinary intermediate turns. Use `--publish` only when the handoff should be committed and shared through git. Treat all context docs as routing hints, never as source of truth.
 """
 
 
@@ -1784,7 +1816,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     had_context = (repo / layout.manifest_path).exists()
     transient = not had_context
     manifest = load_manifest(repo, layout) if had_context else inferred_manifest(repo, layout)
-    repo_file_total = len(repo_files(repo))
+    repo_file_total = len(repo_files(repo)) if transient or not args.agent else 0
 
     mode = "work"
     changed = False
@@ -1809,6 +1841,7 @@ def cmd_start(args: argparse.Namespace) -> int:
 
     small_repo_skip = transient and not args.output and repo_file_total <= SMALL_REPO_FILE_THRESHOLD
     pack_generated = bool(pack_reason) and not small_repo_skip
+    max_areas = min(args.max_areas, AGENT_MAX_AREAS) if args.agent else args.max_areas
     selected: list[AreaSelection] = []
     pack_content = ""
     inline_transient = transient and not args.output and not args.quiet
@@ -1830,18 +1863,19 @@ def cmd_start(args: argparse.Namespace) -> int:
             output=str(output_path),
             quiet=True,
             mode=mode,
-            max_areas=args.max_areas,
+            max_areas=max_areas,
             max_read_first=args.max_read_first,
             max_contracts=args.max_contracts,
             max_failure_modes=args.max_failure_modes,
             text_budget=args.text_budget,
+            agent=args.agent,
             manifest=manifest,
             layout=layout,
             transient=transient,
         )
         changed_files = resolve_changed_files(repo, snapshot, pack_args)
         matches = selected_area_matches(manifest, changed_files=changed_files, task=args.task, repo=repo)
-        selected = matches[: args.max_areas]
+        selected = matches[:max_areas]
         if inline_transient:
             pack_content = render_pack(
                 repo,
@@ -1849,12 +1883,14 @@ def cmd_start(args: argparse.Namespace) -> int:
                 snapshot,
                 selected,
                 layout=layout,
-                related_selections=matches[args.max_areas :],
+                related_selections=matches[max_areas:],
                 changed_files=changed_files,
                 task=args.task,
                 mode=mode,
                 include_text_budget=args.text_budget,
                 transient=True,
+                compact=args.agent,
+                include_evidence=args.agent,
                 max_read_first=args.max_read_first,
                 max_contracts=args.max_contracts,
                 max_failure_modes=args.max_failure_modes,
@@ -1864,6 +1900,17 @@ def cmd_start(args: argparse.Namespace) -> int:
             if result != 0:
                 return result
             pack_content = read_text(output_path)
+
+    if args.agent and not args.quiet:
+        if pack_generated:
+            print(pack_content.rstrip())
+        elif small_repo_skip:
+            print(f"Context Pack skipped: unconfigured repo has {repo_file_total} files; direct reading is cheaper.")
+        elif had_context:
+            print(f"Read `{normalize_path(layout.current_path)}` and `{normalize_path(layout.index_path)}`.")
+        else:
+            print("Context Pack found no task, review, or changed-file signal.")
+        return 0
 
     if not args.quiet:
         print(f"Context Pack Start for {repo}")
@@ -1945,6 +1992,49 @@ def tokenize(value: str) -> set[str]:
     }
 
 
+def ordered_tokens(value: str) -> list[str]:
+    cleaned = "".join(ch.lower() if ch.isalnum() else " " for ch in value)
+    return unique(
+        part
+        for part in cleaned.split()
+        if (len(part) >= 3 or part == "ci" or (len(part) >= 2 and any(ord(ch) > 127 for ch in part)))
+        and part not in TOKEN_STOP_WORDS
+    )
+
+
+def term_specificity(term: str) -> int:
+    value = str(term).strip()
+    if not value:
+        return -100
+    score = min(len(value), 24)
+    if "_" in value or "::" in value or "." in value:
+        score += 12
+    if any(ch.isupper() for ch in value[1:]):
+        score += 12
+    if " " in value:
+        score -= 6
+    return score
+
+
+def configured_search_terms(areas: dict[str, Any], selections: Iterable[AreaSelection]) -> list[str]:
+    terms: list[str] = []
+    for selection in selections:
+        terms.extend(areas.get(selection.area_id, {}).get("search_terms", []) or [])
+    values = unique_text(terms)
+    indexed = list(enumerate(values))
+    indexed.sort(key=lambda item: (0 if term_is_symbolic(item[1]) else 1, item[0]))
+    return [term for _, term in indexed[:EVIDENCE_MAX_TERMS]]
+
+
+def fallback_task_search_terms(task: str | None) -> list[str]:
+    noise = TASK_ACTION_TOKENS | ROUTE_NOISE_TOKENS
+    return [
+        token
+        for token in ordered_tokens(task or "")
+        if token not in noise and (len(token) >= 4 or (len(token) >= 2 and any(ord(ch) > 127 for ch in token)))
+    ][:EVIDENCE_MAX_TERMS]
+
+
 def area_role(area_id: str, area: dict[str, Any]) -> str:
     explicit = str(area.get("kind", "")).strip().lower()
     if explicit:
@@ -1982,13 +2072,13 @@ def area_routing_text(repo: Path | None, area_id: str, area: dict[str, Any]) -> 
     strong_parts.extend(area.get("keywords", []) or [])
     strong_parts.extend(area.get("search_terms", []) or [])
     support_parts = [area.get("description", "")]
-    for field in ("paths", "start_files", "contracts", "failure_modes"):
+    for field in ("paths", "start_files"):
         support_parts.extend(area.get(field, []) or [])
     if repo is not None:
         doc = area_doc_path(repo, area)
         if doc.is_file():
             markdown = read_text(doc)
-            for heading in ("Read When", "Start With", "Contracts", "Common Failure Modes"):
+            for heading in ("Read When", "Start With", "Search First"):
                 support_parts.extend(extract_section_bullets(markdown, heading))
     return tokenize(" ".join(str(item) for item in strong_parts)), tokenize(" ".join(str(item) for item in support_parts))
 
@@ -2141,7 +2231,7 @@ def print_selection_reasons(title: str, selections: list[AreaSelection]) -> None
 def read_text(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return ""
 
 
@@ -2272,6 +2362,232 @@ def files_for_read_first_entries(repo: Path, entries: Iterable[str], repo_file_l
     return unique(out)
 
 
+def files_for_evidence_entries(repo: Path, entries: Iterable[str], repo_file_list: list[str]) -> list[str]:
+    out: list[str] = []
+    for raw in entries:
+        entry = normalize_path(raw)
+        if not entry:
+            continue
+        path = repo / entry
+        if path.is_file():
+            out.append(entry)
+        elif path.is_dir():
+            prefix = entry.rstrip("/") + "/"
+            out.extend(item for item in repo_file_list if item.startswith(prefix))
+        else:
+            out.extend(item for item in repo_file_list if pattern_matches(item, entry))
+    return unique(out)
+
+
+def is_generated_context_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    return normalized.startswith(".context-pack/") or normalized.startswith(".codex/")
+
+
+def read_evidence_lines(path: Path) -> tuple[list[str], int] | None:
+    if path.suffix.lower() in TEXT_BUDGET_BINARY_SUFFIXES:
+        return None
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return None
+    if not size or size > EVIDENCE_MAX_FILE_BYTES:
+        return None
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if b"\0" in data:
+        return None
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return text.splitlines(), len(data)
+
+
+def term_is_symbolic(term: str) -> bool:
+    value = str(term).strip()
+    return (
+        "_" in value
+        or "::" in value
+        or "." in value
+        or any(ch.isupper() for ch in value[1:])
+    )
+
+
+def format_evidence_window(lines: list[str], hit_line: int, max_chars: int) -> tuple[int, int, str]:
+    start = max(0, hit_line - EVIDENCE_CONTEXT_BEFORE)
+    end = min(len(lines), hit_line + EVIDENCE_CONTEXT_AFTER + 1)
+
+    def render(current_start: int, current_end: int) -> str:
+        width = len(str(current_end))
+        rendered: list[str] = []
+        for index in range(current_start, current_end):
+            value = lines[index].replace("\t", "    ")
+            if len(value) > EVIDENCE_MAX_LINE_CHARS:
+                value = value[: EVIDENCE_MAX_LINE_CHARS - 3] + "..."
+            rendered.append(f"{index + 1:>{width}}: {value}")
+        return "\n".join(rendered)
+
+    text = render(start, end)
+    while len(text) > max_chars and end - start > 7:
+        if end - hit_line > 7:
+            end -= 1
+        elif hit_line - start > 2:
+            start += 1
+        else:
+            break
+        text = render(start, end)
+    return start + 1, end, text
+
+
+def collect_evidence(
+    repo: Path,
+    areas: dict[str, Any],
+    selections: list[AreaSelection],
+    *,
+    changed_files: list[str],
+    task: str | None,
+) -> EvidenceResult:
+    configured_terms = configured_search_terms(areas, selections)
+    fallback_terms = fallback_task_search_terms(task)
+    repo_file_list = repo_files(repo)
+
+    preferred_entries: list[str] = list(changed_files)
+    fallback_entries: list[str] = []
+    for selection in selections:
+        area = areas.get(selection.area_id, {})
+        preferred_entries.extend(area.get("start_files", []) or [])
+        fallback_entries.extend(area.get("paths", []) or [])
+    candidate_files = files_for_evidence_entries(repo, preferred_entries, repo_file_list)
+    if not candidate_files:
+        candidate_files = files_for_evidence_entries(repo, fallback_entries, repo_file_list)
+    candidate_files = [
+        path
+        for path in candidate_files
+        if not is_generated_context_path(path)
+    ]
+    changed_set = set(changed_files)
+    candidate_files.sort(key=lambda path: (0 if path in changed_set else 1))
+
+    records: list[tuple[str, list[str]]] = []
+    scanned_bytes = 0
+    for rel in candidate_files[:EVIDENCE_MAX_FILES]:
+        result = read_evidence_lines(repo / rel)
+        if result is None:
+            continue
+        lines, size = result
+        if scanned_bytes + size > EVIDENCE_MAX_SCAN_BYTES:
+            break
+        records.append((rel, lines))
+        scanned_bytes += size
+
+    def find_hits(terms: list[str], *, configured: bool) -> tuple[list[str], list[tuple[int, str, int, int]]]:
+        if not terms:
+            return [], []
+        hit_counts = {term: 0 for term in terms}
+        file_counts = {term: 0 for term in terms}
+        raw_hits: dict[str, list[tuple[int, int]]] = {term: [] for term in terms}
+        folded_terms = {term: term.casefold() for term in terms}
+
+        for file_index, (_, lines) in enumerate(records):
+            seen_in_file: set[str] = set()
+            for line_index, line in enumerate(lines):
+                folded = line.casefold()
+                for term in terms:
+                    if folded_terms[term] not in folded:
+                        continue
+                    hit_counts[term] += 1
+                    seen_in_file.add(term)
+                    if len(raw_hits[term]) < EVIDENCE_BROAD_HIT_LIMIT + 1:
+                        raw_hits[term].append((file_index, line_index))
+            for term in seen_in_file:
+                file_counts[term] += 1
+
+        accepted: list[str] = []
+        for term in terms:
+            hits = hit_counts[term]
+            if not hits:
+                continue
+            if term_is_symbolic(term):
+                accepted.append(term)
+            elif configured and hits <= EVIDENCE_BROAD_HIT_LIMIT:
+                accepted.append(term)
+            elif not configured and hits <= 12 and file_counts[term] <= 4:
+                accepted.append(term)
+
+        candidates: list[tuple[int, str, int, int]] = []
+        task_tokens = tokenize(task or "")
+        for term_index, term in enumerate(accepted):
+            for file_index, line_index in raw_hits[term]:
+                rel, lines = records[file_index]
+                window_start = max(0, line_index - EVIDENCE_CONTEXT_BEFORE)
+                window_end = min(len(lines), line_index + EVIDENCE_CONTEXT_AFTER + 1)
+                window = "\n".join(lines[window_start:window_end])
+                overlap = len(task_tokens & tokenize(window))
+                line = lines[line_index].casefold()
+                definition = (
+                    "def " in line
+                    or "function" in line
+                    or "class " in line
+                    or f"{term.casefold()}:" in line
+                )
+                score = 120 - (term_index * 8)
+                score += term_specificity(term)
+                score += min(overlap, 6) * 10
+                score += 24 if definition else 0
+                score += 30 if rel in changed_set else 0
+                score -= min(hit_counts[term], 20)
+                score -= min(file_index, 20)
+                candidates.append((score, term, file_index, line_index))
+        candidates.sort(key=lambda item: (-item[0], item[2], item[3], item[1]))
+        return accepted, candidates
+
+    accepted_terms, candidates = find_hits(configured_terms, configured=True)
+    if not candidates and fallback_terms:
+        accepted_terms, candidates = find_hits(fallback_terms, configured=False)
+
+    snippets: list[EvidenceSnippet] = []
+    snippet_fingerprints: set[str] = set()
+    remaining_chars = EVIDENCE_MAX_CHARS
+    for score, term, file_index, line_index in candidates:
+        if len(snippets) >= EVIDENCE_MAX_SNIPPETS or remaining_chars < 500:
+            break
+        rel, lines = records[file_index]
+        if any(
+            snippet.path == rel
+            and abs(line_index + 1 - ((snippet.start_line + snippet.end_line) // 2)) <= EVIDENCE_CLUSTER_DISTANCE
+            for snippet in snippets
+        ):
+            continue
+        slots_left = EVIDENCE_MAX_SNIPPETS - len(snippets)
+        snippet_budget = max(500, remaining_chars // slots_left)
+        start_line, end_line, text = format_evidence_window(lines, line_index, snippet_budget)
+        fingerprint = "\n".join(line.rstrip() for line in lines[start_line - 1 : end_line]).strip()
+        if fingerprint in snippet_fingerprints:
+            continue
+        snippets.append(
+            EvidenceSnippet(
+                path=rel,
+                start_line=start_line,
+                end_line=end_line,
+                term=term,
+                text=text,
+            )
+        )
+        snippet_fingerprints.add(fingerprint)
+        remaining_chars -= len(text)
+
+    selected_terms = unique([snippet.term for snippet in snippets] + accepted_terms)[:EVIDENCE_MAX_TERMS]
+    if not selected_terms:
+        selected_terms = configured_terms or fallback_terms
+    return EvidenceResult(
+        terms=selected_terms,
+        snippets=snippets,
+    )
+
+
 def estimated_tokens(chars: int) -> int:
     if chars <= 0:
         return 0
@@ -2331,11 +2647,73 @@ def unique_text(items: Iterable[str]) -> list[str]:
     return out
 
 
+def extend_distinct_text(target: list[str], items: Iterable[str], threshold: float = 0.55) -> None:
+    token_sets: list[set[str]] = []
+    for item in target:
+        tokens = tokenize(item)
+        if tokens:
+            token_sets.append(tokens)
+    exact = {" ".join(str(item).strip().split()).casefold() for item in target}
+    for raw in items:
+        item = " ".join(str(raw).strip().split())
+        if not item or item.casefold() in exact:
+            continue
+        tokens = tokenize(item)
+        if tokens and any(similarity(tokens, previous) >= threshold for previous in token_sets):
+            continue
+        target.append(item)
+        exact.add(item.casefold())
+        if tokens:
+            token_sets.append(tokens)
+
+
 def split_limited(items: Iterable[str], limit: int | None) -> tuple[list[str], list[str]]:
     values = unique_text(items)
     if limit is None or limit < 1:
         return values, []
     return values[:limit], values[limit:]
+
+
+def rank_task_text(items: Iterable[str], task: str | None, limit: int) -> list[str]:
+    values = unique_text(items)
+    if limit < 1:
+        return []
+    task_tokens = tokenize(task or "") - TASK_ACTION_TOKENS - ROUTE_NOISE_TOKENS
+    scored: list[tuple[int, int, str]] = []
+    for index, item in enumerate(values):
+        overlap = task_tokens & tokenize(item)
+        scored.append((len(overlap), index, item))
+    if any(score for score, _, _ in scored):
+        scored.sort(key=lambda item: (-item[0], item[1]))
+    return [item for _, _, item in scored[:limit]]
+
+
+def verification_commands(items: Iterable[str], task: str | None, limit: int) -> list[str]:
+    executables = {
+        "cargo",
+        "dotnet",
+        "git",
+        "go",
+        "gradle",
+        "make",
+        "mvn",
+        "node",
+        "npm",
+        "npx",
+        "pnpm",
+        "pytest",
+        "python",
+        "python3",
+        "ruby",
+        "uv",
+        "yarn",
+    }
+    commands: list[str] = []
+    for item in unique_text(items):
+        parts = str(item).strip().split(maxsplit=1)
+        if parts and parts[0].lower() in executables:
+            commands.append(item)
+    return rank_task_text(commands, task, limit)
 
 
 def area_doc_path(repo: Path, area: dict[str, Any]) -> Path:
@@ -2359,6 +2737,111 @@ def stale_warning(repo: Path, snapshot: Snapshot, area_id: str, area: dict[str, 
     return None
 
 
+def concise_text(value: str, limit: int = 240) -> str:
+    text = " ".join(str(value).strip().split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def render_agent_pack(
+    snapshot: Snapshot,
+    selections: list[AreaSelection],
+    *,
+    search_terms: list[str],
+    search_scopes: list[str],
+    changed_files: list[str],
+    contracts: list[str],
+    failures: list[str],
+    tests: list[str],
+    warnings: list[str],
+    evidence: EvidenceResult | None,
+) -> str:
+    visible_scopes = unique(search_scopes)[:AGENT_MAX_SCOPES]
+    visible_changed = unique(changed_files)[:8]
+    visible_contracts = [concise_text(item) for item in contracts]
+    visible_failures = [concise_text(item) for item in failures]
+    visible_tests = [concise_text(item) for item in tests]
+    visible_warnings = [concise_text(item) for item in unique(warnings)[:3]]
+    snippets = list(evidence.snippets if evidence else [])
+
+    def build() -> str:
+        terms = evidence.terms if evidence and evidence.terms else search_terms
+        lines = ["# Context Pack", "", "## Route"]
+        for selection in selections:
+            reason = concise_text(selection.reasons[0] if selection.reasons else "selected by context-pack", 180)
+            lines.append(f"- `{selection.area_id}`: {reason}")
+        if not selections:
+            lines.append("- No area selected")
+        if terms:
+            lines.append("- Search: " + ", ".join(f"`{term}`" for term in terms[:EVIDENCE_MAX_TERMS]))
+        if visible_scopes:
+            lines.append("- Scopes: " + ", ".join(f"`{scope}`" for scope in visible_scopes))
+
+        if snippets:
+            lines.extend(
+                [
+                    "",
+                    "## Evidence",
+                    "- Current source, patch-ready. If the cause is visible, edit directly; do not reopen these ranges.",
+                ]
+            )
+            for snippet in snippets:
+                lines.extend(
+                    [
+                        f"### `{snippet.path}:{snippet.start_line}-{snippet.end_line}` (`{snippet.term}`)",
+                        "````text",
+                        snippet.text,
+                        "````",
+                    ]
+                )
+
+        if visible_changed:
+            lines.extend(["", "## Changed"])
+            lines.extend(f"- `{path}`" for path in visible_changed)
+            remaining = len(unique(changed_files)) - len(visible_changed)
+            if remaining > 0:
+                lines.append(f"- {remaining} more changed file(s) omitted")
+
+        if visible_contracts or visible_failures:
+            lines.extend(["", "## Guardrails"])
+            lines.extend(f"- Contract: {item}" for item in visible_contracts)
+            lines.extend(f"- Watch: {item}" for item in visible_failures)
+
+        if visible_tests:
+            lines.extend(["", "## Verify"])
+            lines.extend(f"- `{item}`" for item in visible_tests)
+
+        if visible_warnings:
+            lines.extend(["", "## Stale"])
+            lines.extend(f"- {item}" for item in visible_warnings)
+
+        lines.extend(
+            [
+                "",
+                "## State",
+                (
+                    f"- Repo: `{snapshot.repo_root}`; branch: `{snapshot.branch}`; "
+                    f"HEAD: `{snapshot.head[:12]}`; dirty: {len(snapshot.dirty_files)}; hash: `{snapshot.diff_hash}`"
+                ),
+                "- Expand only when Evidence is insufficient; otherwise use the next tool call for editing or verification.",
+            ]
+        )
+        return "\n".join(lines).rstrip() + "\n"
+
+    content = build()
+    while len(content) > AGENT_PACK_MAX_CHARS and len(snippets) > 1:
+        snippets.pop()
+        content = build()
+    while len(content) > AGENT_PACK_MAX_CHARS and visible_failures:
+        visible_failures.pop()
+        content = build()
+    while len(content) > AGENT_PACK_MAX_CHARS and visible_contracts:
+        visible_contracts.pop()
+        content = build()
+    return content
+
+
 def render_pack(
     repo: Path,
     manifest: dict[str, Any],
@@ -2372,6 +2855,8 @@ def render_pack(
     mode: str,
     include_text_budget: bool = False,
     transient: bool = False,
+    compact: bool = False,
+    include_evidence: bool = False,
     max_read_first: int = 12,
     max_contracts: int = 12,
     max_failure_modes: int = 10,
@@ -2381,7 +2866,6 @@ def render_pack(
     related_selections = related_selections or []
     changed = changed_files
     search_scopes: list[str] = []
-    search_terms: list[str] = []
     read_first: list[str] = []
     read_later: list[str] = []
     tests: list[str] = []
@@ -2399,19 +2883,19 @@ def render_pack(
                 search_scopes.append(start_file)
             else:
                 target.append(start_file)
-        if primary and task:
-            search_terms.extend(area.get("search_terms", []) or [])
         target.extend(path for path in changed if matches_any(path, area.get("paths", []) or []))
         if primary:
             tests.extend(area.get("tests", []) or [])
-            contracts.extend(area.get("contracts", []) or [])
-            failures.extend(area.get("failure_modes", []) or [])
+            area_contracts = area.get("contracts", []) or []
+            area_failures = area.get("failure_modes", []) or []
+            contracts.extend(area_contracts)
+            failures.extend(area_failures)
 
         doc = area_doc_path(repo, area)
         text = read_text(doc)
         if primary:
-            contracts.extend(extract_section_bullets(text, "Contracts"))
-            failures.extend(extract_section_bullets(text, "Common Failure Modes"))
+            extend_distinct_text(contracts, extract_section_bullets(text, "Contracts"))
+            extend_distinct_text(failures, extract_section_bullets(text, "Common Failure Modes"))
 
         if not transient:
             warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
@@ -2420,31 +2904,42 @@ def render_pack(
 
     for selection in selections:
         collect_area(selection, primary=True)
-    for selection in related_selections:
-        collect_area(selection, primary=False)
+    if not compact:
+        for selection in related_selections:
+            collect_area(selection, primary=False)
 
-    if task:
-        task_hint_noise = TASK_ACTION_TOKENS | ROUTE_NOISE_TOKENS | {
-            "answer",
-            "briefly",
-            "changing",
-            "generated",
-            "legacy",
-            "locally",
-            "permits",
-            "recent",
-            "repository",
-            "smallest",
-            "still",
-            "visible",
-            "without",
-            "work",
-            "works",
-        }
-        search_terms.extend(sorted(tokenize(task) - task_hint_noise)[:8])
+    search_terms = configured_search_terms(areas, selections)
+    if not search_terms:
+        search_terms = fallback_task_search_terms(task)
 
     search_scopes = unique(search_scopes)
-    search_terms = unique_text(search_terms)[:12]
+    search_terms = unique_text(search_terms)[:EVIDENCE_MAX_TERMS]
+
+    if compact:
+        evidence = (
+            collect_evidence(
+                repo,
+                areas,
+                selections,
+                changed_files=changed,
+                task=task,
+            )
+            if include_evidence and task
+            else None
+        )
+        return render_agent_pack(
+            snapshot,
+            selections,
+            search_terms=search_terms,
+            search_scopes=search_scopes,
+            changed_files=changed,
+            contracts=rank_task_text(contracts, task, min(max_contracts, AGENT_MAX_CONTRACTS)),
+            failures=rank_task_text(failures, task, min(max_failure_modes, AGENT_MAX_FAILURE_MODES)),
+            tests=verification_commands(tests, task, AGENT_MAX_TESTS),
+            warnings=warnings,
+            evidence=evidence,
+        )
+
     read_first_unique = unique(read_first)
     read_first_visible = read_first_unique[:max_read_first]
     read_later = unique(read_first_unique[max_read_first:] + read_later)
@@ -2620,6 +3115,8 @@ def build_pack(args: argparse.Namespace) -> int:
         mode=args.mode,
         include_text_budget=bool(getattr(args, "text_budget", False)),
         transient=transient,
+        compact=bool(getattr(args, "agent", False)),
+        include_evidence=bool(getattr(args, "agent", False)),
         max_read_first=getattr(args, "max_read_first", 12),
         max_contracts=getattr(args, "max_contracts", 12),
         max_failure_modes=getattr(args, "max_failure_modes", 10),
@@ -3560,11 +4057,28 @@ def add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--quiet", action="store_true", help="Reduce command output")
 
 
-def add_pack_budget(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--max-areas", type=int, default=4, help="Maximum primary areas in the pack")
-    parser.add_argument("--max-read-first", type=int, default=12, help="Maximum Read First entries before spilling to Read Later")
-    parser.add_argument("--max-contracts", type=int, default=12, help="Maximum contract bullets in the pack")
-    parser.add_argument("--max-failure-modes", type=int, default=10, help="Maximum failure mode bullets in the pack")
+def add_pack_budget(
+    parser: argparse.ArgumentParser,
+    *,
+    max_areas: int = 4,
+    max_read_first: int = 12,
+    max_contracts: int = 12,
+    max_failure_modes: int = 10,
+) -> None:
+    parser.add_argument("--max-areas", type=int, default=max_areas, help="Maximum primary areas in the pack")
+    parser.add_argument(
+        "--max-read-first",
+        type=int,
+        default=max_read_first,
+        help="Maximum Read First entries before spilling to Read Later",
+    )
+    parser.add_argument("--max-contracts", type=int, default=max_contracts, help="Maximum contract bullets in the pack")
+    parser.add_argument(
+        "--max-failure-modes",
+        type=int,
+        default=max_failure_modes,
+        help="Maximum failure mode bullets in the pack",
+    )
     parser.add_argument(
         "--text-budget",
         action="store_true",
@@ -3656,6 +4170,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
     p.add_argument("--changed", action="store_true", help="Include dirty files when preparing a work pack")
     p.add_argument("--output", help="Output markdown path")
+    p.add_argument("--agent", action="store_true", help="Emit compact evidence-first output for an agent")
     add_pack_budget(p)
     p.set_defaults(func=cmd_start)
 

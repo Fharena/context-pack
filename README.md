@@ -18,7 +18,7 @@
 
 Coding agents are good at reading code. The waste comes from making each new session rediscover the same architecture, relevant files, tests, and unfinished state.
 
-Context Pack keeps a small versioned project map in the repo and generates a focused pack for the current task. It works with Codex, Claude Code, Cursor, and other agents that follow repository instructions.
+Context Pack keeps a small versioned project map in the repo and generates a focused pack with bounded source evidence for the current task. It works with Codex, Claude Code, Cursor, and other agents that follow repository instructions.
 
 ## Who It Is For
 
@@ -66,10 +66,10 @@ The user speaks normally. The agent chooses the deterministic operation.
 
 | User request | Agent operation |
 | --- | --- |
-| “Fix the login timeout.” | `context-pack start --task "fix login timeout"` |
-| “Why are tests failing?” | `context-pack start --task "tests failing"` |
-| “Review this branch.” | `context-pack start --review` |
-| “Leave this easy to resume.” | `context-pack checkpoint --pack` |
+| “Fix the login timeout.” | `context-pack start --agent --task "fix login timeout"` |
+| “Why are tests failing?” | `context-pack start --agent --task "tests failing"` |
+| “Review this branch.” | `context-pack start --agent --review` |
+| “Leave this easy to resume.” | `context-pack checkpoint --pack --quiet` |
 
 The CLI does not need to classify review or handoff prose. The agent already understands that intent and passes an explicit flag.
 
@@ -80,7 +80,7 @@ The CLI does not need to classify review or handoff prose. The agent already und
 On an unconfigured Git repo, `start` runs in transient mode:
 
 - infers source, tests, docs, automation, and assets in memory;
-- prints the pack inline without writing it to the repository;
+- prints compact, bounded source evidence inline without writing it to the repository;
 - does not create `.context-pack/`, `AGENTS.md`, or `.gitignore`;
 - skips pack generation when the repo has 24 files or fewer and broad reading is likely cheaper.
 
@@ -126,8 +126,8 @@ context-pack setup
 context-pack doctor
 
 # Task and review orientation
-context-pack start --task "fix stale detection bug"
-context-pack start --review
+context-pack start --agent --task "fix stale detection bug"
+context-pack start --agent --review
 
 # Handoff
 context-pack checkpoint --pack
@@ -142,11 +142,12 @@ Context Pack is not RAG and does not use embeddings or a vector database. Routin
 
 1. Git identifies changed files and the current branch/HEAD.
 2. Paths map files to configured areas.
-3. Task words are matched against area names, keywords, contracts, failure modes, and area notes.
+3. Task words are matched against area names, keywords, configured search terms, paths, and concise routing notes.
 4. Area roles such as `source`, `tests`, and `automation` provide generic fallbacks even when a project uses custom area names.
-5. The generated pack provides search terms and scopes before any full-file reads, then explains each selection.
+5. Agent mode searches strong configured symbols first and returns at most two bounded, line-numbered source regions.
+6. Contracts, failure modes, and one verification command are ranked only after routing; they do not select unrelated areas.
 
-The result is a map, not ground truth. Agents must verify source before editing.
+Area notes remain hints. Embedded `Evidence` is extracted from the current source and can be edited directly when the root cause is visible.
 
 ## Maintenance Controls
 
@@ -155,20 +156,25 @@ The result is a map, not ground truth. Agents must verify source before editing.
 - Area notes carry stale fingerprints and review status.
 - Checkpoint logs are bounded instead of append-only forever.
 - Text-budget scanning is opt-in through `measure` or `--text-budget`; normal `start` does not read every text file for a statistic.
+- Agent output is capped, omits duplicate preambles, and avoids duplicate packaged source copies.
 - Optional `safe` Git hooks use the exact local Python interpreter and warn without blocking commits.
 
 ## Evidence And Limits
 
-Context Pack now has an actual Codex CLI A/B harness, not only a `chars/4` routing proxy. In a five-run BrowserQuest zoning benchmark, baseline and curated Context Pack both produced the correct minimal patch in 5/5 runs.
+Context Pack has an actual Codex CLI A/B harness, not only a `chars/4` routing proxy. In the v0.4.0 five-run BrowserQuest zoning benchmark, baseline and evidence-first curated Context Pack both produced the correct minimal patch in 5/5 runs.
 
 | Median | Baseline | Curated Context Pack | Change |
 | --- | ---: | ---: | ---: |
-| Total input tokens | 107,339 | 125,848 | 17.2% more |
-| Uncached input tokens | 18,520 | 15,890 | 14.2% less |
-| Duration | 43.6s | 45.1s | 3.4% slower |
-| Total-input range | 83,106-226,500 | 118,769-153,498 | lower worst case |
+| Total input tokens | 111,828 | 68,075 | 39.1% less |
+| Uncached input tokens | 20,948 | 6,905 | 67.0% less |
+| Commands | 4 | 5 | 25.0% more |
+| Tool output chars | 47,809 | 4,298 | 91.0% less |
+| Duration | 38.2s | 43.7s | 14.3% slower |
+| Total-input range | 101,287-247,516 | 53,486-82,548 | lower and tighter |
 
-So this release does **not** claim universal total-token savings. Curated routing reduced newly processed context and the largest exploration run, but its tool round trip added cached input. Provider billing may weight cached tokens differently. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and the [machine-readable Codex A/B result](docs/benchmarks/codex-ab-zoning-confirm.json).
+The largest single tool output was 1,048,576 characters for baseline and 3,364 for curated. Token and tool-output reductions did not produce a latency reduction in this batch. This is evidence for one maintained area on one seeded JavaScript bug, not a universal billing, latency, or productivity claim. Total input is cumulative across model turns, and curated context includes task-relevant symbols, contracts, and a verification command. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and the [machine-readable v0.4.0 result](docs/benchmarks/codex-ab-zoning-evidence.json).
+
+The previous search-only v0.3.0 result used 17.2% more median total input despite lowering uncached input. That failure drove evidence-first retrieval, compact agent output, and the benchmark PATH isolation used here.
 
 The older deterministic benchmark still checks routing and clone replay. Its `chars/4` figures are search-scope estimates, not actual model usage.
 

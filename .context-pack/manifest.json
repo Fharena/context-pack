@@ -2,7 +2,7 @@
   "areas": {
     "engine": {
       "kind": "source",
-      "description": "Deterministic Git snapshot, transient routing, packs, checkpoints, doctor, installers, and hooks.",
+      "description": "Deterministic Git snapshot, compact evidence routing, packs, checkpoints, doctor, installers, and hooks.",
       "doc": ".context-pack/AREAS/engine.md",
       "keywords": [
         "engine",
@@ -17,13 +17,16 @@
         "hook",
         "doctor",
         "unicode",
-        "path"
+        "path",
+        "evidence",
+        "token",
+        "compact"
       ],
       "search_terms": [
+        "render_agent_pack",
+        "collect_evidence",
         "render_pack",
-        "Search First",
-        "cmd_start",
-        "inline_transient"
+        "cmd_start"
       ],
       "paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
@@ -45,14 +48,16 @@
         "Normal start is read-only with respect to tracked repo files until setup is explicit.",
         "Git filenames are parsed losslessly enough for Unicode, spaces, renames, and Unix absolute hook paths.",
         "Generated packs are routing hints and never replace source verification.",
-        "Safe hooks warn and fail open instead of blocking commits."
+        "Safe hooks warn and fail open instead of blocking commits.",
+        "Agent evidence is bounded, line-numbered current source and avoids duplicate source copies."
       ],
       "failure_modes": [
         "First-run orientation creates AGENTS.md, .gitignore, or .context-pack without consent.",
         "Context Pack metadata hides the product files being reviewed.",
         "Normal start scans every text file just to print an estimate.",
         "A hook records a broken relative engine path or propagates a safe-mode failure.",
-        "Custom area names fall back to overview because roles are inferred only from literal IDs."
+        "Custom area names fall back to overview because roles are inferred only from literal IDs.",
+        "Search-only routing adds a model turn without removing the next grep or file-read turn."
       ],
       "tests": [
         "python -m unittest discover -s tests -v"
@@ -184,7 +189,7 @@
       "contracts": [
         "English and Korean onboarding describe the same product behavior.",
         "Benchmark claims distinguish approximate orientation budgets from billed tokens and patch quality.",
-        "Actual Codex usage reports total and uncached input separately and does not claim universal token savings.",
+        "Actual Codex usage reports total and uncached input, command count, and tool output separately and does not claim universal token savings.",
         "The main README keeps one primary install path per agent surface and links details instead of repeating them."
       ],
       "failure_modes": [
@@ -231,7 +236,8 @@
         "The agent interprets natural-language task, review, continuation, and handoff intent.",
         "The CLI receives explicit operations and does not maintain a duplicate phrase classifier.",
         "Normal work may use transient start; persistent setup requires an explicit configuration request.",
-        "Skill instructions stay short enough to be cheap background guidance."
+        "Skill instructions stay short enough to be cheap background guidance.",
+        "Agents use compact current-source Evidence directly instead of reopening shown ranges."
       ],
       "failure_modes": [
         "The skill turns every small task into Context Pack ceremony.",

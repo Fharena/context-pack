@@ -13,11 +13,17 @@ last_reviewed_head: 9b5789e04e19
 
 ## Read When
 - Changing routing, Git snapshots, packs, checkpoints, doctor, installers, or hooks.
-- Debugging transient first-run behavior, stale fingerprints, Unicode paths, or review scope.
+- Debugging evidence retrieval, transient first-run behavior, stale fingerprints, Unicode paths, or review scope.
 
 ## Start With
 - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`
 - `tests/test_context_pack.py`
+
+## Search First
+- `render_agent_pack`
+- `collect_evidence`
+- `render_pack`
+- `cmd_start`
 
 ## Contracts
 - The canonical engine remains Python stdlib-only.
@@ -28,6 +34,7 @@ last_reviewed_head: 9b5789e04e19
 - Task packs expose search terms and scopes; globs and directories are never bulk-read instructions.
 - Interactive transient packs print inline without writing repository or Git metadata files.
 - Packs explain deterministic routing but never replace source verification.
+- Agent evidence is bounded, line-numbered current source and avoids duplicate source copies.
 
 ## Common Failure Modes
 - First-run work unexpectedly creates `.context-pack/`, `AGENTS.md`, or `.gitignore`.
@@ -36,6 +43,7 @@ last_reviewed_head: 9b5789e04e19
 - A custom area name cannot receive a generic source/test/automation role.
 - A fallback start file points at an entire source or test directory.
 - An agent reopens an already inlined pack or reads an entire search scope.
+- Search-only routing adds a model turn without removing the next grep or file-read turn.
 
 ## Do Not Start With
 - generated packs
