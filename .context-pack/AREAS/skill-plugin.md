@@ -7,7 +7,7 @@ paths:
   - plugins/context-pack/skills/context-pack/agents/openai.yaml
 tests:
   - python scripts/sync_packaged_assets.py --check
-last_reviewed_head: b440399b85ee
+last_reviewed_head: 9b5789e04e19
 ---
 
 # Skill And Plugin

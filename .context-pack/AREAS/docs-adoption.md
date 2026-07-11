@@ -8,7 +8,7 @@ paths:
   - docs/benchmarks/**
 tests:
   - python scripts/benchmark_context_pack.py --public --fail-on-weak
-last_reviewed_head: b440399b85ee
+last_reviewed_head: 9b5789e04e19
 ---
 
 # Docs And Adoption
