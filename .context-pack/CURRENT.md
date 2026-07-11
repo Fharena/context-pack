@@ -19,7 +19,7 @@
 3. The relevant `.context-pack/AREAS/*.md`
 
 ## Next Actions
-1. Confirm the pushed CI run, then tag and publish `v0.3.0`.
+1. Tag and publish `v0.3.0`.
 2. Expand actual A/B to precise bugs, domain-routed bugs, reviews, and continuation with 10-20 paired trials per arm.
 3. Configure PyPI/npm trusted publishing before enabling registry publication; GitHub release assets can remain the default distribution.
 
@@ -37,4 +37,5 @@
 - `python scripts/benchmark_context_pack.py --public --fail-on-weak ...` (10/10 routing scenarios passed; clone replay matched)
 - Extracted `context_pack-0.3.0` sdist passed all 76 tests; wheel/sdist and twine checks passed
 - `npm pack --dry-run` (9 intended files; no cache artifacts)
+- GitHub Actions CI run `29151499931` passed on Ubuntu/Windows with Python 3.11/3.12
 - `git diff --check`

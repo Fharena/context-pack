@@ -13,4 +13,4 @@ Recent published checkpoints only; older history remains available in git.
 - HEAD: 391a40efb5a9
 - Dirty files: none
 - Dirty diff hash: clean
-- Verification: 76 tests passed in the checkout and extracted sdist; npm packaged workflow, wheel/sdist, twine, npm tarball, skill/plugin validators, and 10 public routing scenarios passed; actual Codex CLI A/B produced correct minimal patches in both 5/5 arms with mixed token and latency results documented.
+- Verification: 76 tests passed in the checkout and extracted sdist; npm packaged workflow, wheel/sdist, twine, npm tarball, skill/plugin validators, and 10 public routing scenarios passed; actual Codex CLI A/B produced correct minimal patches in both 5/5 arms with mixed token and latency results documented; GitHub Actions run 29151499931 passed on Ubuntu/Windows with Python 3.11/3.12.
