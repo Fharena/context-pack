@@ -1,6 +1,6 @@
 {
   "engine_version": "0.3.0",
-  "generated_at": "2026-07-11T19:21:09+09:00",
+  "generated_at": "2026-07-11T19:23:06+09:00",
   "handoff_replay": {
     "clone": {
       "read_first_entries": 4,
@@ -31,7 +31,7 @@
   },
   "public_results": [
     {
-      "duration_ms": 314,
+      "duration_ms": 271,
       "expected": [
         "automation",
         "source",
@@ -71,7 +71,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 398,
+      "duration_ms": 308,
       "expected": [
         "source",
         "tests"
@@ -106,7 +106,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 348,
+      "duration_ms": 288,
       "expected": [
         "source",
         "tests"
@@ -140,7 +140,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 361,
+      "duration_ms": 293,
       "expected": [
         "automation",
         "source",
@@ -179,7 +179,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 645,
+      "duration_ms": 510,
       "expected": [
         "source"
       ],
@@ -208,7 +208,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 292,
+      "duration_ms": 499,
       "expected": [
         "assets",
         "source"
@@ -242,7 +242,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 281,
+      "duration_ms": 282,
       "expected": [
         "source"
       ],
@@ -271,7 +271,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 473,
+      "duration_ms": 516,
       "expected": [
         "source"
       ],
@@ -304,7 +304,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 303,
+      "duration_ms": 298,
       "expected": [
         "source"
       ],
@@ -333,7 +333,7 @@
       "weak_flags": []
     },
     {
-      "duration_ms": 283,
+      "duration_ms": 298,
       "expected": [
         "source"
       ],
@@ -366,6 +366,6 @@
       "weak_flags": []
     }
   ],
-  "subject_head": "7beb3041dbe9",
+  "subject_head": "8ac7fb8ff890",
   "weak_public_results": []
 }
