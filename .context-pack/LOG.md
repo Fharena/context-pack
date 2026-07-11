@@ -32,3 +32,9 @@ Recent published checkpoints only; older history remains available in git.
 - Dirty files: .context-pack/AREAS/docs-adoption.md, .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/overview.md, .context-pack/AREAS/skill-plugin.md, .context-pack/AREAS/tests.md
 - Dirty diff hash: sha256:76aacf6d5edeca091b93e41d
 - Verification: not recorded
+## 2026-07-12T05:15:31+09:00
+- Branch: main
+- HEAD: 646a341a7c91
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: 98 tests passed; packaged CLI, skill/plugin validators, and 10/10 public routing checks passed; all 42 saved Codex trials matched the final evaluator; GitHub CI run 29166590894 passed on Ubuntu/Windows with Python 3.11/3.12.
