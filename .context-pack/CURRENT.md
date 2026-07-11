@@ -4,11 +4,12 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 9b5789e04e19
-- Dirty files: .context-pack/AREAS/docs-adoption.md, .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/overview.md, .context-pack/AREAS/skill-plugin.md, .context-pack/AREAS/tests.md, .context-pack/CURRENT.md, .context-pack/LOG.md
-- Dirty diff hash: sha256:43f94862ac74a3b8fa4b08ad
-- Updated at: 2026-07-11T20:44:08+09:00
+- HEAD: 391a40efb5a9
+- Dirty files: none
+- Dirty diff hash: clean
+- Updated at: 2026-07-11T20:44:58+09:00
 <!-- context-pack:fingerprint:end -->
+
 ## Active Goal
 - Context Pack `v0.3.0` is a release candidate with search-first/inline routing, reproducible actual Codex CLI A/B evidence, synchronized packages, and installed-artifact validation.
 
