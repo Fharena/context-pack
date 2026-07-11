@@ -4,13 +4,13 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 646a341a7c91
+- HEAD: 9cf1c32b9b71
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-07-12T05:15:31+09:00
+- Updated at: 2026-07-12T05:17:39+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
-- Context Pack `v0.5.0` is a validated release candidate with base-safe review context, confidence-labeled Evidence, handoff-derived continuation, explicit verification commands, and four-class Codex CLI A/B evidence.
+- Context Pack `v0.5.0` is published with base-safe review context, confidence-labeled Evidence, handoff-derived continuation, explicit verification commands, and four-class Codex CLI A/B evidence.
 
 ## Read First
 1. `.context-pack/INDEX.md`
@@ -19,9 +19,9 @@
 4. The relevant `.context-pack/AREAS/*.md`
 
 ## Next Actions
-1. Commit and push `v0.5.0`, verify GitHub CI, publish the tag/release, and verify release assets.
-2. Complete first-package registration and trusted-publisher setup on PyPI/npm; GitHub environments and OIDC workflow jobs already exist.
-3. Gather independent field reports and run Claude Code/Cursor runtime checks before broad compatibility or productivity claims.
+1. Complete first-package registration and trusted-publisher setup on PyPI/npm; GitHub environments and OIDC workflow jobs already exist.
+2. Gather independent reports through GitHub issue #1 and evaluate repeat-session maintenance cost.
+3. Run Claude Code/Cursor runtime checks before broad compatibility or productivity claims.
 
 ## Watch Outs
 - Maintained context and baseline were both correct in 14/14 author-run BrowserQuest trials, with maintained per-scenario median total input 16.5%-37.5% lower and uncached input 41.6%-48.7% lower.
@@ -41,4 +41,7 @@
 - `npm pack --dry-run` passed with 9 intended files.
 - Skill and plugin validators passed.
 - Independent Codex release review found three trust/evaluator issues; all were reproduced, fixed, regression-tested, and re-reviewed. The final adversarial denial case was also fixed and re-scored.
+- GitHub CI run `29166590894` passed on Ubuntu/Windows with Python 3.11/3.12.
+- GitHub Release run `29166729855` rebuilt and uploaded the v0.5.0 wheel, sdist, and npm tarball; registry publish jobs were intentionally skipped.
+- Public field-test issue: `https://github.com/Fharena/context-pack/issues/1`.
 - `git diff --check`

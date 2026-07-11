@@ -38,3 +38,9 @@ Recent published checkpoints only; older history remains available in git.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: 98 tests passed; packaged CLI, skill/plugin validators, and 10/10 public routing checks passed; all 42 saved Codex trials matched the final evaluator; GitHub CI run 29166590894 passed on Ubuntu/Windows with Python 3.11/3.12.
+## 2026-07-12T05:17:39+09:00
+- Branch: main
+- HEAD: 9cf1c32b9b71
+- Dirty files: none
+- Dirty diff hash: clean
+- Verification: GitHub CI run 29166590894 and Release run 29166729855 passed; v0.5.0 wheel, sdist, and npm tarball are uploaded; field-test issue #1 is open; PyPI/npm publication remains pending registry-side setup.
