@@ -25,6 +25,8 @@ last_reviewed_head: b440399b85ee
 - Git parsing supports Unicode, spaces, renames, and NUL-delimited output.
 - Safe hooks invoke the exact install interpreter and fail open.
 - Normal `start` does not scan the full repo for text-budget statistics.
+- Task packs expose search terms and scopes; globs and directories are never bulk-read instructions.
+- Interactive transient packs print inline without writing repository or Git metadata files.
 - Packs explain deterministic routing but never replace source verification.
 
 ## Common Failure Modes
@@ -33,6 +35,7 @@ last_reviewed_head: b440399b85ee
 - A Unix absolute hook path loses its leading slash.
 - A custom area name cannot receive a generic source/test/automation role.
 - A fallback start file points at an entire source or test directory.
+- An agent reopens an already inlined pack or reads an entire search scope.
 
 ## Do Not Start With
 - generated packs

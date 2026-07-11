@@ -14,6 +14,14 @@ python -m unittest discover -s tests -v
 python scripts/validate_packaged_cli.py
 ```
 
+Run the opt-in, model-using A/B benchmark only when actual Codex usage evidence is needed:
+
+```bash
+python scripts/benchmark_codex_ab.py --scenario zoning --conditions baseline curated --trials 5 --max-workers 2
+```
+
+This consumes model tokens. Keep total, cached, uncached, latency, and patch-quality results together when reporting it.
+
 Run the repo doctor:
 
 ```bash

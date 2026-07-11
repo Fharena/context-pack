@@ -54,7 +54,13 @@ def validate_transient_start(binary: pathlib.Path) -> None:
 
     run_output(
         [str(binary), "start", "--repo", str(repo), "--task", "fix login timeout"],
-        ["Context library: transient", "Generated work pack for task", "Selected areas: source, tests"],
+        [
+            "Context library: transient",
+            "Generated work pack for task: inline (not written)",
+            "Selected areas: source, tests",
+            "Context pack follows",
+            "## Search First",
+        ],
     )
 
     after = subprocess.check_output(["git", "status", "--porcelain=v1", "-uall"], cwd=repo, text=True)
@@ -62,7 +68,7 @@ def validate_transient_start(binary: pathlib.Path) -> None:
     assert not (repo / ".context-pack").exists()
     assert not (repo / "AGENTS.md").exists()
     assert not (repo / ".gitignore").exists()
-    assert (repo / ".git/context-pack/CONTEXT_PACK.md").exists()
+    assert not (repo / ".git/context-pack/CONTEXT_PACK.md").exists()
 
 
 def validate_configured_flow(binary: pathlib.Path) -> None:

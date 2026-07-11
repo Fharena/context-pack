@@ -1093,6 +1093,7 @@ def generic_area_doc(area_id: str, area: dict[str, Any], snapshot: Snapshot, lay
     tests = "\n".join(f"  - {item}" for item in area.get("tests", []) or [])
     stale = "\n".join(f"  - {item} changes" for item in area.get("stale_if_paths", []) or [])
     start = "\n".join(f"- `{item}`" for item in area.get("start_files", []) or [])
+    search = "\n".join(f"- `{item}`" for item in area.get("search_terms", []) or [])
     contracts = "\n".join(f"- {item}" for item in area.get("contracts", []) or [])
     failures = "\n".join(f"- {item}" for item in area.get("failure_modes", []) or [])
     return f"""---
@@ -1114,6 +1115,9 @@ stale_if:
 
 ## Start With
 {start or f"- Use `{path_text(layout.index_path)}` to choose source files."}
+
+## Search First
+{search or "- Use distinctive task terms or symbols within the Start With scopes."}
 
 ## Contracts
 {contracts or "- Verify behavior in source before trusting summaries."}
@@ -1273,7 +1277,9 @@ Use Context Pack quietly when a non-trivial coding, debugging, review, or handof
 - Coding/debugging: `context-pack start --task "<short task>"`
 - Branch or PR review: `context-pack start --review`; add `--base <ref>` when known.
 - Dirty files are the only signal: `context-pack start --changed`
-- Read the pack path printed by `start`, then verify relevant source before editing.
+- Use the inline pack printed by `start`; do not reopen its saved path unless output was truncated.
+- Follow `Search First` with targeted queries and bounded snippets before opening full files.
+- Treat directory and glob entries as search scopes. Never bulk-read their contents into model context.
 
 On an unconfigured repo, `start` is transient and must not create `.context-pack/`, `AGENTS.md`, or `.gitignore`. Run `context-pack setup --dry-run` and `context-pack setup` only when the user explicitly asks to persist Context Pack in the repo.
 
@@ -1804,6 +1810,8 @@ def cmd_start(args: argparse.Namespace) -> int:
     small_repo_skip = transient and not args.output and repo_file_total <= SMALL_REPO_FILE_THRESHOLD
     pack_generated = bool(pack_reason) and not small_repo_skip
     selected: list[AreaSelection] = []
+    pack_content = ""
+    inline_transient = transient and not args.output and not args.quiet
     if args.output:
         output_path = Path(args.output)
     elif transient:
@@ -1832,10 +1840,30 @@ def cmd_start(args: argparse.Namespace) -> int:
             transient=transient,
         )
         changed_files = resolve_changed_files(repo, snapshot, pack_args)
-        selected = selected_area_matches(manifest, changed_files=changed_files, task=args.task, repo=repo)[: args.max_areas]
-        result = build_pack(pack_args)
-        if result != 0:
-            return result
+        matches = selected_area_matches(manifest, changed_files=changed_files, task=args.task, repo=repo)
+        selected = matches[: args.max_areas]
+        if inline_transient:
+            pack_content = render_pack(
+                repo,
+                manifest,
+                snapshot,
+                selected,
+                layout=layout,
+                related_selections=matches[args.max_areas :],
+                changed_files=changed_files,
+                task=args.task,
+                mode=mode,
+                include_text_budget=args.text_budget,
+                transient=True,
+                max_read_first=args.max_read_first,
+                max_contracts=args.max_contracts,
+                max_failure_modes=args.max_failure_modes,
+            )
+        else:
+            result = build_pack(pack_args)
+            if result != 0:
+                return result
+            pack_content = read_text(output_path)
 
     if not args.quiet:
         print(f"Context Pack Start for {repo}")
@@ -1847,7 +1875,8 @@ def cmd_start(args: argparse.Namespace) -> int:
         print(f"Dirty files: {len(snapshot.dirty_files)}; diff hash: {snapshot.diff_hash}")
         print("")
         if pack_generated:
-            print(f"Generated {mode} pack for {pack_reason}: {rel_to_repo(output_path, repo)}")
+            location = "inline (not written)" if inline_transient else rel_to_repo(output_path, repo)
+            print(f"Generated {mode} pack for {pack_reason}: {location}")
             if mode == "review" and args.base:
                 suffix = " (auto)" if review_base_inferred else ""
                 print(f"Review base: {args.base}{suffix}")
@@ -1855,17 +1884,15 @@ def cmd_start(args: argparse.Namespace) -> int:
             print_selection_reasons("Why selected:", selected)
             if repo_file_total:
                 print(f"Scope reduction: start from {len(selected)} area(s) instead of scanning {repo_file_total} repo file(s)")
-            text_budget = pack_text_budget_summary(output_path)
+            text_budget = pack_text_budget_summary(output_path) if not inline_transient else None
             if text_budget:
                 print(f"Approx text budget: {text_budget}")
             print("")
-            print("Read next:")
-            print(f"- {rel_to_repo(output_path, repo)}")
-            for item in selected:
-                area = (manifest.get("areas") or {}).get(item.area_id, {})
-                doc = area.get("doc")
-                if doc and (repo / doc).is_file():
-                    print(f"- {doc}")
+            if not inline_transient:
+                print(f"Saved pack: {rel_to_repo(output_path, repo)}")
+            print("Context pack follows; do not reopen it unless this output was truncated:")
+            print("")
+            print(pack_content.rstrip())
         else:
             if small_repo_skip:
                 print(
@@ -1953,6 +1980,7 @@ def area_role(area_id: str, area: dict[str, Any]) -> str:
 def area_routing_text(repo: Path | None, area_id: str, area: dict[str, Any]) -> tuple[set[str], set[str]]:
     strong_parts = [area_id, area.get("kind", "")]
     strong_parts.extend(area.get("keywords", []) or [])
+    strong_parts.extend(area.get("search_terms", []) or [])
     support_parts = [area.get("description", "")]
     for field in ("paths", "start_files", "contracts", "failure_modes"):
         support_parts.extend(area.get(field, []) or [])
@@ -2272,7 +2300,7 @@ def pack_text_budget_summary(pack_path: Path) -> str:
 
 
 def percent(part: int, whole: int) -> int:
-    if whole <= 0:
+    if part <= 0 or whole <= 0:
         return 0
     return min(100, max(1, round((part / whole) * 100)))
 
@@ -2352,6 +2380,8 @@ def render_pack(
     areas = manifest.get("areas") or {}
     related_selections = related_selections or []
     changed = changed_files
+    search_scopes: list[str] = []
+    search_terms: list[str] = []
     read_first: list[str] = []
     read_later: list[str] = []
     tests: list[str] = []
@@ -2361,11 +2391,16 @@ def render_pack(
 
     def collect_area(selection: AreaSelection, *, primary: bool) -> None:
         area = areas.get(selection.area_id, {})
-        doc_path = normalize_path(area.get("doc", ""))
-        if doc_path and (not transient or (repo / doc_path).is_file()):
-            (read_first if primary else read_later).append(doc_path)
         target = read_first if primary else read_later
-        target.extend(area.get("start_files", []) or [])
+        start_files = area.get("start_files", []) or []
+        for start_file in start_files:
+            is_scope = any(ch in start_file for ch in "*?[") or (repo / start_file).is_dir()
+            if primary and (task or is_scope):
+                search_scopes.append(start_file)
+            else:
+                target.append(start_file)
+        if primary and task:
+            search_terms.extend(area.get("search_terms", []) or [])
         target.extend(path for path in changed if matches_any(path, area.get("paths", []) or []))
         if primary:
             tests.extend(area.get("tests", []) or [])
@@ -2388,6 +2423,28 @@ def render_pack(
     for selection in related_selections:
         collect_area(selection, primary=False)
 
+    if task:
+        task_hint_noise = TASK_ACTION_TOKENS | ROUTE_NOISE_TOKENS | {
+            "answer",
+            "briefly",
+            "changing",
+            "generated",
+            "legacy",
+            "locally",
+            "permits",
+            "recent",
+            "repository",
+            "smallest",
+            "still",
+            "visible",
+            "without",
+            "work",
+            "works",
+        }
+        search_terms.extend(sorted(tokenize(task) - task_hint_noise)[:8])
+
+    search_scopes = unique(search_scopes)
+    search_terms = unique_text(search_terms)[:12]
     read_first_unique = unique(read_first)
     read_first_visible = read_first_unique[:max_read_first]
     read_later = unique(read_first_unique[max_read_first:] + read_later)
@@ -2434,6 +2491,7 @@ def render_pack(
         "## Scope Reduction",
         f"- Repo files considered: {repo_file_total if repo_file_total else 'unknown'}",
         f"- Primary areas selected: {len(selections)} of {area_total}",
+        f"- Search scopes: {len(search_scopes)}",
         f"- Read First entries: {read_first_total}" + (f" (~{read_first_ratio}% of repo files)" if repo_file_total else ""),
         f"- Changed files in scope: {len(changed)}",
     ]
@@ -2461,6 +2519,21 @@ def render_pack(
         for item in related_selections:
             reason = "; ".join(item.reasons)
             lines.append(f"- {item.area_id} (score {item.score}): {reason}")
+
+    lines.extend(["", "## Search First"])
+    if search_terms:
+        lines.append("- Terms/symbols: " + ", ".join(f"`{item}`" for item in search_terms))
+    else:
+        lines.append("- Terms/symbols: use the task's most distinctive identifiers")
+    if search_scopes:
+        lines.append("- Scopes:")
+        for item in search_scopes[:12]:
+            lines.append(f"  - `{item}`")
+        if len(search_scopes) > 12:
+            lines.append(f"  - ... {len(search_scopes) - 12} more scope(s) omitted")
+    else:
+        lines.append("- Scopes: selected area paths")
+    lines.append("- Search first, then inspect only matching regions. Do not bulk-read a directory, glob, or large file.")
 
     lines.extend(["", "## Read First"])
     for item in read_first_visible:
@@ -2515,7 +2588,9 @@ def render_pack(
         [
             "",
             "## Operating Rule",
-            "- Use this pack to choose what to inspect first. Verify behavior in source code before editing or reviewing.",
+            "- Follow Search First with targeted queries and bounded snippets before opening full files.",
+            "- Treat globs and directories as search scopes, never as instructions to bulk-read their contents.",
+            "- Verify behavior in source code before editing or reviewing.",
         ]
     )
     return "\n".join(lines).rstrip() + "\n"

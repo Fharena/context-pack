@@ -18,6 +18,14 @@ First-run routing uses generic area roles and bounded entry-point globs. Public 
 
 `chars/4` numbers describe approximate first-read text scope only. They are never billed-token, answer-consistency, or patch-quality claims. Independent-agent A/B testing is a separate proof milestone.
 
+## 2026-07-11: Actual Token Evidence Must Stay Mixed
+
+Codex CLI A/B uses reported cumulative input and derives uncached input separately. The first current-code confirmation reduced median uncached input and the worst total-input run, but increased median total input and latency. Until broader paired trials disagree, the product does not claim universal token or cost savings.
+
+## 2026-07-11: Search Scopes Are Not Read Lists
+
+Task packs route with bounded terms and search scopes. Files, directories, and globs are candidates for targeted search, not instructions to load all content. Inline output avoids a second pack read and transient first use leaves no files behind.
+
 ## 2026-07-11: Neglect Must Be Bounded
 
 Published and local checkpoint logs rotate, generated state remains ignored, normal start avoids full-repo statistics, and doctor warns about overly broad areas. The library should degrade into warnings and source verification instead of growing without limit.

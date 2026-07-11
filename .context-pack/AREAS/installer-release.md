@@ -20,6 +20,7 @@ last_reviewed_head: b440399b85ee
 - Preparing a version bump or release artifact.
 
 ## Start With
+- `MANIFEST.in`
 - `pyproject.toml`
 - `package.json`
 - `scripts/sync_packaged_assets.py`
@@ -31,6 +32,8 @@ last_reviewed_head: b440399b85ee
 - Canonical engine, skill, agent metadata, and plugin manifest are synchronized before validation.
 - The npm wrapper delegates to the bundled Python engine.
 - Packaged validation covers transient start, setup, task, review, checkpoint, and install-codex.
+- Source distributions include the development harness and pass the same test suite after extraction.
+- CI reinstalls the built wheel before final CLI and plugin-install checks.
 - Registry publishing remains opt-in until trusted publishing is configured.
 
 ## Common Failure Modes

@@ -50,6 +50,8 @@ jobs:
           node bin/context-pack.js --help
           python -m build
           python -m twine check dist/*
+          python -c "import pathlib, subprocess, sys; wheels = list(pathlib.Path('dist').glob('*.whl')); assert len(wheels) == 1, wheels; subprocess.run([sys.executable, '-m', 'pip', 'install', '--force-reinstall', str(wheels[0])], check=True)"
+          context-pack --version
           npm pack --dry-run
           python scripts/validate_packaged_cli.py
           python -c "import json, pathlib, subprocess, tempfile; root = pathlib.Path(tempfile.mkdtemp()); target = root / 'plugins' / 'context-pack'; marketplace = root / '.agents' / 'plugins' / 'marketplace.json'; subprocess.run(['context-pack', 'install-codex', '--target', str(target), '--marketplace', str(marketplace), '--quiet'], check=True); assert (target / '.codex-plugin' / 'plugin.json').exists(); assert (target / 'skills' / 'context-pack' / 'SKILL.md').exists(); data = json.loads(marketplace.read_text(encoding='utf-8')); assert data['plugins'][0]['name'] == 'context-pack'"

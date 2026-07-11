@@ -19,6 +19,12 @@
         "unicode",
         "path"
       ],
+      "search_terms": [
+        "render_pack",
+        "Search First",
+        "cmd_start",
+        "inline_transient"
+      ],
       "paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "plugins/context-pack/scripts/context_pack.py",
@@ -76,6 +82,7 @@
         "scripts/validate_packaged_cli.py",
         ".github/workflows/**",
         ".agents/plugins/marketplace.json",
+        "MANIFEST.in",
         "pyproject.toml",
         "package.json",
         "bin/**",
@@ -85,6 +92,7 @@
         "src/context_pack/bundled/plugin.json"
       ],
       "start_files": [
+        "MANIFEST.in",
         "pyproject.toml",
         "package.json",
         "scripts/sync_packaged_assets.py",
@@ -93,6 +101,7 @@
         ".github/workflows/release.yml"
       ],
       "stale_if_paths": [
+        "MANIFEST.in",
         "pyproject.toml",
         "package.json",
         "plugins/context-pack/**",
@@ -136,6 +145,12 @@
         "marketing",
         "release notes"
       ],
+      "search_terms": [
+        "benchmark_codex_ab",
+        "input_tokens",
+        "uncached_input_tokens",
+        "scope_ratio"
+      ],
       "paths": [
         "README.md",
         "README.ko.md",
@@ -147,24 +162,29 @@
         "docs/RELEASE.md",
         "docs/RELEASE.ko.md",
         "docs/benchmarks/**",
-        "docs/releases/**"
+        "docs/releases/**",
+        "scripts/benchmark_codex_ab.py",
+        "scripts/benchmark_context_pack.py"
       ],
       "start_files": [
         "README.md",
         "README.ko.md",
         "docs/BENCHMARKS.md",
-        "docs/benchmarks/latest.md"
+        "docs/benchmarks/codex-ab-zoning-confirm.md",
+        "scripts/benchmark_codex_ab.py"
       ],
       "stale_if_paths": [
         "README.md",
         "README.ko.md",
         "docs/**",
+        "scripts/benchmark_codex_ab.py",
         "scripts/benchmark_context_pack.py",
         "scripts/generate_demo_gif.py"
       ],
       "contracts": [
         "English and Korean onboarding describe the same product behavior.",
         "Benchmark claims distinguish approximate orientation budgets from billed tokens and patch quality.",
+        "Actual Codex usage reports total and uncached input separately and does not claim universal token savings.",
         "The main README keeps one primary install path per agent surface and links details instead of repeating them."
       ],
       "failure_modes": [
@@ -237,14 +257,19 @@
         "packaged"
       ],
       "paths": [
-        "tests/test_context_pack.py"
+        "tests/test_context_pack.py",
+        "tests/test_benchmarks.py"
       ],
       "start_files": [
-        "tests/test_context_pack.py"
+        "tests/test_context_pack.py",
+        "tests/test_benchmarks.py"
       ],
       "stale_if_paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "scripts/validate_packaged_cli.py",
+        "scripts/benchmark_codex_ab.py",
+        "scripts/benchmark_context_pack.py",
+        "tests/test_benchmarks.py",
         "tests/test_context_pack.py"
       ],
       "contracts": [

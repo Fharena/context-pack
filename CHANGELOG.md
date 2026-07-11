@@ -11,6 +11,8 @@ All notable changes to Context Pack will be documented here.
 - Added transient first-run packs that live under Git metadata or the system temp directory without creating repository files.
 - Added generic area roles, bounded start-file inference, broad-glob diagnostics, bounded checkpoint logs, and package-resource sync checks.
 - Added cross-platform integration tests that execute installed Git hooks and cover Unicode branch and renamed file paths.
+- Added `scripts/benchmark_codex_ab.py` for parallel, isolated Codex CLI A/B trials with reported total/cached/uncached token usage, latency, and patch checks.
+- Added `Search First` terms and scopes so task packs route agents to bounded matches instead of whole globs or large files.
 
 ### Changed
 
@@ -21,6 +23,10 @@ All notable changes to Context Pack will be documented here.
 - Reduced the default CLI help and public documentation to the primary workflow while retaining compatibility commands.
 - Moved packaged skill, agent metadata, and plugin metadata to synchronized resource files instead of embedded hand-maintained strings.
 - Updated the public benchmark to 10 passing repositories and a matching fresh-clone handoff signature.
+- Interactive `start` now prints the complete pack inline; agents no longer need a second tool turn to reopen the saved pack.
+- Transient first runs are inline and file-free instead of writing under `.git`, which can be blocked by agent sandboxes.
+- The skill now tries one precise search before transient routing in unconfigured repos and skips Context Pack when that search is enough.
+- Reframed benchmark evidence around actual Codex CLI usage: current five-run evidence shows 14.2% lower median uncached input but 17.2% higher median total input, so no universal total-token claim is made.
 
 ### Fixed
 

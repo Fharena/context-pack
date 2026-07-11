@@ -576,6 +576,7 @@ class ContextPackTests(unittest.TestCase):
                 "description": "Command-line entrypoints.",
                 "paths": ["src/cli.py"],
                 "start_files": ["src/cli.py"],
+                "search_terms": ["main"],
                 "tests": [],
                 "keywords": ["cli", "command"],
             }
@@ -599,10 +600,17 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("## Scope Reduction", pack)
             self.assertIn("- Repo files considered:", pack)
             self.assertIn("- Primary areas selected:", pack)
-            self.assertIn("- Read First entries:", pack)
+            self.assertIn("- Search scopes: 1", pack)
+            self.assertIn("- Read First entries: 0 (~0% of repo files)", pack)
             self.assertNotIn("- Approx Read First text:", pack)
             self.assertNotIn("- Approx repo text:", pack)
             self.assertIn("- cli", pack)
+            search_section = pack.split("## Search First", 1)[1].split("## Read First", 1)[0]
+            read_section = pack.split("## Read First", 1)[1].split("## Changed Files", 1)[0]
+            self.assertIn("`main`", search_section)
+            self.assertIn("`src/cli.py`", search_section)
+            self.assertNotIn("`src/cli.py`", read_section)
+            self.assertIn("Do not bulk-read", search_section)
 
     def test_measure_reports_scope_without_writing_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -725,9 +733,13 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- tests: starter code area for unclassified task", text)
             snapshot = self.engine.collect_snapshot(repo)
             pack_path = self.engine.transient_pack_path(repo, snapshot)
-            pack = pack_path.read_text(encoding="utf-8")
+            self.assertFalse(pack_path.exists())
+            self.assertIn("Generated work pack for task: inline (not written)", text)
+            self.assertIn("Context pack follows", text)
+            pack = text.split("Context pack follows; do not reopen it unless this output was truncated:", 1)[1]
             self.assertIn("- source (score 2): starter code area for unclassified task", pack)
             self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+            self.assertIn("## Search First", pack)
             self.assertFalse((repo / ".context-pack").exists())
             self.assertFalse((repo / "AGENTS.md").exists())
             self.assertFalse((repo / ".gitignore").exists())
@@ -1666,7 +1678,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("focused repo context", plugin["interface"]["defaultPrompt"][0])
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("quiet orientation", skill)
-            self.assertIn("must not create `.context-pack/`", skill)
+            self.assertIn("prints a transient pack without writing repository files", skill)
             self.assertIn("explicitly asks to install", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
             self.assertIn("setup --dry-run", skill)
@@ -1939,6 +1951,7 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("User: Fix the login timeout.", text)
         self.assertIn("Context library: transient", text)
         self.assertIn("repo files stay untouched", text)
+        self.assertIn("Search first: targeted terms + bounded scopes", text)
         self.assertIn("broad reading is likely cheaper", text)
         self.assertIn("context-pack setup --dry-run", text)
         self.assertIn("context-pack start --task", text)

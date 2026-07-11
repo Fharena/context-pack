@@ -15,6 +15,7 @@ last_reviewed_head: b440399b85ee
 
 ## Start With
 - `tests/test_context_pack.py`
+- `tests/test_benchmarks.py`
 - `scripts/validate_packaged_cli.py` for installed-package behavior
 
 ## Contracts

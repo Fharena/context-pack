@@ -1,0 +1,344 @@
+{
+  "codex_version": "codex-cli 0.144.0-alpha.4",
+  "conditions": [
+    "baseline",
+    "curated"
+  ],
+  "context_pack_engine_sha256": "52f379af2c27f9838b56a36145acac6a339f5cf951511872070b6fd57096f085",
+  "context_pack_version": "context-pack 0.3.0",
+  "generated_at": "2026-07-11T20:22:35+09:00",
+  "max_workers": 2,
+  "model": "gpt-5.6-sol",
+  "prompt": "On phones, walking through the bottom edge of the visible world now makes the camera jump sideways instead of continuing into the next area. Desktop edge transitions still work. Find and fix the smallest root cause without changing generated maps or renderer behavior. Inspect and verify locally as far as this legacy repository permits. In the final answer, briefly state the changed file and verification.",
+  "reasoning_effort": "low",
+  "repo": "mozilla/BrowserQuest",
+  "results": [
+    {
+      "command_count": 3,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 43.624,
+      "error": "",
+      "event_count": 14,
+      "id": "baseline-1",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "fdaa46114f66",
+      "status": "ok",
+      "trial": 1,
+      "usage": {
+        "cached_input_tokens": 87808,
+        "input_tokens": 106328,
+        "output_tokens": 1230,
+        "reasoning_output_tokens": 67,
+        "total_tokens": 107558,
+        "uncached_input_tokens": 18520
+      }
+    },
+    {
+      "command_count": 3,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 34.108,
+      "error": "",
+      "event_count": 14,
+      "id": "baseline-2",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "fdaa46114f66",
+      "status": "ok",
+      "trial": 2,
+      "usage": {
+        "cached_input_tokens": 65536,
+        "input_tokens": 83106,
+        "output_tokens": 815,
+        "reasoning_output_tokens": 52,
+        "total_tokens": 83921,
+        "uncached_input_tokens": 17570
+      }
+    },
+    {
+      "command_count": 6,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 50.33,
+      "error": "",
+      "event_count": 20,
+      "id": "baseline-3",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "6309f2370407",
+      "status": "ok",
+      "trial": 3,
+      "usage": {
+        "cached_input_tokens": 192512,
+        "input_tokens": 226500,
+        "output_tokens": 1306,
+        "reasoning_output_tokens": 139,
+        "total_tokens": 227806,
+        "uncached_input_tokens": 33988
+      }
+    },
+    {
+      "command_count": 5,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 43.703,
+      "error": "",
+      "event_count": 18,
+      "id": "baseline-4",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "38a7fef4b171",
+      "status": "ok",
+      "trial": 4,
+      "usage": {
+        "cached_input_tokens": 131328,
+        "input_tokens": 155420,
+        "output_tokens": 1120,
+        "reasoning_output_tokens": 66,
+        "total_tokens": 156540,
+        "uncached_input_tokens": 24092
+      }
+    },
+    {
+      "command_count": 4,
+      "condition": "baseline",
+      "context_pack_invoked": false,
+      "duration_seconds": 40.615,
+      "error": "",
+      "event_count": 16,
+      "id": "baseline-5",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "fcfe13db1639",
+      "status": "ok",
+      "trial": 5,
+      "usage": {
+        "cached_input_tokens": 88832,
+        "input_tokens": 107339,
+        "output_tokens": 1087,
+        "reasoning_output_tokens": 85,
+        "total_tokens": 108426,
+        "uncached_input_tokens": 18507
+      }
+    },
+    {
+      "command_count": 5,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 45.12,
+      "error": "",
+      "event_count": 18,
+      "id": "curated-1",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "7e392967e854",
+      "status": "ok",
+      "trial": 1,
+      "usage": {
+        "cached_input_tokens": 111872,
+        "input_tokens": 127762,
+        "output_tokens": 1143,
+        "reasoning_output_tokens": 28,
+        "total_tokens": 128905,
+        "uncached_input_tokens": 15890
+      }
+    },
+    {
+      "command_count": 5,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 45.062,
+      "error": "",
+      "event_count": 18,
+      "id": "curated-2",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "0c265b5cb0f0",
+      "status": "ok",
+      "trial": 2,
+      "usage": {
+        "cached_input_tokens": 107776,
+        "input_tokens": 122974,
+        "output_tokens": 1107,
+        "reasoning_output_tokens": 48,
+        "total_tokens": 124081,
+        "uncached_input_tokens": 15198
+      }
+    },
+    {
+      "command_count": 6,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 55.531,
+      "error": "",
+      "event_count": 20,
+      "id": "curated-3",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "d97844234096",
+      "status": "ok",
+      "trial": 3,
+      "usage": {
+        "cached_input_tokens": 136192,
+        "input_tokens": 153498,
+        "output_tokens": 1223,
+        "reasoning_output_tokens": 54,
+        "total_tokens": 154721,
+        "uncached_input_tokens": 17306
+      }
+    },
+    {
+      "command_count": 5,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 46.732,
+      "error": "",
+      "event_count": 19,
+      "id": "curated-4",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "efa7cc92a43d",
+      "status": "ok",
+      "trial": 4,
+      "usage": {
+        "cached_input_tokens": 110848,
+        "input_tokens": 125848,
+        "output_tokens": 1102,
+        "reasoning_output_tokens": 39,
+        "total_tokens": 126950,
+        "uncached_input_tokens": 15000
+      }
+    },
+    {
+      "command_count": 5,
+      "condition": "curated",
+      "context_pack_invoked": true,
+      "duration_seconds": 43.551,
+      "error": "",
+      "event_count": 18,
+      "id": "curated-5",
+      "quality": {
+        "changed_files": [
+          "client/js/game.js"
+        ],
+        "fixed": true,
+        "minimal_patch": true
+      },
+      "return_code": 0,
+      "seed_head": "1c246ece24fb",
+      "status": "ok",
+      "trial": 5,
+      "usage": {
+        "cached_input_tokens": 95488,
+        "input_tokens": 118769,
+        "output_tokens": 1064,
+        "reasoning_output_tokens": 27,
+        "total_tokens": 119833,
+        "uncached_input_tokens": 23281
+      }
+    }
+  ],
+  "scenario": "zoning",
+  "scenario_title": "domain-routed mobile edge transition regression",
+  "seed": {
+    "file": "client/js/game.js",
+    "from": "y = (z === Types.Orientations.UP) ? c.y - yoffset : c.y + yoffset;",
+    "to": "x = (z === Types.Orientations.UP) ? c.y - yoffset : c.y + yoffset;"
+  },
+  "source_head": "af32d247cac3495ca430d0effbb88dd5f3250b2c",
+  "summary": {
+    "baseline": {
+      "context_pack_invocations": 0,
+      "duration_change_vs_baseline_percent": 0.0,
+      "duration_seconds_median": 43.624,
+      "fixed_runs": 5,
+      "input_reduction_vs_baseline_percent": 0.0,
+      "input_tokens_max": 226500.0,
+      "input_tokens_mean": 135738.6,
+      "input_tokens_median": 107339.0,
+      "input_tokens_min": 83106.0,
+      "minimal_patch_runs": 5,
+      "runs": 5,
+      "successful_runs": 5,
+      "uncached_input_tokens_max": 33988.0,
+      "uncached_input_tokens_median": 18520.0,
+      "uncached_input_tokens_min": 17570.0,
+      "uncached_reduction_vs_baseline_percent": 0.0
+    },
+    "curated": {
+      "context_pack_invocations": 5,
+      "duration_change_vs_baseline_percent": 3.4,
+      "duration_seconds_median": 45.12,
+      "fixed_runs": 5,
+      "input_reduction_vs_baseline_percent": -17.2,
+      "input_tokens_max": 153498.0,
+      "input_tokens_mean": 129770.2,
+      "input_tokens_median": 125848.0,
+      "input_tokens_min": 118769.0,
+      "minimal_patch_runs": 5,
+      "runs": 5,
+      "successful_runs": 5,
+      "uncached_input_tokens_max": 23281.0,
+      "uncached_input_tokens_median": 15890.0,
+      "uncached_input_tokens_min": 15000.0,
+      "uncached_reduction_vs_baseline_percent": 14.2
+    }
+  },
+  "trials_per_condition": 5
+}

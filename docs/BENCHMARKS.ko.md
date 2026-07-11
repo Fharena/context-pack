@@ -1,60 +1,80 @@
 # Context Pack 벤치마크
 
-이 결과는 Context Pack의 결정론적 orientation 성능을 확인합니다. 보편적인 token 절감률을 주장하거나 에이전트가 더 좋은 patch를 만든다는 것을 증명하지는 않습니다.
+Context Pack에는 서로 다른 두 종류의 벤치마크가 있습니다. 두 수치를 섞어 쓰면 안 됩니다.
 
-## 측정 방법
+1. **Codex CLI A/B**는 model run이 보고한 usage와 실제 patch를 검사합니다.
+2. **Deterministic routing**은 agent를 실행하지 않고 area 선택과 clone replay를 검사합니다.
 
-- 날짜: 2026-07-11
-- 엔진: `0.3.0`
-- 명령: `python scripts/benchmark_context_pack.py --public --fail-on-weak`
-- 입력: Context Pack을 설정하지 않은 공개 저장소 shallow clone 10개와 로컬 handoff replay 1개
-- 추정 방식: 읽을 수 있는 text 문자 수를 4로 나눔. ignore, binary, empty, unreadable, 1 MB 초과 파일은 제외
-- 통과 조건: 기대 area role 선택, 시나리오별 read ratio 상한 충족, 비어 있는 first-read route 없음, 5초 안에 routing 완료
+어느 쪽도 보편적인 생산성 향상이나 billing 절감을 증명하지는 않습니다.
 
-정확한 생성 결과는 [`benchmarks/latest.md`](benchmarks/latest.md)와 [`benchmarks/latest.json`](benchmarks/latest.json)에 있습니다.
+## 실제 Codex CLI A/B
 
-## 최신 결과
+다음 명령으로 재현합니다.
 
-| 시나리오 | 저장소 | 먼저 선택된 영역 | 대략적인 first read / repo | 비율 |
-| --- | --- | --- | ---: | ---: |
-| CI 실패 | `pypa/sampleproject` | automation, source, tests | 2.2k / 3.3k | 65% |
-| 테스트 실패 | `psf/requests` | source, tests | 41.3k / 386.9k | 11% |
-| Shell completion | `pallets/click` | source, tests | 101.9k / 365.7k | 28% |
-| Build 실패 | `encode/httpx` | automation, source, tests | 88.5k / 247.7k | 36% |
-| Mobile control | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
-| Asset loading | `mozilla/BrowserQuest` | assets, source | 98.2k / 602.2k | 16% |
-| WebSocket login | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
-| Middleware panic | `gin-gonic/gin` | source, tests | 9.0k / 217.6k | 4% |
-| Router error | `expressjs/express` | source | 15.5k / 177.9k | 9% |
-| Regex filter | `sharkdp/fd` | source, tests | 6.3k / 141.1k | 4% |
+```bash
+python scripts/benchmark_codex_ab.py \
+  --scenario zoning \
+  --conditions baseline curated \
+  --trials 5 \
+  --max-workers 2 \
+  --json docs/benchmarks/codex-ab-zoning-confirm.json \
+  --markdown docs/benchmarks/codex-ab-zoning-confirm.md \
+  --fail-on-error
+```
 
-10개 시나리오가 모두 미리 정한 기준을 통과했습니다. 이 비율은 first-read route에 이름이 올라간 파일 범위이며, 에이전트가 작업 중 최종적으로 읽을 모든 파일을 뜻하지 않습니다.
+harness는 다음을 수행합니다.
 
-## Handoff Replay
+- `mozilla/BrowserQuest@af32d247cac3`를 shallow clone합니다.
+- 같은 mobile zoning regression을 shallow root commit 안에 숨깁니다.
+- baseline과 curated Context Pack checkout을 격리합니다.
+- Codex CLI `0.144.0-alpha.4`, `gpt-5.6-sol`, low reasoning을 ephemeral mode로 실행합니다.
+- 최대 두 trial을 병렬로 실행합니다.
+- JSONL의 `turn.completed.usage`를 읽습니다.
+- 기대한 source 수정과 unrelated file이 바뀌지 않았는지 검사합니다.
 
-벤치마크는 synthetic repo를 설정하고 checkpoint를 publish한 뒤 clone합니다. 그리고 두 checkout에서 같은 test-failure 작업을 routing합니다.
+### 5회 확인 결과
 
-- clone 후 동일한 routing signature: yes
-- 두 checkout 모두: `source, tests`
-- 대략적인 first read: 408 / 3,310 tokens, 12%
-- first-read entry: 각 checkout에서 4개
+| 조건 | 정확한 최소 patch | Total input 중앙값 | Total 범위 | Uncached input 중앙값 | 시간 중앙값 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 5/5 | 107,339 | 83,106-226,500 | 18,520 | 43.6초 |
+| Curated Context Pack | 5/5 | 125,848 | 118,769-153,498 | 15,890 | 45.1초 |
 
-이는 git으로 이동한 context가 결정론적 orientation을 재현한다는 뜻입니다. 서로 독립적인 에이전트가 같은 자연어 답변이나 patch를 만든다는 뜻은 아닙니다.
+baseline과 비교하면 curated Context Pack은 **total input 중앙값이 17.2% 늘었고**, **uncached input 중앙값은 14.2% 줄었으며**, **시간 중앙값은 3.4% 늘었습니다**. 가장 큰 run은 Context Pack 153,498, baseline 226,500 total input tokens였습니다.
 
-## 이번 검증에서 바뀐 점
+이는 token 절감 headline이 아니라 혼합된 결과입니다. context route가 새로 처리하는 탐색과 tail 크기는 줄였지만 추가 tool turn이 cached input을 늘렸습니다. billing system은 cached input을 다르게 가격화할 수 있지만 이 저장소는 이를 비용 절감 주장으로 환산하지 않습니다.
 
-- 커스텀 area 이름에도 source, tests, docs, assets, automation 같은 일반 role을 부여합니다.
-- BrowserQuest 전용 sprite/map bucket과 벤치마크에 맞춘 framework 단어를 제거했습니다.
-- 추론된 시작 범위는 source/test 폴더 전체 대신 제한된 entry-point glob을 사용합니다.
-- 실제 제품 파일도 바뀌었으면 review routing에서 Context Pack 자체 metadata를 분리합니다.
-- 평소 `start`는 token 통계를 출력하려고 repo 전체를 scan하지 않습니다.
+정확한 결과는 [`codex-ab-zoning-confirm.md`](benchmarks/codex-ab-zoning-confirm.md)와 [`codex-ab-zoning-confirm.json`](benchmarks/codex-ab-zoning-confirm.json)에 있습니다. raw JSONL trace와 patch는 machine path와 긴 model output을 포함하므로 로컬 benchmark work directory에만 보관합니다.
+
+## A/B로 발견해 고친 점
+
+첫 A/B run은 실제 설계 결함 두 개를 드러냈습니다.
+
+- pack이 glob과 큰 파일을 `Read First`로 표현해 agent가 bounded search 대신 파일 전체를 읽기도 했습니다.
+- `.git` 아래 transient pack은 Codex workspace sandbox에서 쓰기가 막혀 retry와 추가 turn을 만들 수 있었습니다.
+
+현재 engine은 `Search First` term과 scope를 출력하고 bounded match만 보도록 지시합니다. pack은 inline으로 출력하며 transient first run은 파일을 쓰지 않습니다. 스킬도 한 번의 정확한 검색으로 찾을 수 있는 작업에서는 Context Pack을 건너뜁니다.
+
+## Deterministic Routing
+
+기존 공개 저장소 harness도 regression 검사에는 계속 유용합니다.
+
+```bash
+python scripts/benchmark_context_pack.py \
+  --public \
+  --json docs/benchmarks/latest.json \
+  --markdown docs/benchmarks/latest.md \
+  --fail-on-weak
+```
+
+공개 시나리오 10개는 기대한 area role, runtime threshold, fresh-clone handoff replay를 검사합니다. 과거 `chars/4` ratio는 candidate text scope일 뿐 실제 model token이 아니므로 핵심 세일즈 수치로 사용하면 안 됩니다.
 
 ## 한계
 
-- `chars/4`는 text-budget proxy이며 provider billing이나 실제 tokenizer 결과가 아닙니다.
-- 로컬 duration은 regression signal이며 머신과 filesystem cache에 따라 달라집니다.
-- routing과 replay를 측정할 뿐 진단 정확도, patch 품질, test 성공률, 작업 완료 시간은 측정하지 않습니다.
-- 잘 큐레이션된 area 경계는 first-run 추론보다 좋을 수 있고, 나쁜 경계는 오히려 routing을 해칠 수 있습니다.
-- 실제 source 검증은 항상 필요합니다.
+- 조건별 5회는 여전히 작은 표본입니다.
+- 같은 prompt와 repo에서도 model 행동은 달라집니다.
+- 병렬 실행은 시간을 줄이지만 prefix cache와 service load 조건을 공유할 수 있습니다.
+- CLI `input_tokens`는 여러 model turn의 누적값이며 peak context-window 점유량이 아닙니다.
+- `uncached_input_tokens`는 새로 처리한 input이지 직접적인 청구 금액이 아닙니다.
+- 하나의 seeded legacy JavaScript bug가 일반적인 patch 품질을 증명하지 않습니다.
 
-다음으로 의미 있는 증명은 독립 에이전트 A/B입니다. 읽은 파일, 첫 관련 파일 도달, 소요 시간, test 결과, blinded patch review를 함께 기록해야 합니다. 그전까지 홍보 수치는 orientation 측정값으로만 표현해야 합니다.
+다음 확장은 precise bug, domain-routed bug, branch review, session continuation을 각각 조건당 10-20회 실행하는 것입니다.

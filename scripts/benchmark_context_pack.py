@@ -116,6 +116,35 @@ def parse_read_first(pack: str) -> list[str]:
     return items
 
 
+def parse_search_scopes(pack: str) -> list[str]:
+    items: list[str] = []
+    in_section = False
+    in_scopes = False
+    for line in pack.splitlines():
+        stripped = line.strip()
+        if stripped == "## Search First":
+            in_section = True
+            continue
+        if in_section and stripped.startswith("## "):
+            break
+        if not in_section:
+            continue
+        if stripped == "- Scopes:":
+            in_scopes = True
+            continue
+        if in_scopes and not line.startswith("  - "):
+            break
+        if not in_scopes or not line.startswith("  - "):
+            continue
+        value = stripped[2:].strip()
+        if value.startswith("`"):
+            value = value.split("`", 2)[1]
+        value = value.replace(" (missing)", "").strip()
+        if value:
+            items.append(value)
+    return items
+
+
 def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
     started = time.perf_counter()
     snapshot = engine.collect_snapshot(repo.resolve())
@@ -140,11 +169,13 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
     repo_file_list = engine.repo_files(repo)
     repo_budget = engine.text_budget_for_files(repo, repo_file_list)
     read_first = parse_read_first(pack)
-    read_first_files = engine.files_for_read_first_entries(repo, read_first, repo_file_list)
-    read_budget = engine.text_budget_for_files(repo, read_first_files)
+    search_scopes = parse_search_scopes(pack)
+    orientation_entries = list(dict.fromkeys([*search_scopes, *read_first]))
+    orientation_files = engine.files_for_read_first_entries(repo, orientation_entries, repo_file_list)
+    orientation_budget = engine.text_budget_for_files(repo, orientation_files)
     repo_tokens = engine.estimated_tokens(repo_budget.chars)
-    read_tokens = engine.estimated_tokens(read_budget.chars)
-    ratio = round((read_tokens / repo_tokens) * 100) if repo_tokens and read_tokens else 0
+    scope_tokens = engine.estimated_tokens(orientation_budget.chars)
+    ratio = round((scope_tokens / repo_tokens) * 100) if repo_tokens and scope_tokens else 0
     selected = [item.area_id for item in primary]
     selected_set = set(selected)
     expected_set = set(scenario.expected)
@@ -155,8 +186,8 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
         weak_flags.append("expected_miss")
     if ratio > scenario.max_ratio:
         weak_flags.append("high_budget")
-    if expected_set and read_budget.files == 0:
-        weak_flags.append("empty_read_first")
+    if expected_set and orientation_budget.files == 0:
+        weak_flags.append("empty_orientation")
     if duration_ms > 5000:
         weak_flags.append("slow_measure")
     return {
@@ -168,12 +199,14 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
         "expected": list(scenario.expected),
         "expected_ok": expected_set.issubset(selected_set),
         "repo_files": len(repo_file_list),
+        "search_scope_entries": len(search_scopes),
         "read_first_entries": len(read_first),
-        "read_first_files": read_budget.files,
+        "orientation_entries": len(orientation_entries),
+        "orientation_files": orientation_budget.files,
         "repo_text_files": repo_budget.files,
-        "read_tokens": read_tokens,
+        "scope_tokens": scope_tokens,
         "repo_tokens": repo_tokens,
-        "read_ratio": ratio,
+        "scope_ratio": ratio,
         "reduction": max(0, 100 - ratio),
         "max_ratio": scenario.max_ratio,
         "duration_ms": duration_ms,
@@ -192,11 +225,13 @@ def configure_git(repo: Path) -> None:
 def routing_signature(result: dict[str, Any]) -> dict[str, Any]:
     return {
         "selected": result["selected"],
+        "search_scope_entries": result["search_scope_entries"],
         "read_first_entries": result["read_first_entries"],
-        "read_first_files": result["read_first_files"],
-        "read_tokens": result["read_tokens"],
+        "orientation_entries": result["orientation_entries"],
+        "orientation_files": result["orientation_files"],
+        "scope_tokens": result["scope_tokens"],
         "repo_tokens": result["repo_tokens"],
-        "read_ratio": result["read_ratio"],
+        "scope_ratio": result["scope_ratio"],
     }
 
 
@@ -267,7 +302,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         "## Public Orientation Results",
         "",
-        "| Scenario | Repo | Prompt | Selected | Read / Repo Tokens | Ratio | Duration | Flags |",
+        "| Scenario | Repo | Prompt | Selected | Search Scope / Repo Tokens | Ratio | Duration | Flags |",
         "| --- | --- | --- | --- | ---: | ---: | ---: | --- |",
     ]
     for item in data["public_results"]:
@@ -278,9 +313,9 @@ def render_markdown(data: dict[str, Any]) -> str:
                 repo=item["repo"],
                 prompt=item["prompt"],
                 selected=", ".join(item["selected"]),
-                read=format_tokens(item["read_tokens"]),
+                read=format_tokens(item["scope_tokens"]),
                 repo_tokens=format_tokens(item["repo_tokens"]),
-                ratio=item["read_ratio"],
+                ratio=item["scope_ratio"],
                 duration=item["duration_ms"],
                 flags=flags,
             )
@@ -307,7 +342,7 @@ def render_markdown(data: dict[str, Any]) -> str:
             "",
             "## Limits",
             "",
-            "- Token counts are approximate `chars/4` text-budget estimates, not provider billing tokens.",
+            "- Search-scope counts are approximate `chars/4` candidate-text estimates, not files actually read or provider billing tokens.",
             "- Durations are local wall-clock checks for regression signals and are machine/cache dependent.",
             "- This measures deterministic orientation and replay, not independent agent patch quality.",
             "- Public repos are shallow clones at the recorded HEAD.",

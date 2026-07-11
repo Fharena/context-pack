@@ -1,60 +1,80 @@
 # Context Pack Benchmarks
 
-These results test Context Pack as a deterministic orientation layer. They do not claim a universal token-saving rate or prove that an agent writes a better patch.
+Context Pack has two different benchmark layers. Do not mix their numbers.
 
-## Method
+1. **Codex CLI A/B** records usage reported by the model run and checks the resulting patch.
+2. **Deterministic routing** checks area selection and clone replay without running an agent.
 
-- Date: 2026-07-11
-- Engine: `0.3.0`
-- Command: `python scripts/benchmark_context_pack.py --public --fail-on-weak`
-- Inputs: 10 shallow public-repository clones with no Context Pack setup, plus one local handoff replay
-- Estimate: readable text characters divided by four; ignored, binary, empty, unreadable, and files over 1 MB are excluded
-- Pass condition: expected area roles selected, scenario-specific read-ratio ceiling met, no empty first-read route, routing completed under five seconds
+Neither layer proves a universal productivity or billing reduction.
 
-The exact generated artifacts are [`benchmarks/latest.md`](benchmarks/latest.md) and [`benchmarks/latest.json`](benchmarks/latest.json).
+## Actual Codex CLI A/B
 
-## Latest Results
+Run the experiment with:
 
-| Scenario | Repository | Selected first | Approx. first read / repo | Ratio |
-| --- | --- | --- | ---: | ---: |
-| CI failure | `pypa/sampleproject` | automation, source, tests | 2.2k / 3.3k | 65% |
-| Test failure | `psf/requests` | source, tests | 41.3k / 386.9k | 11% |
-| Shell completion | `pallets/click` | source, tests | 101.9k / 365.7k | 28% |
-| Build failure | `encode/httpx` | automation, source, tests | 88.5k / 247.7k | 36% |
-| Mobile controls | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
-| Asset loading | `mozilla/BrowserQuest` | assets, source | 98.2k / 602.2k | 16% |
-| WebSocket login | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
-| Middleware panic | `gin-gonic/gin` | source, tests | 9.0k / 217.6k | 4% |
-| Router errors | `expressjs/express` | source | 15.5k / 177.9k | 9% |
-| Regex filter | `sharkdp/fd` | source, tests | 6.3k / 141.1k | 4% |
+```bash
+python scripts/benchmark_codex_ab.py \
+  --scenario zoning \
+  --conditions baseline curated \
+  --trials 5 \
+  --max-workers 2 \
+  --json docs/benchmarks/codex-ab-zoning-confirm.json \
+  --markdown docs/benchmarks/codex-ab-zoning-confirm.md \
+  --fail-on-error
+```
 
-All 10 scenarios passed their declared thresholds. These ratios describe the files named in the first-read route, not all files an agent may eventually inspect.
+The harness:
 
-## Handoff Replay
+- shallow-clones `mozilla/BrowserQuest` at `af32d247cac3`;
+- hides the same mobile zoning regression inside the shallow root commit;
+- creates isolated baseline and curated Context Pack checkouts;
+- runs Codex CLI `0.144.0-alpha.4`, `gpt-5.6-sol`, low reasoning, ephemerally;
+- runs at most two trials in parallel;
+- reads `turn.completed.usage` from JSONL;
+- verifies the expected source repair and that no unrelated file changed.
 
-The harness sets up a synthetic repository, publishes a checkpoint, clones it, and routes the same test-failure task in both checkouts.
+### Five-Run Confirmation
 
-- Same routing signature after clone: yes
-- Both checkouts: `source, tests`
-- Approximate first read: 408 / 3,310 tokens, 12%
-- First-read entries: 4 in each checkout
+| Condition | Correct minimal patch | Median total input | Total range | Median uncached input | Median duration |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 5/5 | 107,339 | 83,106-226,500 | 18,520 | 43.6s |
+| Curated Context Pack | 5/5 | 125,848 | 118,769-153,498 | 15,890 | 45.1s |
 
-This verifies that git-carried context reproduces deterministic orientation. It does not imply identical natural-language answers or patches from independent agents.
+Compared with baseline, curated Context Pack used **17.2% more median total input**, **14.2% less median uncached input**, and **3.4% more median time**. Its largest run was 153,498 total input tokens versus baseline's 226,500.
 
-## What Changed During This Run
+This is a mixed result, not a token-saving headline. The context route reduced newly processed exploration and tail size, while the extra tool turn added cached input. Billing systems may price cached input differently, but this repository does not convert the result into a cost claim.
 
-- Custom area names now receive generic roles such as source, tests, docs, assets, and automation.
-- The router no longer contains BrowserQuest-specific sprite/map buckets or benchmark-specific framework words.
-- Inferred start files use bounded entry-point globs instead of whole source and test directories.
-- Review routing suppresses Context Pack's own metadata when product files also changed.
-- Normal `start` no longer scans the whole repository to print an approximate token statistic.
+The exact result is in [`codex-ab-zoning-confirm.md`](benchmarks/codex-ab-zoning-confirm.md) and [`codex-ab-zoning-confirm.json`](benchmarks/codex-ab-zoning-confirm.json). Raw JSONL traces and patches are retained only in the local benchmark work directory because they contain machine paths and verbose model output.
+
+## Product Changes Found By A/B
+
+The first A/B runs exposed two real design failures:
+
+- A pack described globs and large files as `Read First`, so agents sometimes loaded whole files instead of searching bounded regions.
+- Transient packs under `.git` could be unwritable inside a Codex workspace sandbox, causing retries and extra turns.
+
+The engine now emits `Search First` terms and scopes, tells agents to inspect bounded matches, prints packs inline, and leaves transient first runs file-free. The skill also skips Context Pack when one precise search can localize the task.
+
+## Deterministic Routing
+
+The older public-repository harness remains useful for regression testing:
+
+```bash
+python scripts/benchmark_context_pack.py \
+  --public \
+  --json docs/benchmarks/latest.json \
+  --markdown docs/benchmarks/latest.md \
+  --fail-on-weak
+```
+
+Its 10 public scenarios validate expected area roles, runtime thresholds, and fresh-clone handoff replay. Historical `chars/4` ratios describe candidate text scope only. They are not actual model tokens and should not be used as the primary sales claim.
 
 ## Limits
 
-- `chars/4` is a text-budget proxy, not provider billing or tokenizer output.
-- Local durations are regression signals and vary with machine and filesystem cache.
-- The benchmark tests routing and replay, not diagnosis accuracy, patch quality, test success, or task completion time.
-- Curated area boundaries can outperform first-run inference; poor boundaries can also make routing worse.
-- Source verification remains required.
+- Five trials per arm are still a small sample.
+- Model behavior varies even with the same prompt and repository.
+- Parallel trials reduce wall-clock time but can share prefix-cache and service-load conditions.
+- CLI `input_tokens` is cumulative across model turns; it is not peak context-window occupancy.
+- `uncached_input_tokens` is newly processed input, not a direct invoice amount.
+- One seeded legacy JavaScript bug does not establish general patch quality.
 
-The next meaningful proof is an independent-agent A/B study with captured reads, first relevant file, elapsed time, test outcome, and blinded patch review. Until then, marketing should describe these numbers as orientation measurements only.
+The next useful expansion is multiple task classes with at least 10-20 trials per arm: precise bug, domain-routed bug, branch review, and session continuation.

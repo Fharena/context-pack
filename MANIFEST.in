@@ -1,0 +1,8 @@
+include CHANGELOG.md CONTRIBUTING.md README.ko.md SECURITY.md package.json
+include .context-pack/manifest.json
+recursive-include .agents *.json
+recursive-include assets demo.gif
+recursive-include bin *.js
+recursive-include plugins/context-pack *.json *.md *.py *.yaml
+recursive-include scripts *.py
+recursive-include tests *.py

@@ -8,6 +8,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Doc: `.context-pack/AREAS/installer-release.md`
 - Read when: Python/npm packaging, synchronized resources, CI, release workflow, and install smoke tests.
 - Start with:
+  - `MANIFEST.in`
   - `pyproject.toml`
   - `package.json`
   - `scripts/sync_packaged_assets.py`
@@ -21,6 +22,7 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `scripts/validate_packaged_cli.py`
   - `.github/workflows/**`
   - `.agents/plugins/marketplace.json`
+  - `MANIFEST.in`
   - `pyproject.toml`
   - `package.json`
   - `bin/**`
@@ -42,7 +44,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `README.md`
   - `README.ko.md`
   - `docs/BENCHMARKS.md`
-  - `docs/benchmarks/latest.md`
+  - `docs/benchmarks/codex-ab-zoning-confirm.md`
+  - `scripts/benchmark_codex_ab.py`
 - Matches:
   - `README.md`
   - `README.ko.md`
@@ -55,6 +58,8 @@ Use this file as a router. It should reduce reading, not replace source verifica
   - `docs/RELEASE.ko.md`
   - `docs/benchmarks/**`
   - `docs/releases/**`
+  - `scripts/benchmark_codex_ab.py`
+  - `scripts/benchmark_context_pack.py`
 - Tests:
   - `python scripts/benchmark_context_pack.py --public --fail-on-weak`
 
@@ -107,8 +112,10 @@ Use this file as a router. It should reduce reading, not replace source verifica
 - Read when: Unit and integration coverage for engine behavior and release-critical flows.
 - Start with:
   - `tests/test_context_pack.py`
+  - `tests/test_benchmarks.py`
 - Matches:
   - `tests/test_context_pack.py`
+  - `tests/test_benchmarks.py`
 - Tests:
   - `python -m unittest discover -s tests -v`
 

@@ -80,11 +80,11 @@ The CLI does not need to classify review or handoff prose. The agent already und
 On an unconfigured Git repo, `start` runs in transient mode:
 
 - infers source, tests, docs, automation, and assets in memory;
-- writes a temporary pack under `.git/context-pack/`;
+- prints the pack inline without writing it to the repository;
 - does not create `.context-pack/`, `AGENTS.md`, or `.gitignore`;
 - skips pack generation when the repo has 24 files or fewer and broad reading is likely cheaper.
 
-Only explicit `setup` creates persistent repository files.
+The skill first tries a targeted search in unconfigured repos and uses transient routing only when the task remains broad. Only explicit `setup` creates persistent repository files.
 
 ## Persistent Library
 
@@ -144,7 +144,7 @@ Context Pack is not RAG and does not use embeddings or a vector database. Routin
 2. Paths map files to configured areas.
 3. Task words are matched against area names, keywords, contracts, failure modes, and area notes.
 4. Area roles such as `source`, `tests`, and `automation` provide generic fallbacks even when a project uses custom area names.
-5. The generated pack lists the smallest useful starting set and explains each selection.
+5. The generated pack provides search terms and scopes before any full-file reads, then explains each selection.
 
 The result is a map, not ground truth. Agents must verify source before editing.
 
@@ -159,11 +159,18 @@ The result is a map, not ground truth. Agents must verify source before editing.
 
 ## Evidence And Limits
 
-The benchmark harness measures deterministic orientation: selected areas, first-read text budget, latency, and handoff replay after cloning. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and [docs/benchmarks/latest.md](docs/benchmarks/latest.md).
+Context Pack now has an actual Codex CLI A/B harness, not only a `chars/4` routing proxy. In a five-run BrowserQuest zoning benchmark, baseline and curated Context Pack both produced the correct minimal patch in 5/5 runs.
 
-The current 10-repository run passed every declared routing threshold. Examples include `psf/requests` at an estimated 11% first-read ratio, `mozilla/BrowserQuest` at 16%, and a fresh-clone handoff replay with the same routing signature at 12%.
+| Median | Baseline | Curated Context Pack | Change |
+| --- | ---: | ---: | ---: |
+| Total input tokens | 107,339 | 125,848 | 17.2% more |
+| Uncached input tokens | 18,520 | 15,890 | 14.2% less |
+| Duration | 43.6s | 45.1s | 3.4% slower |
+| Total-input range | 83,106-226,500 | 118,769-153,498 | lower worst case |
 
-Token figures are approximate `chars/4` text-budget estimates, not provider billing tokens. They do not prove that an independent agent produces a better patch. Patch-quality A/B evaluation remains a separate requirement.
+So this release does **not** claim universal total-token savings. Curated routing reduced newly processed context and the largest exploration run, but its tool round trip added cached input. Provider billing may weight cached tokens differently. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and the [machine-readable Codex A/B result](docs/benchmarks/codex-ab-zoning-confirm.json).
+
+The older deterministic benchmark still checks routing and clone replay. Its `chars/4` figures are search-scope estimates, not actual model usage.
 
 Context Pack also cannot remove curation cost completely. Its value depends on useful area boundaries and concise notes. The product goal is to remain harmless when those notes are neglected: warn, rotate, prune generated state, and fall back to source verification.
 
