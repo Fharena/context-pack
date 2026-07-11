@@ -19,8 +19,8 @@
 3. `docs/releases/v0.3.0.md` for the release summary
 
 ## Next Actions
-1. Confirm GitHub Actions CI passes on pushed `main`.
-2. Tag and publish `v0.3.0` when ready; PyPI/npm publication remains opt-in until trusted publishing is configured.
+1. Tag and publish `v0.3.0` when ready.
+2. Configure PyPI/npm trusted publishing before enabling registry publication; GitHub release assets can remain the default distribution.
 3. For stronger product evidence, run an independent-agent A/B study with captured reads, elapsed time, tests, and blinded patch review.
 
 ## Watch Outs
@@ -36,4 +36,5 @@
 - `python scripts/benchmark_context_pack.py --public --fail-on-weak ...` (10/10 public scenarios passed; clone replay signature matched)
 - `python -m build` and `python -m twine check` (wheel and sdist passed)
 - `npm pack --dry-run` (9 intended files; no cache artifacts)
+- GitHub Actions CI run `29149300970` passed on Ubuntu/Windows with Python 3.11/3.12
 - `git diff --check`
