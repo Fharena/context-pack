@@ -1,349 +1,305 @@
 {
   "areas": {
     "engine": {
-      "contracts": [
-        "The engine must remain stdlib-only so it can run from a skill, plugin, or copied checkout.",
-        "Generated packs must stay under .context-pack/packs/ and remain ignored by git.",
-        "Context docs are routing hints; packs must include stale warnings instead of hiding uncertainty.",
-        "`setup` must stay the lowest-friction repo onboarding path and compose deterministic init, agent-doc install, optional hooks, and doctor checks.",
-        "`doctor --fix` must repair missing setup files through the same safe setup path and must not install git hooks.",
-        "`start` must stay a thin agent-first router over deterministic init, pack, review-pack, and dirty-file behavior.",
-        "Running `context-pack` with no arguments should print a quickstart and exit successfully.",
-        "`context-pack --version` should report the public package version.",
-        "`install-codex` must refuse unsafe overwrites and be able to install from both source checkouts and packaged CLI installs.",
-        "`install-agent-docs` must preserve existing user text and only replace the managed marker block.",
-        "Generated packs should show scope-reduction metrics without pretending they replace source verification."
-      ],
-      "description": "Deterministic context-pack engine: git snapshot, start routing, area matching, pack generation, doctor, and git hooks.",
+      "kind": "source",
+      "description": "Deterministic Git snapshot, transient routing, packs, checkpoints, doctor, installers, and hooks.",
       "doc": ".context-pack/AREAS/engine.md",
-      "failure_modes": [
-        "Dirty files are matched only at directory level, missing the real changed file.",
-        "Review packs ignore committed branch changes when no dirty files exist.",
-        "Hook installation duplicates marker blocks or overwrites unrelated user hook logic.",
-        "Pack generation creates tracked generated files.",
-        "`setup` skips shared agent docs or installs git hooks without explicit setup flags.",
-        "`doctor --fix` reports success while required context files are still missing.",
-        "`start` hides setup errors or creates noisy tracked files on first run.",
-        "No-argument CLI invocation exits with an argparse error instead of a useful first-run quickstart.",
-        "Users cannot confirm the installed package version through `context-pack --version`.",
-        "`install-codex --force` overwrites the source plugin tree or writes an invalid marketplace entry.",
-        "`install-agent-docs` duplicates marker blocks or strips existing AGENTS.md, CLAUDE.md, or Cursor rule content.",
-        "Scope-reduction numbers are missing or imply false precision about exact token savings."
-      ],
       "keywords": [
         "engine",
-        "setup",
-        "start",
-        "install-codex",
-        "install-agent-docs",
-        "agent-docs",
-        "scope",
-        "reduction",
+        "routing",
+        "transient",
+        "stale",
+        "fingerprint",
         "checkpoint",
         "pack",
         "review",
         "git",
         "hook",
-        "claude",
-        "cursor",
         "doctor",
-        "fix",
-        "manifest"
+        "unicode",
+        "path"
       ],
       "paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "plugins/context-pack/scripts/context_pack.py",
-        "src/context_pack/**"
-      ],
-      "stale_if_paths": [
-        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
-        "plugins/context-pack/scripts/context_pack.py",
-        "src/context_pack/**",
-        "tests/test_context_pack.py"
+        "src/context_pack/cli.py",
+        "src/context_pack/bundled/context_pack.py"
       ],
       "start_files": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "tests/test_context_pack.py"
+      ],
+      "stale_if_paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "src/context_pack/cli.py",
         "tests/test_context_pack.py"
       ],
+      "contracts": [
+        "The canonical engine remains Python stdlib-only.",
+        "Normal start is read-only with respect to tracked repo files until setup is explicit.",
+        "Git filenames are parsed losslessly enough for Unicode, spaces, renames, and Unix absolute hook paths.",
+        "Generated packs are routing hints and never replace source verification.",
+        "Safe hooks warn and fail open instead of blocking commits."
+      ],
+      "failure_modes": [
+        "First-run orientation creates AGENTS.md, .gitignore, or .context-pack without consent.",
+        "Context Pack metadata hides the product files being reviewed.",
+        "Normal start scans every text file just to print an estimate.",
+        "A hook records a broken relative engine path or propagates a safe-mode failure.",
+        "Custom area names fall back to overview because roles are inferred only from literal IDs."
+      ],
       "tests": [
-        "tests/test_context_pack.py"
+        "python -m unittest discover -s tests -v"
       ]
     },
-    "installer-release": {
-      "contracts": [
-        "Install scripts must not overwrite existing local skill/plugin installs unless --force is explicit.",
-        "Codex plugin install must work from a package install without requiring a repo clone.",
-        "Marketplace updates must preserve personal marketplace shape and include installation/authentication/category policy.",
-        "Release checks must include unit tests, plugin validation, skill validation, and npm wrapper validation.",
-        "Node/npx wrapper must delegate to the bundled Python engine without duplicating business logic.",
-        "Node/npx wrapper should be smoke-tested for first-time `setup` and packaged `install-codex`, not only `--help`.",
-        "Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`.",
-        "Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.",
-        "PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs."
-      ],
-      "description": "Install and release workflow for local skill/plugin distribution.",
+    "distribution": {
+      "kind": "automation",
+      "description": "Python/npm packaging, synchronized resources, CI, release workflow, and install smoke tests.",
       "doc": ".context-pack/AREAS/installer-release.md",
-      "failure_modes": [
-        "Installer replaces a user's existing skill/plugin without explicit --force.",
-        "Marketplace entry points to the wrong relative plugin path.",
-        "README documents a command not covered by tests or validation.",
-        "Packaged CLI can start projects but cannot install the Codex skill/plugin experience.",
-        "npm package metadata drifts from Python/plugin versions or omits the bundled engine.",
-        "README leads with an `npx` command path that is not covered by packaged CLI smoke tests.",
-        "Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.",
-        "Registry publishing runs automatically before PyPI/npm trusted publishing has been configured."
-      ],
       "keywords": [
         "install",
-        "install-codex",
-        "npm",
-        "npx",
-        "node",
+        "package",
+        "bundle",
+        "sync",
         "release",
         "workflow",
-        "assets",
+        "npm",
         "pypi",
-        "trusted",
-        "publishing",
+        "wheel",
         "marketplace",
-        "skill",
-        "plugin",
-        "deploy",
-        "docs",
-        "readme",
-        "onboarding",
-        "usage",
-        "adoption",
-        "proof"
+        "deploy"
       ],
       "paths": [
         "scripts/install_skill.py",
         "scripts/install_plugin.py",
+        "scripts/sync_packaged_assets.py",
         "scripts/validate_packaged_cli.py",
+        ".github/workflows/**",
         ".agents/plugins/marketplace.json",
-        ".github/**",
         "pyproject.toml",
         "package.json",
         "bin/**",
-        "src/context_pack/**",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "assets/**",
-        "docs/**",
-        "README.md",
-        "README.ko.md",
-        "LICENSE",
-        "SECURITY.md",
-        ".gitignore",
-        ".gitattributes"
-      ],
-      "stale_if_paths": [
-        "plugins/context-pack/.codex-plugin/plugin.json",
-        "plugins/context-pack/skills/context-pack/SKILL.md",
-        ".agents/plugins/marketplace.json",
-        ".github/**",
-        "pyproject.toml",
-        "package.json",
-        "bin/**",
-        "src/context_pack/**",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "assets/**",
-        "docs/**",
-        "scripts/**",
-        "README.md",
-        "README.ko.md",
-        "SECURITY.md",
-        ".gitignore",
-        ".gitattributes"
+        "src/context_pack/__init__.py",
+        "src/context_pack/bundled/SKILL.md",
+        "src/context_pack/bundled/openai.yaml",
+        "src/context_pack/bundled/plugin.json"
       ],
       "start_files": [
-        "README.md",
-        "README.ko.md",
-        "CHANGELOG.md",
+        "pyproject.toml",
         "package.json",
-        "bin/context-pack.js",
-        "docs/RELEASE.md",
-        "docs/RELEASE.ko.md",
-        "scripts/install_skill.py",
-        "scripts/install_plugin.py",
-        "scripts/validate_packaged_cli.py"
+        "scripts/sync_packaged_assets.py",
+        "scripts/validate_packaged_cli.py",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml"
+      ],
+      "stale_if_paths": [
+        "pyproject.toml",
+        "package.json",
+        "plugins/context-pack/**",
+        "src/context_pack/**",
+        "scripts/sync_packaged_assets.py",
+        "scripts/validate_packaged_cli.py",
+        ".github/workflows/**"
+      ],
+      "contracts": [
+        "Canonical engine, skill, agent metadata, and plugin manifest are synchronized before test, build, and release.",
+        "The npm wrapper delegates to the bundled Python engine and does not duplicate routing logic.",
+        "Packaged validation exercises transient start, configured work, review, checkpoint, and install-codex.",
+        "Registry publishing remains opt-in until trusted publishing is configured."
+      ],
+      "failure_modes": [
+        "A package ships stale embedded instructions or engine code.",
+        "A source-checkout test passes while the wheel or npm tarball fails.",
+        "Version metadata drifts across Python, npm, engine, and plugin files.",
+        "Release assets are built from a different revision than the tag."
       ],
       "tests": [
-        "python -m unittest discover -s tests -v",
-        "python -m json.tool plugins/context-pack/.codex-plugin/plugin.json",
-        "python -m json.tool .agents/plugins/marketplace.json",
-        "python -m pip install -e .",
+        "python scripts/sync_packaged_assets.py --check",
+        "python scripts/validate_packaged_cli.py",
         "python -m build",
         "python -m twine check dist/*",
-        "context-pack --help",
-        "node bin/context-pack.js --help",
-        "npm pack --dry-run",
-        "python scripts/validate_packaged_cli.py",
-        "context-pack setup --repo <tmp> --quiet",
-        "context-pack doctor --repo <tmp> --fix --quiet",
-        "context-pack status --quiet",
-        "context-pack start --task \"agent-first CLI UX\" --quiet",
-        "context-pack start --review --base HEAD~1 --quiet",
-        "context-pack install-codex --target <tmp>/plugins/context-pack --marketplace <tmp>/.agents/plugins/marketplace.json --quiet",
-        "context-pack install-agent-docs --repo <tmp> --quiet",
-        "context-pack checkpoint --pack --quiet does not dirty tracked files"
+        "npm pack --dry-run"
       ]
     },
-    "overview": {
-      "contracts": [
-        "Treat context docs as routing hints, not ground truth.",
-        "Verify source code when the context fingerprint is stale."
-      ],
-      "description": "Default project orientation and safe starting point.",
-      "doc": ".context-pack/AREAS/overview.md",
-      "failure_modes": [
-        "Trusting old summaries after HEAD or dirty files changed.",
-        "Reading logs or generated packs before current source files.",
-        "Editing the wrong checkout or copied workspace."
-      ],
+    "docs-adoption": {
+      "kind": "docs",
+      "description": "Public positioning, onboarding, benchmark evidence, demo, changelog, and release notes.",
+      "doc": ".context-pack/AREAS/docs-adoption.md",
       "keywords": [
-        "overview",
+        "readme",
+        "docs",
+        "benchmark",
+        "evidence",
+        "demo",
+        "adoption",
         "onboarding",
-        "new session",
-        "architecture",
-        "context",
-        "review"
+        "marketing",
+        "release notes"
       ],
       "paths": [
         "README.md",
         "README.ko.md",
-        "AGENTS.md",
-        ".cursor/rules/**",
-        "assets/**",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
-        "SECURITY.md",
-        "CLAUDE.md",
-        "codex.md",
-        ".agents/plugins/marketplace.json",
-        ".context-pack/**"
-      ],
-      "stale_if_paths": [
-        ".context-pack/**",
-        ".context-pack/**",
-        "AGENTS.md",
-        "CLAUDE.md",
-        ".cursor/rules/**",
-        "README.md",
-        "README.ko.md",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "SECURITY.md"
+        "assets/demo.gif",
+        "docs/BENCHMARKS.md",
+        "docs/BENCHMARKS.ko.md",
+        "docs/RELEASE.md",
+        "docs/RELEASE.ko.md",
+        "docs/benchmarks/**",
+        "docs/releases/**"
       ],
       "start_files": [
         "README.md",
         "README.ko.md",
-        "AGENTS.md",
-        "CHANGELOG.md",
-        ".context-pack/INDEX.md",
-        ".context-pack/CURRENT.md"
+        "docs/BENCHMARKS.md",
+        "docs/benchmarks/latest.md"
       ],
-      "tests": []
+      "stale_if_paths": [
+        "README.md",
+        "README.ko.md",
+        "docs/**",
+        "scripts/benchmark_context_pack.py",
+        "scripts/generate_demo_gif.py"
+      ],
+      "contracts": [
+        "English and Korean onboarding describe the same product behavior.",
+        "Benchmark claims distinguish approximate orientation budgets from billed tokens and patch quality.",
+        "The main README keeps one primary install path per agent surface and links details instead of repeating them."
+      ],
+      "failure_modes": [
+        "README output or screenshots describe an older CLI flow.",
+        "A ratio is promoted as actual token billing or task-quality evidence.",
+        "Internal audit notes crowd out the five-minute getting-started path."
+      ],
+      "tests": [
+        "python scripts/benchmark_context_pack.py --public --fail-on-weak"
+      ]
     },
     "skill-plugin": {
-      "contracts": [
-        "The Codex skill must tell agents to use deterministic script commands before semantic summarization.",
-        "Plugin manifest must remain validation-ready and avoid unsupported fields.",
-        "The skill should use `context-pack setup` when Context Pack is missing or the user asks to configure project memory.",
-        "The skill should use `context-pack doctor --fix` when setup is present but broken or incomplete.",
-        "The skill should be implicitly invokable for context setup, install/update requests, shared agent-doc rules, start routing, review packs, checkpointing, and token-saving repo orientation."
-      ],
-      "description": "Codex skill instructions, plugin manifest metadata, and agent-facing UX.",
+      "kind": "docs",
+      "description": "Codex skill instructions, agent metadata, and plugin-facing natural-language behavior.",
       "doc": ".context-pack/AREAS/skill-plugin.md",
-      "failure_modes": [
-        "Skill docs describe behavior that the script cannot perform.",
-        "Plugin metadata promises automatic lifecycle hooks not actually installed by the manifest.",
-        "Trigger description is too narrow and only catches session handoff use cases.",
-        "Skill guidance teaches lower-level commands before the one-command start path.",
-        "Skill guidance teaches `init` plus `install-agent-docs` before the one-command `setup` path.",
-        "Skill guidance treats doctor as read-only even when repair is available.",
-        "Install/update requests are routed to old local scripts instead of `install-codex`.",
-        "Claude/Cursor guidance drifts from the generated AGENTS.md rule block."
-      ],
       "keywords": [
         "skill",
         "plugin",
         "codex",
         "agent",
-        "agent-docs",
-        "setup",
         "claude",
         "cursor",
-        "start",
-        "install",
         "instructions",
-        "doctor",
-        "fix",
-        "metadata"
+        "prompt",
+        "intent"
       ],
       "paths": [
         "plugins/context-pack/.codex-plugin/plugin.json",
         "plugins/context-pack/skills/context-pack/SKILL.md",
         "plugins/context-pack/skills/context-pack/agents/openai.yaml"
       ],
+      "start_files": [
+        "plugins/context-pack/skills/context-pack/SKILL.md",
+        "plugins/context-pack/skills/context-pack/agents/openai.yaml",
+        "plugins/context-pack/.codex-plugin/plugin.json"
+      ],
       "stale_if_paths": [
         "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "plugins/context-pack/.codex-plugin/plugin.json",
-        "plugins/context-pack/skills/context-pack/SKILL.md"
-      ],
-      "start_files": [
         "plugins/context-pack/skills/context-pack/SKILL.md",
-        "plugins/context-pack/.codex-plugin/plugin.json",
         "plugins/context-pack/skills/context-pack/agents/openai.yaml"
       ],
+      "contracts": [
+        "The agent interprets natural-language task, review, continuation, and handoff intent.",
+        "The CLI receives explicit operations and does not maintain a duplicate phrase classifier.",
+        "Normal work may use transient start; persistent setup requires an explicit configuration request.",
+        "Skill instructions stay short enough to be cheap background guidance."
+      ],
+      "failure_modes": [
+        "The skill turns every small task into Context Pack ceremony.",
+        "The plugin promises automatic lifecycle behavior that the skill cannot enforce.",
+        "Packaged skill content drifts from the canonical SKILL.md."
+      ],
       "tests": [
-        "python -m json.tool plugins/context-pack/.codex-plugin/plugin.json",
+        "python scripts/sync_packaged_assets.py --check",
         "python -m unittest discover -s tests -v"
       ]
     },
     "tests": {
-      "contracts": [
-        "Tests should exercise real command flows through the engine main entrypoint.",
-        "Coverage should include no-git repos, no-argument quickstart, `--version`, first-run setup, doctor repair, first-run start, install-codex, install-agent-docs, Node wrapper help/setup/install-codex, dirty changed files, committed review diffs, and hook idempotency.",
-        "Version sync tests should include Python package, plugin manifest, engine, and npm package metadata."
-      ],
-      "description": "Unit tests for the deterministic engine and release-critical flows.",
+      "kind": "tests",
+      "description": "Unit and integration coverage for engine behavior and release-critical flows.",
       "doc": ".context-pack/AREAS/tests.md",
-      "failure_modes": [
-        "Tests import the engine in a way that differs from script execution.",
-        "Git behavior is tested only with dirty files and misses committed review use cases.",
-        "Hook tests check creation but not idempotency or uninstall.",
-        "Installing shared agent docs twice duplicates marker blocks.",
-        "Setup drifts from the init/install-agent-docs/hook commands it composes.",
-        "Doctor is tested only as read-only validation after adding repair behavior.",
-        "Node wrapper tests stop at `--help` after README starts recommending no-argument quickstart, `npx` setup, or install-codex paths."
-      ],
       "keywords": [
         "test",
         "unittest",
-        "validation",
-        "git",
-        "setup",
-        "doctor",
-        "fix",
-        "start",
-        "review-pack"
+        "regression",
+        "integration",
+        "hook",
+        "unicode",
+        "packaged"
       ],
       "paths": [
-        "tests/test_context_pack.py"
-      ],
-      "stale_if_paths": [
-        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
         "tests/test_context_pack.py"
       ],
       "start_files": [
         "tests/test_context_pack.py"
       ],
+      "stale_if_paths": [
+        "plugins/context-pack/skills/context-pack/scripts/context_pack.py",
+        "scripts/validate_packaged_cli.py",
+        "tests/test_context_pack.py"
+      ],
+      "contracts": [
+        "Tests exercise real Git repositories and command entrypoints.",
+        "Hook coverage executes the installed hook, not only its generated text.",
+        "Resource sync and packaged CLI behavior are release gates."
+      ],
+      "failure_modes": [
+        "Windows-only tests miss broken Unix absolute paths.",
+        "ASCII-only fixtures miss Korean branches or filenames.",
+        "Source imports pass while installed package entrypoints fail."
+      ],
       "tests": [
         "python -m unittest discover -s tests -v"
       ]
+    },
+    "overview": {
+      "kind": "overview",
+      "description": "Project orientation, shared handoff state, and repository-level agent rules.",
+      "doc": ".context-pack/AREAS/overview.md",
+      "keywords": [
+        "overview",
+        "architecture",
+        "continuation",
+        "handoff",
+        "context"
+      ],
+      "paths": [
+        ".context-pack/**",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".cursor/rules/**",
+        "SECURITY.md",
+        "LICENSE"
+      ],
+      "start_files": [
+        ".context-pack/CURRENT.md",
+        ".context-pack/INDEX.md",
+        "README.md"
+      ],
+      "stale_if_paths": [
+        ".context-pack/**",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".cursor/rules/**"
+      ],
+      "contracts": [
+        "Context docs are routing hints, not ground truth.",
+        "Shared handoff state names the exact repository and version being resumed."
+      ],
+      "failure_modes": [
+        "A session edits the wrong checkout or trusts a stale summary over source.",
+        "Overview context dominates a task that has a specific source or test route."
+      ],
+      "tests": []
     }
   },
   "generated_by": "context-pack",

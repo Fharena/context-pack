@@ -1,125 +1,39 @@
 ---
-id: installer-release
-last_reviewed_head: 1e8f6642604e
+id: distribution
 status: active
 paths:
-  - scripts/install_skill.py
-  - scripts/install_plugin.py
-  - .agents/plugins/marketplace.json
-  - .github/**
   - pyproject.toml
   - package.json
-  - bin/**
-  - src/context_pack/**
-  - assets/**
-  - docs/**
-  - CHANGELOG.md
-  - CONTRIBUTING.md
-  - README.md
-  - README.ko.md
-  - LICENSE
-  - SECURITY.md
-  - .gitignore
-  - .gitattributes
+  - scripts/sync_packaged_assets.py
+  - scripts/validate_packaged_cli.py
+  - .github/workflows/**
 tests:
-  - python -m unittest discover -s tests -v
-  - python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
-  - python -m json.tool .agents/plugins/marketplace.json
-  - python -m build
-  - python -m twine check dist/*
-  - npm pack --dry-run
-stale_if:
-  - install paths change
-  - marketplace policy changes
-  - release checks change
+  - python scripts/sync_packaged_assets.py --check
+  - python scripts/validate_packaged_cli.py
 ---
 
-# Installer Release
+# Distribution
 
 ## Read When
-- Changing installation scripts or release instructions.
-- Documenting shared agent rules for Codex, Claude, Cursor, or mixed-agent repos.
-- Preparing a local plugin/skill distribution.
-- Updating README command examples.
-- Improving clone-free or one-command first-run onboarding.
-- Updating npm/npx wrapper metadata or package contents.
-- Updating PyPI/npm release readiness or registry publishing instructions.
+- Changing Python/npm packaging, install-codex, synchronized resources, CI, or release workflows.
+- Preparing a version bump or release artifact.
 
 ## Start With
-- `README.md`
-- `README.ko.md`
-- `CHANGELOG.md`
 - `pyproject.toml`
 - `package.json`
-- `bin/context-pack.js`
-- `docs/RELEASE.md`
-- `docs/RELEASE.ko.md`
-- `src/context_pack/cli.py`
-- `assets/demo.gif`
-- `scripts/install_skill.py`
-- `scripts/install_plugin.py`
-- `scripts/benchmark_context_pack.py`
-- `scripts/validate_remaining.py`
+- `scripts/sync_packaged_assets.py`
 - `scripts/validate_packaged_cli.py`
-- `.agents/plugins/marketplace.json`
 - `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
 
 ## Contracts
-- Installers must not overwrite existing installs unless `--force` is explicit.
-- Codex plugin install must work from a package install without requiring a repo clone.
-- The personal marketplace entry must include `policy.installation`, `policy.authentication`, and `category`.
-- Release checks include unit tests, plugin validation, and skill validation.
-- GitHub Actions should run stdlib unit tests without relying on local Codex validator paths.
-- Packaged CLI behavior should match the bundled skill engine.
-- Node/npx wrapper should delegate to the bundled Python engine without duplicating business logic.
-- Node/npx wrapper should be smoke-tested for first-time `setup`, natural-language start routing, and packaged `install-codex`, not only `--help`.
-- Python wheel/sdist builds must pass `twine check` before registry publishing.
-- Release workflow must build from the requested tag, verify Python/npm version sync, and upload Python wheel/sdist plus npm tarball assets to the matching GitHub Release.
-- PyPI/npm publishing must stay opt-in unless trusted publishing is explicitly enabled through repository variables or manual workflow inputs.
-- README should distinguish Codex plugin installation from shared repo-rule installation.
-- README should lead direct terminal users to `context-pack setup` before lower-level commands.
-- README should make the natural-language agent flow credible by pointing to tested bug/review/handoff behavior.
-- README should show `doctor --fix` as the recovery path for broken or partial setup.
-- Public beta docs should include honest benchmark evidence and launch copy without claiming universal token savings.
-- Benchmark docs should be reproducible from `scripts/benchmark_context_pack.py` and should keep generated JSON/Markdown artifacts in sync when claims change.
-- Remaining validation docs should distinguish installability/routing consistency from true independent-agent patch quality.
-- Contributor validation should expose the packaged npx smoke path through `scripts/validate_packaged_cli.py`, including natural failing-test, CI/build failure, English broken/not-working bug prompts, Korean bug-fix variants, committed branch-review, soft dirty-review, Korean dirty-review, long handoff, and short handoff starts.
+- Canonical engine, skill, agent metadata, and plugin manifest are synchronized before validation.
+- The npm wrapper delegates to the bundled Python engine.
+- Packaged validation covers transient start, setup, task, review, checkpoint, and install-codex.
+- Registry publishing remains opt-in until trusted publishing is configured.
 
 ## Common Failure Modes
-- Marketplace path is correct but the copied plugin source is stale.
-- README tells users to install a plugin without telling them the Codex add command.
-- Packaged CLI can start projects but cannot install the Codex skill/plugin experience.
-- Korean README drifts from the English install or release flow.
-- Demo GIF no longer matches the command output or product positioning.
-- CI depends on local-only validator paths from one developer machine.
-- npm package metadata drifts from Python/plugin versions or omits the bundled engine.
-- README leads with an `npx` command path that is not covered by packaged CLI smoke tests.
-- Natural-language routing works in unit tests but fails through the installed npm entrypoint.
-- Packaged validation misses the README's "why are tests failing" prompt and lets release drift from the advertised agent flow.
-- Packaged validation misses the README's "CI is red" prompt and leaves CI/build failure routing proven only by lower-level unit tests.
-- Packaged validation misses the README's "login is broken" prompt and leaves broken/not-working routing proven only by lower-level unit tests.
-- Packaged validation covers only one Korean bug phrase and misses common variants like "버그 잡아줘" or "문제 해결해줘".
-- Packaged validation proves dirty review routing but not clean committed branch review with an inferred base.
-- Packaged validation proves explicit branch review but misses softer real-user review phrasing like "look over my changes" or "변경사항 봐줘".
-- Packaged validation misses natural handoff wording, especially short wrap-up prompts like "I'm done for now" and "작업 끝났어", and leaves checkpoint cleanliness proven only by lower-level unit tests.
-- PyPI metadata starts warning or rendering poorly because build/twine checks are not in CI.
-- Release workflow builds from `main` instead of the release tag, producing assets that do not match the tag.
-- Registry publishing runs automatically before PyPI/npm trusted publishing has been configured.
-- Marketplace JSON points at a plugin path that does not exist in the repo.
-- Installer overwrites a local user customization without `--force`.
-- README teaches lower-level commands before the one-command `start` path.
-- README teaches `init` plus `install-agent-docs` before the one-command `setup` path.
-- README tells users to reinstall from scratch instead of repairing with `doctor --fix`.
-- README makes `install-agent-docs` sound required for single-agent Codex use.
-- Release notes claim registry availability before npm/PyPI authentication or trusted publishing is configured.
-- Benchmark claims drift from the latest generated artifacts or imply independent-agent patch quality.
-- Validation docs claim npm/PyPI registry availability when only GitHub release assets are available.
-
-## Expand Scope If
-- Moving from local marketplace install to packaged release.
-- Adding npm/pip distribution.
-- Changing package metadata or CLI entry points.
-- Adding plugin-native hooks.
-
-## Do Not Start With
-- engine internals unless install commands fail
+- A wheel or npm tarball contains stale engine or skill resources.
+- Package versions disagree across Python, npm, plugin, and engine metadata.
+- Source-checkout tests pass while an installed entrypoint fails.
+- Release assets are built from a revision other than the tag.

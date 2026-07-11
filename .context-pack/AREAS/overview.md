@@ -1,50 +1,37 @@
 ---
 id: overview
-last_reviewed_head: 1e8f6642604e
 status: active
 paths:
-  - README.md
-  - AGENTS.md
   - .context-pack/**
+  - AGENTS.md
+  - CLAUDE.md
+  - .cursor/rules/**
 tests: []
-stale_if:
-  - AGENTS.md changes
-  - README.md changes
-  - context manifest changes
 ---
 
 # Overview
 
 ## Read When
-- Starting a new session or code review.
-- Unsure which area owns the task.
-- Bootstrapping this repository's context library.
+- Starting or resuming work without a specific task.
+- Verifying the source-of-truth checkout, current handoff, or area ownership.
 
 ## Start With
-- README.md
-- AGENTS.md
-- .context-pack/INDEX.md
-- .context-pack/CURRENT.md
+- `.context-pack/CURRENT.md`
+- `.context-pack/INDEX.md`
+- `README.md`
 
 ## Contracts
 - Context docs are routing hints, not ground truth.
-- If HEAD, dirty files, or diff hash differ from the pack, verify source code before acting.
-- Generated packs are temporary and should not be committed.
-- Public benchmark claims should distinguish deterministic orientation/token-budget comparisons from true independent-agent task success.
-- Public benchmark docs should stay tied to reproducible `docs/benchmarks/latest.json` results and name weak spots found during dogfood.
+- A handoff names the repository path, branch, HEAD, dirty fingerprint, and next action.
+- Generated packs remain ignored and shared logs stay bounded.
+- Benchmark evidence is reproducible and never substitutes for source or patch verification.
 
 ## Common Failure Modes
-- Trusting stale summaries after the code moved on.
-- Reading append-only logs before the current source of truth.
-- Editing a copied checkout or generated file instead of the canonical workspace.
-- Presenting a routing/token reduction benchmark as if it proved final patch quality or wall-clock agent performance.
-- Updating README benchmark claims without refreshing the generated benchmark artifacts and limitations.
-
-## Expand Scope If
-- Public API, CLI, schema, storage format, subprocess launch, or test helpers changed.
-- The changed file does not match any known area.
+- A session edits a copied or stale checkout.
+- Overview context dominates a task with a clear source or test route.
+- Old checkpoint detail is read before current source and `CURRENT.md`.
+- Orientation ratios are described as exact provider tokens or task-quality gains.
 
 ## Do Not Start With
-- .context-pack/packs/
-- archived logs
-- generated artifacts
+- `.context-pack/packs/`
+- old Git history unless the current handoff points there

@@ -35,7 +35,7 @@ PUBLIC_SCENARIOS = [
     Scenario("click-shell-completion", "pallets/click", "https://github.com/pallets/click.git", "fix shell completion bug", ("source", "tests"), 65),
     Scenario("httpx-build", "encode/httpx", "https://github.com/encode/httpx.git", "build failed", ("automation", "source", "tests"), 85),
     Scenario("browserquest-mobile", "mozilla/BrowserQuest", "https://github.com/mozilla/BrowserQuest.git", "fix mobile controls bug on touch devices", ("source",), 25),
-    Scenario("browserquest-sprites", "mozilla/BrowserQuest", "https://github.com/mozilla/BrowserQuest.git", "fix missing sprite asset loading bug", ("source", "sprites"), 25),
+    Scenario("browserquest-assets", "mozilla/BrowserQuest", "https://github.com/mozilla/BrowserQuest.git", "fix missing sprite asset loading bug", ("assets", "source"), 25),
     Scenario("browserquest-websocket", "mozilla/BrowserQuest", "https://github.com/mozilla/BrowserQuest.git", "debug websocket login connect failure", ("source",), 25),
     Scenario("gin-middleware", "gin-gonic/gin", "https://github.com/gin-gonic/gin.git", "fix middleware panic bug", ("source",), 20),
     Scenario("express-router", "expressjs/express", "https://github.com/expressjs/express.git", "fix router middleware error handling", ("source",), 55),
@@ -121,10 +121,8 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
     snapshot = engine.collect_snapshot(repo.resolve())
     layout = engine.resolve_layout(repo)
     has_context_library = (repo / layout.manifest_path).exists()
-    manifest = engine.load_manifest(repo, layout)
-    if not has_context_library:
-        manifest = engine.merge_inferred_areas(repo, manifest, layout)
-    matches = engine.selected_area_matches(manifest, changed_files=[], task=scenario.prompt)
+    manifest = engine.load_manifest(repo, layout) if has_context_library else engine.inferred_manifest(repo, layout)
+    matches = engine.selected_area_matches(manifest, changed_files=[], task=scenario.prompt, repo=repo)
     primary = matches[:4]
     pack = engine.render_pack(
         repo,
@@ -136,6 +134,7 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
         changed_files=[],
         task=scenario.prompt,
         mode="work",
+        transient=not has_context_library,
     )
     duration_ms = round((time.perf_counter() - started) * 1000)
     repo_file_list = engine.repo_files(repo)
@@ -156,6 +155,8 @@ def measure_repo(engine: Any, repo: Path, scenario: Scenario) -> dict[str, Any]:
         weak_flags.append("expected_miss")
     if ratio > scenario.max_ratio:
         weak_flags.append("high_budget")
+    if expected_set and read_budget.files == 0:
+        weak_flags.append("empty_read_first")
     if duration_ms > 5000:
         weak_flags.append("slow_measure")
     return {
@@ -338,7 +339,6 @@ def run_benchmarks(args: argparse.Namespace) -> dict[str, Any]:
             "generated_at": engine.now_local(),
             "engine_version": engine.CONTEXT_PACK_VERSION,
             "subject_head": git_text(ROOT, ["rev-parse", "--short=12", "HEAD"]),
-            "workdir": str(workdir),
             "public_results": public_results,
             "weak_public_results": [item for item in public_results if item["weak_flags"]],
             "handoff_replay": replay,

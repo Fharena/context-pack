@@ -1,22 +1,16 @@
 <!-- context-pack:rules:start -->
 ## Context Pack
 
-Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
+Use Context Pack quietly when a non-trivial coding, debugging, review, or handoff request would otherwise require broad repo reading. The user does not need to name the tool.
 
-Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", "I'm done for now", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+- Coding/debugging: `context-pack start --task "<short task>"`
+- Branch or PR review: `context-pack start --review`; add `--base <ref>` when known.
+- Dirty files are the only signal: `context-pack start --changed`
+- Read the pack path printed by `start`, then verify relevant source before editing.
 
-Run it only when repo orientation would save broad reading or preserve useful handoff state:
-- Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
-- Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
-- Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
-- Changed files are the only signal: `context-pack start --changed`
-- Missing `.context-pack/` during a normal task: still use `context-pack start`; it auto-initializes lightweight context docs.
-- Explicit install/configuration request: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for broken setup.
-- End of meaningful work or handoff: `context-pack checkpoint --pack`
+On an unconfigured repo, `start` is transient and must not create `.context-pack/`, `AGENTS.md`, or `.gitignore`. Run `context-pack setup --dry-run` and `context-pack setup` only when the user explicitly asks to persist Context Pack in the repo.
 
-Skip Context Pack for pure Q&A, tiny obvious single-file edits, or tasks where the relevant files and tests are already clear.
+Skip pure Q&A, tiny obvious edits, already-known files, and small repos where `start` says broad reading is cheaper.
 
-When a pack is generated, read `.context-pack/packs/CONTEXT_PACK.md` before broad source reads. Treat context docs as routing hints, not ground truth; verify against source when state, stale warnings, or code behavior disagree.
-
-Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
+After meaningful work in a configured repo, run `context-pack checkpoint --pack`. Use `--publish` only when the handoff should be committed and shared through git. Treat all context docs as routing hints, never as source of truth.
 <!-- context-pack:rules:end -->

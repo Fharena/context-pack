@@ -1,69 +1,60 @@
 # Context Pack 벤치마크
 
-이 문서는 `v0.2.20` 후보의 릴리즈 준비용 dogfood 및 orientation 벤치마크입니다.
+이 결과는 Context Pack의 결정론적 orientation 성능을 확인합니다. 보편적인 token 절감률을 주장하거나 에이전트가 더 좋은 patch를 만든다는 것을 증명하지는 않습니다.
 
-목표는 모든 프로젝트에서 같은 token 절감률을 주장하는 것이 아닙니다. Context Pack은 routing layer입니다. 에이전트가 넓게 읽기 전에 무엇을 먼저 볼지 고르고, 왜 골랐는지 설명하고, 한계도 같이 드러내야 합니다.
+## 측정 방법
 
-## 방법
+- 날짜: 2026-07-11
+- 엔진: `0.3.0`
+- 명령: `python scripts/benchmark_context_pack.py --public --fail-on-weak`
+- 입력: Context Pack을 설정하지 않은 공개 저장소 shallow clone 10개와 로컬 handoff replay 1개
+- 추정 방식: 읽을 수 있는 text 문자 수를 4로 나눔. ignore, binary, empty, unreadable, 1 MB 초과 파일은 제외
+- 통과 조건: 기대 area role 선택, 시나리오별 read ratio 상한 충족, 비어 있는 first-read route 없음, 5초 안에 routing 완료
 
-- 날짜: 2026-06-30
-- 도구: local 후보를 `python scripts/benchmark_context_pack.py --public`로 실행
-- 모드: read-only first-run routing 및 synthetic handoff replay
-- 대상: `.context-pack/`가 없는 공개 GitHub repo shallow clone
-- 추정치: text budget은 `chars/4` 근사값이며 ignored, unreadable, known binary, empty, 1 MB 초과 파일은 제외
-- 약점 기준: 기대한 영역이 선택되어야 하고, read ratio가 각 시나리오 threshold보다 낮아야 하며, deterministic routing이 5초 안에 끝나야 함
+정확한 생성 결과는 [`benchmarks/latest.md`](benchmarks/latest.md)와 [`benchmarks/latest.json`](benchmarks/latest.json)에 있습니다.
 
-기계가 읽는 결과는 [`docs/benchmarks/latest.json`](benchmarks/latest.json)에 있고, 생성된 요약은 [`docs/benchmarks/latest.md`](benchmarks/latest.md)에 있습니다.
+## 최신 결과
 
-## 공개 repo 오리엔테이션 결과
+| 시나리오 | 저장소 | 먼저 선택된 영역 | 대략적인 first read / repo | 비율 |
+| --- | --- | --- | ---: | ---: |
+| CI 실패 | `pypa/sampleproject` | automation, source, tests | 2.2k / 3.3k | 65% |
+| 테스트 실패 | `psf/requests` | source, tests | 41.3k / 386.9k | 11% |
+| Shell completion | `pallets/click` | source, tests | 101.9k / 365.7k | 28% |
+| Build 실패 | `encode/httpx` | automation, source, tests | 88.5k / 247.7k | 36% |
+| Mobile control | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
+| Asset loading | `mozilla/BrowserQuest` | assets, source | 98.2k / 602.2k | 16% |
+| WebSocket login | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
+| Middleware panic | `gin-gonic/gin` | source, tests | 9.0k / 217.6k | 4% |
+| Router error | `expressjs/express` | source | 15.5k / 177.9k | 9% |
+| Regex filter | `sharkdp/fd` | source, tests | 6.3k / 141.1k | 4% |
 
-| Scenario | Repo | Prompt | 먼저 고른 영역 | 대략적인 first-read text | Flags |
-| --- | --- | --- | --- | ---: | --- |
-| sampleproject-ci | `pypa/sampleproject` | `ci is red` | `automation, source, tests` | 약 2.2k / 약 3.3k tokens, 67% | ok |
-| requests-tests | `psf/requests` | `why are tests failing` | `source, tests` | 약 103.7k / 약 386.9k tokens, 27% | ok |
-| click-shell-completion | `pallets/click` | `fix shell completion bug` | `source, tests` | 약 210.1k / 약 357.8k tokens, 59% | ok |
-| httpx-build | `encode/httpx` | `build failed` | `automation, source, tests` | 약 196.6k / 약 247.7k tokens, 79% | ok |
-| browserquest-mobile | `mozilla/BrowserQuest` | `fix mobile controls bug on touch devices` | `source` | 약 98.2k / 약 602.2k tokens, 16% | ok |
-| browserquest-sprites | `mozilla/BrowserQuest` | `fix missing sprite asset loading bug` | `source, sprites` | 약 103.6k / 약 602.2k tokens, 17% | ok |
-| browserquest-websocket | `mozilla/BrowserQuest` | `debug websocket login connect failure` | `source` | 약 98.2k / 약 602.2k tokens, 16% | ok |
-| gin-middleware | `gin-gonic/gin` | `fix middleware panic bug` | `source` | 약 8.8k / 약 217.6k tokens, 4% | ok |
-| express-router | `expressjs/express` | `fix router middleware error handling` | `source` | 약 15.5k / 약 177.8k tokens, 9% | ok |
-| fd-rust-filter | `sharkdp/fd` | `fix regex filter bug` | `source` | 약 41.8k / 약 138.6k tokens, 30% | ok |
+10개 시나리오가 모두 미리 정한 기준을 통과했습니다. 이 비율은 first-read route에 이름이 올라간 파일 범위이며, 에이전트가 작업 중 최종적으로 읽을 모든 파일을 뜻하지 않습니다.
 
 ## Handoff Replay
 
-synthetic replay 벤치마크는 작은 repo를 만들고, setup을 실행하고, handoff state를 publish한 뒤, repo를 로컬 clone하고, 양쪽 checkout에 같은 test-failure prompt를 던집니다.
+벤치마크는 synthetic repo를 설정하고 checkpoint를 publish한 뒤 clone합니다. 그리고 두 checkout에서 같은 test-failure 작업을 routing합니다.
 
-- clone 이후 같은 routing signature 유지: yes
-- 원본 checkout: `source, tests`, 약 404 / 약 4427 tokens, 9%
-- clone checkout: `source, tests`, 약 404 / 약 4427 tokens, 9%
+- clone 후 동일한 routing signature: yes
+- 두 checkout 모두: `source, tests`
+- 대략적인 first read: 408 / 3,310 tokens, 12%
+- first-read entry: 각 checkout에서 4개
 
-이 결과는 git에 실린 context가 새 세션에서도 같은 routing context를 제공할 수 있다는 핵심 약속을 확인합니다. 다만 서로 다른 독립 에이전트가 완전히 같은 답변을 낸다는 증명은 아닙니다.
+이는 git으로 이동한 context가 결정론적 orientation을 재현한다는 뜻입니다. 서로 독립적인 에이전트가 같은 자연어 답변이나 patch를 만든다는 뜻은 아닙니다.
 
-## 발견하고 보강한 약점
+## 이번 검증에서 바뀐 점
 
-- Go repo 추론이 약했습니다. `gin-gonic/gin` middleware prompt는 이전에는 root/top-level Go package 파일을 충분히 추론하지 못해 generic orientation으로 빠질 위험이 있었습니다. 이제 엔진은 Go repo, root `*.go`, top-level package directory, `*_test.go` 파일을 인식합니다. 최종 run에서 `gin-middleware`는 `source`를 골랐고 read ratio는 4%였습니다.
-- Rust repo가 너무 넓게 잡혔습니다. `sharkdp/fd` regex/filter prompt는 처음에는 source/test context를 넓게 잡았습니다. 이제 공통 Rust crate start file과 Rust/filter/search keyword를 반영합니다. 최종 run에서 `fd-rust-filter`는 `source`를 골랐고 read ratio는 30%였습니다.
-- media가 많은 repo에서 cold-start 비용이 드러났습니다. BrowserQuest에는 binary asset이 많고, 수정 전에는 binary file을 읽은 뒤에야 non-text로 버려서 slow threshold를 넘을 수 있었습니다. 이제 text-budget scan은 known binary suffix를 먼저 제외하고, 파일 크기를 읽기 전에 확인합니다. 최종 BrowserQuest run은 모두 5초 threshold 아래였습니다.
-- benchmark 기대값도 정리했습니다. router/error-handling prompt에서는 generated pack이 별도 test guidance를 제공하므로 `source`가 올바른 첫 영역입니다. 불필요하게 더 많은 영역을 고르는 것을 좋은 점수로 보지 않도록 했습니다.
+- 커스텀 area 이름에도 source, tests, docs, assets, automation 같은 일반 role을 부여합니다.
+- BrowserQuest 전용 sprite/map bucket과 벤치마크에 맞춘 framework 단어를 제거했습니다.
+- 추론된 시작 범위는 source/test 폴더 전체 대신 제한된 entry-point glob을 사용합니다.
+- 실제 제품 파일도 바뀌었으면 review routing에서 Context Pack 자체 metadata를 분리합니다.
+- 평소 `start`는 token 통계를 출력하려고 repo 전체를 scan하지 않습니다.
 
-## 검증된 점
+## 한계
 
-- 사용자가 Context Pack 이름을 말하지 않아도 자연어 prompt를 기대한 first-read area type으로 라우팅합니다.
-- `Why selected` 출력으로 setup 파일을 쓰기 전에 선택 이유를 볼 수 있습니다.
-- first-run inference가 Python, JavaScript client/server, web game asset, Go, Rust layout을 더 넓게 다룹니다.
-- 중간 규모 웹게임에서 task별 first-read text budget이 넓은 repo text budget 약 602.2k tokens에서 약 98.2k-103.6k tokens로 줄었습니다.
-- handoff replay는 context docs가 commit된 fresh clone에서도 deterministic routing이 유지됨을 보여줍니다.
+- `chars/4`는 text-budget proxy이며 provider billing이나 실제 tokenizer 결과가 아닙니다.
+- 로컬 duration은 regression signal이며 머신과 filesystem cache에 따라 달라집니다.
+- routing과 replay를 측정할 뿐 진단 정확도, patch 품질, test 성공률, 작업 완료 시간은 측정하지 않습니다.
+- 잘 큐레이션된 area 경계는 first-run 추론보다 좋을 수 있고, 나쁜 경계는 오히려 routing을 해칠 수 있습니다.
+- 실제 source 검증은 항상 필요합니다.
 
-## 아직 검증하지 못한 점
-
-- 모든 repo에서 동일한 token 절감률을 보장하지 않습니다.
-- provider billing token을 정확히 측정한 것이 아니라 text-budget 근사값입니다.
-- duration 숫자는 로컬 wall-clock 회귀 신호이며 머신과 파일시스템 캐시 상태에 영향을 받습니다.
-- 독립 에이전트의 정확도, 실제 작업 시간, 최종 patch 품질, 답변 일관성까지 측정한 것은 아직 아닙니다.
-- source verification을 대체하지 않습니다.
-- curated area boundary 없는 monorepo 품질은 아직 증명하지 못했습니다.
-
-## 다음 증명 단계
-
-다음 벤치마크는 independent-agent trace여야 합니다. 같은 repo, 같은 task를 Context Pack 없이 한 번, Context Pack으로 한 번 실행하고, 첫 관련 파일까지 걸린 시간, 읽은 token, elapsed time, 최종 patch 품질, test 결과, 새 세션이 같은 진단에 도달하는지를 비교해야 합니다.
+다음으로 의미 있는 증명은 독립 에이전트 A/B입니다. 읽은 파일, 첫 관련 파일 도달, 소요 시간, test 결과, blinded patch review를 함께 기록해야 합니다. 그전까지 홍보 수치는 orientation 측정값으로만 표현해야 합니다.

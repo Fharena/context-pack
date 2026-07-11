@@ -9,7 +9,9 @@ Context Pack is intentionally stdlib-only. No package install is required for th
 Run tests:
 
 ```bash
+python scripts/sync_packaged_assets.py --check
 python -m unittest discover -s tests -v
+python scripts/validate_packaged_cli.py
 ```
 
 Run the repo doctor:
@@ -23,6 +25,8 @@ context-pack doctor
 - `plugins/context-pack/skills/context-pack/scripts/context_pack.py`: deterministic engine
 - `plugins/context-pack/skills/context-pack/SKILL.md`: Codex skill instructions
 - `plugins/context-pack/.codex-plugin/plugin.json`: Codex plugin metadata
+- `src/context_pack/bundled/`: synchronized resources used by installed packages
+- `scripts/sync_packaged_assets.py`: updates and verifies packaged copies
 - `.context-pack/`: project context library
 - `tests/`: unit tests
 
@@ -41,3 +45,5 @@ Keep changes focused. If you change command behavior, update:
 - Use agent judgment only for semantic summaries, contracts, failure modes, and decisions.
 - Keep generated files under `.context-pack/packs/` and out of git.
 - Treat context docs as routing hints, not source of truth.
+- Keep natural-language intent interpretation in the agent skill; keep CLI operations explicit.
+- Run `python scripts/sync_packaged_assets.py` after changing the engine, skill, agent metadata, or plugin manifest.

@@ -8,8 +8,9 @@ Run from a clean `main` checkout:
 
 ```bash
 git status --short
-context-pack status
+python scripts/sync_packaged_assets.py --check
 python -m unittest discover -s tests -v
+python scripts/validate_packaged_cli.py
 python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
 python -m json.tool .context-pack/manifest.json
 python -m json.tool .agents/plugins/marketplace.json
@@ -32,10 +33,10 @@ src/context_pack/__init__.py
 plugins/context-pack/.codex-plugin/plugin.json
 plugins/context-pack/skills/context-pack/scripts/context_pack.py
 src/context_pack/bundled/context_pack.py
-README.md
-README.ko.md
 CHANGELOG.md
 ```
+
+Then run `python scripts/sync_packaged_assets.py` so the packaged engine, skill instructions, agent metadata, and plugin manifest match their canonical sources.
 
 Then verify version sync:
 

@@ -4,9 +4,33 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-11
+
 ### Added
 
-- Added remaining-validation artifacts for deterministic A/B proxy checks, fresh-clone session consistency, and post-release install path validation.
+- Added transient first-run packs that live under Git metadata or the system temp directory without creating repository files.
+- Added generic area roles, bounded start-file inference, broad-glob diagnostics, bounded checkpoint logs, and package-resource sync checks.
+- Added cross-platform integration tests that execute installed Git hooks and cover Unicode branch and renamed file paths.
+
+### Changed
+
+- Made `setup` the only operation that persists `.context-pack/` and agent instruction files; small unconfigured repos now skip unnecessary pack generation.
+- Simplified the agent contract: the agent interprets natural-language intent and calls explicit task, review, or checkpoint operations.
+- Replaced benchmark-specific routing buckets with generic source, tests, docs, assets, and automation behavior.
+- Made normal `start` avoid repository-wide text-budget scans; estimates are now opt-in through `measure` or `--text-budget`.
+- Reduced the default CLI help and public documentation to the primary workflow while retaining compatibility commands.
+- Moved packaged skill, agent metadata, and plugin metadata to synchronized resource files instead of embedded hand-maintained strings.
+- Updated the public benchmark to 10 passing repositories and a matching fresh-clone handoff signature.
+
+### Fixed
+
+- Preserved absolute Unix paths in generated hooks, invoked the exact installation interpreter, and made safe hooks fail open.
+- Decoded Git output with explicit UTF-8 and surrogate handling, including NUL-delimited status and filename parsing.
+- Excluded Context Pack's own generated metadata from review routing when product files are also changed.
+
+### Removed
+
+- Removed the CLI's bilingual lifecycle phrase classifier, generated `REVIEW.md` and `CONTRACTS.md` duplicates, unbounded validation proxy artifacts, and internal beta/audit documents.
 
 ## [0.2.20] - 2026-06-30
 

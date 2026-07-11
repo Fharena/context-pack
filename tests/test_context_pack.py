@@ -12,11 +12,15 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "plugins" / "context-pack" / "skills" / "context-pack" / "scripts" / "context_pack.py"
 BUNDLED_ENGINE = ROOT / "src" / "context_pack" / "bundled" / "context_pack.py"
+BUNDLED_SKILL = ROOT / "src" / "context_pack" / "bundled" / "SKILL.md"
+BUNDLED_OPENAI = ROOT / "src" / "context_pack" / "bundled" / "openai.yaml"
+BUNDLED_PLUGIN = ROOT / "src" / "context_pack" / "bundled" / "plugin.json"
 NODE_WRAPPER = ROOT / "bin" / "context-pack.js"
 DEMO_GIF_SCRIPT = ROOT / "scripts" / "generate_demo_gif.py"
 
@@ -161,16 +165,19 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Changed files in scope: 0", pack)
             self.assertNotIn(".context-pack/AREAS/overview.md", pack.split("## Changed Files", 1)[-1])
 
-    def test_start_initializes_missing_context_library(self) -> None:
+    def test_start_missing_context_is_transient_and_does_not_write_repo(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            before = subprocess.check_output(["git", "status", "--porcelain=v1", "-uall"], cwd=repo, text=True)
 
             self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--quiet"]), 0)
 
-            self.assertTrue((repo / ".context-pack/manifest.json").exists())
-            self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
-            self.assertTrue((repo / "AGENTS.md").exists())
-            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
+            self.assertFalse((repo / ".context-pack").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / ".gitignore").exists())
+            after = subprocess.check_output(["git", "status", "--porcelain=v1", "-uall"], cwd=repo, text=True)
+            self.assertEqual(before, after)
 
     def test_start_without_task_points_to_current_and_index_without_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -186,7 +193,6 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Read next:", text)
             self.assertIn("- .context-pack/CURRENT.md", text)
             self.assertIn("- .context-pack/INDEX.md", text)
-            self.assertIn("Optional next commands:", text)
             self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
 
     def test_legacy_codex_layout_still_routes_until_migrated(self) -> None:
@@ -284,8 +290,8 @@ class ContextPackTests(unittest.TestCase):
 
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
-            self.assertIn("quiet orientation", (repo / "AGENTS.md").read_text(encoding="utf-8"))
-            self.assertIn("Skip Context Pack", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
+            self.assertIn("Use Context Pack quietly", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("Skip pure Q&A", (repo / "CLAUDE.md").read_text(encoding="utf-8"))
             self.assertIn(
                 "alwaysApply: true",
                 (repo / ".cursor/rules/context-pack.mdc").read_text(encoding="utf-8"),
@@ -510,16 +516,13 @@ class ContextPackTests(unittest.TestCase):
             self.assertFalse(agents.startswith("\n"))
             self.assertFalse(claude.startswith("\n"))
             self.assertFalse(cursor.startswith("\n"))
-            self.assertIn("quiet orientation", agents)
-            self.assertIn("The user does not need to name it or ask for a pack", agents)
-            self.assertIn('Treat requests like "fix this bug"', agents)
-            self.assertIn('"look over my changes"', agents)
-            self.assertIn('"I\'m done for now"', agents)
-            self.assertIn("Run Context Pack as part of the work", agents)
-            self.assertIn("Session start or continuation with no clear task yet", agents)
-            self.assertIn("Missing `.context-pack/` during a normal task", agents)
-            self.assertIn("it auto-initializes lightweight context docs", agents)
-            self.assertIn("Skip Context Pack", claude)
+            self.assertIn("Use Context Pack quietly", agents)
+            self.assertIn("The user does not need to name the tool", agents)
+            self.assertIn("context-pack start --review", agents)
+            self.assertIn("start` is transient", agents)
+            self.assertIn("must not create `.context-pack/`", agents)
+            self.assertIn("explicitly asks to persist", agents)
+            self.assertIn("Skip pure Q&A", claude)
             self.assertIn("alwaysApply: true", cursor)
             self.assertIn("context-pack checkpoint --pack", cursor)
             self.assertIn("natural bug fixes, reviews, debugging, or handoff", cursor)
@@ -583,13 +586,13 @@ class ContextPackTests(unittest.TestCase):
             )
 
             output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug"]), 0)
+            with mock.patch.object(self.engine, "readable_text_chars", side_effect=AssertionError("unexpected text scan")):
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "cli command bug"]), 0)
 
             text = output.getvalue()
             self.assertIn("Scope reduction: start from", text)
-            self.assertIn("Approx text budget: Read First", text)
-            self.assertIn("; repo", text)
+            self.assertNotIn("Approx text budget:", text)
 
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
             self.assertIn("Mode: work", pack)
@@ -597,9 +600,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- Repo files considered:", pack)
             self.assertIn("- Primary areas selected:", pack)
             self.assertIn("- Read First entries:", pack)
-            self.assertIn("- Approx Read First text:", pack)
-            self.assertIn("- Approx repo text:", pack)
-            self.assertIn("- Token estimates use chars/4", pack)
+            self.assertNotIn("- Approx Read First text:", pack)
+            self.assertNotIn("- Approx repo text:", pack)
             self.assertIn("- cli", pack)
 
     def test_measure_reports_scope_without_writing_pack(self) -> None:
@@ -634,7 +636,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("No files written.", text)
             self.assertIn("Selected areas: cli", text)
             self.assertIn("Why selected:", text)
-            self.assertIn("- cli: task matched keywords: cli, command", text)
+            self.assertIn("- cli: task matched area metadata: cli, command", text)
             self.assertIn("Scope reduction: start from", text)
             self.assertIn("Approx text budget: Read First", text)
             self.assertIn('context-pack start --task "cli command bug"', text)
@@ -655,7 +657,7 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("Context library: not installed; using inferred areas for measurement", text)
-            self.assertIn("Selected areas: tests", text)
+            self.assertIn("Selected areas: source, tests", text)
             self.assertIn("Read First entries:", text)
             self.assertNotIn("~167% of repo files", text)
             self.assertFalse((repo / ".context-pack").exists())
@@ -677,8 +679,8 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("Selected areas: source, tests", text)
-            self.assertIn("- source: paired with tests for failure debugging", text)
-            self.assertIn("- tests: task matched keywords: tests", text)
+            self.assertIn("paired source area for debugging", text)
+            self.assertIn("- tests: task matched area metadata: tests", text)
             self.assertFalse((repo / ".context-pack").exists())
 
     def test_measure_before_setup_routes_unclassified_code_task_to_source_and_tests(self) -> None:
@@ -709,6 +711,8 @@ class ContextPackTests(unittest.TestCase):
             (repo / "tests").mkdir()
             (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
             (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
+            for index in range(25):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
 
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -719,9 +723,54 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("Why selected:", text)
             self.assertIn("- source: starter code area for unclassified task", text)
             self.assertIn("- tests: starter code area for unclassified task", text)
-            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            snapshot = self.engine.collect_snapshot(repo)
+            pack_path = self.engine.transient_pack_path(repo, snapshot)
+            pack = pack_path.read_text(encoding="utf-8")
             self.assertIn("- source (score 2): starter code area for unclassified task", pack)
             self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
+            self.assertFalse((repo / ".context-pack").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / ".gitignore").exists())
+
+    def test_start_skips_small_unconfigured_repo_without_side_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "fix app bug"]), 0)
+
+            self.assertIn("broad reading is likely cheaper", output.getvalue())
+            self.assertFalse((repo / ".context-pack").exists())
+            self.assertFalse((repo / "AGENTS.md").exists())
+            self.assertFalse((repo / ".gitignore").exists())
+
+    def test_review_filters_context_pack_setup_files_when_code_changed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            for index in range(25):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            changed = repo / "src/module_0.py"
+            changed.write_text("VALUE = 99\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--review", "--quiet"]), 0)
+
+            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
+            changed_section = pack.split("## Changed Files", 1)[1].split("## Contracts", 1)[0]
+            self.assertIn("src/module_0.py", changed_section)
+            self.assertNotIn(".context-pack/", changed_section)
+            self.assertNotIn("AGENTS.md", changed_section)
+            self.assertNotIn(".gitignore", changed_section)
+            self.assertIn("- source", pack)
 
     def test_start_existing_repo_routes_unclassified_code_task_to_source_and_tests(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -741,66 +790,8 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn("- source: starter code area for unclassified task", text)
             self.assertIn("- tests: starter code area for unclassified task", text)
 
-    def test_start_task_broken_not_working_phrases_route_to_source_and_tests(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
 
-            for phrase in ("login is broken", "login is not working", "checkout doesn't work", "search stopped working"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
 
-                    text = output.getvalue()
-                    self.assertIn("Selected areas: source, tests", text)
-                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-                    self.assertIn(f"Task: {phrase}", pack)
-                    self.assertIn("- source (score 2): starter code area for unclassified task", pack)
-                    self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
-
-    def test_start_task_broken_phrase_guard_avoids_meta_docs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "broken link report"]), 0)
-
-            text = output.getvalue()
-            self.assertIn("Selected areas: overview", text)
-            self.assertNotIn("Selected areas: source, tests", text)
-
-    def test_start_task_crash_variants_route_to_source_and_tests(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            for phrase in ("app crashes", "app crashed"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
-
-                    text = output.getvalue()
-                    self.assertIn("Selected areas: source, tests", text)
-                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-                    self.assertIn(f"Task: {phrase}", pack)
-                    self.assertIn("- source (score 2): starter code area for unclassified task", pack)
-                    self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
 
     def test_start_existing_repo_pairs_source_with_failing_tests(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -820,373 +811,15 @@ class ContextPackTests(unittest.TestCase):
 
             text = output.getvalue()
             self.assertIn("Selected areas: source, tests", text)
-            self.assertIn("- source: paired with tests for failure debugging", text)
-            self.assertIn("- tests: task matched keywords: test", text)
+            self.assertIn("paired source area for debugging", text)
+            self.assertIn("- tests: task matched area metadata: test", text)
             pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("- source (score 6): paired with tests for failure debugging", pack)
-            self.assertIn("- tests (score 6): task matched keywords: test", pack)
+            self.assertIn("paired source area for debugging", pack)
+            self.assertIn("task matched area metadata: test", pack)
 
-    def test_start_task_ci_build_failure_pairs_automation_source_and_tests(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / ".github/workflows").mkdir(parents=True)
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            (repo / ".github/workflows/ci.yml").write_text("name: CI\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
 
-            for phrase in ("ci is red", "build failed", "github actions failed"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
 
-                    text = output.getvalue()
-                    self.assertIn("Selected areas: automation, source, tests", text)
-                    self.assertIn("- source: paired with CI/build failure debugging", text)
-                    self.assertIn("- tests: paired with CI/build failure debugging", text)
-                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-                    self.assertIn(f"Task: {phrase}", pack)
-                    self.assertIn("paired with CI/build failure debugging", pack)
 
-    def test_start_task_ci_build_failure_guard_avoids_badge_docs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / ".github/workflows").mkdir(parents=True)
-            (repo / "docs").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            (repo / ".github/workflows/ci.yml").write_text("name: CI\n", encoding="utf-8")
-            (repo / "docs/badges.md").write_text("# Badges\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "red build badge docs"]), 0)
-
-            text = output.getvalue()
-            self.assertIn("Selected areas: automation, docs", text)
-            self.assertNotIn("Selected areas: automation, source, tests", text)
-
-    def test_natural_language_bug_review_handoff_flow_on_small_repo(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "README.md").write_text("# Demo app\n", encoding="utf-8")
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text(
-                "from src.app import login_timeout\n\n"
-                "def test_login_timeout():\n"
-                "    assert login_timeout() == 30\n",
-                encoding="utf-8",
-            )
-
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-            subprocess.run(["git", "add", "."], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
-
-            bug_output = io.StringIO()
-            with contextlib.redirect_stdout(bug_output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "fix login timeout"]),
-                    0,
-                )
-            self.assertIn("Selected areas: source, tests", bug_output.getvalue())
-            bug_pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Task: fix login timeout", bug_pack)
-            self.assertIn("- source (score 2): starter code area for unclassified task", bug_pack)
-            self.assertIn("- tests (score 2): starter code area for unclassified task", bug_pack)
-
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text(
-                "from src.app import login_timeout\n\n"
-                "def test_login_timeout():\n"
-                "    assert login_timeout() == 45\n",
-                encoding="utf-8",
-            )
-            subprocess.run(["git", "add", "src/app.py", "tests/test_app.py"], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "tune login timeout"], cwd=repo, check=True, capture_output=True)
-
-            review_output = io.StringIO()
-            with contextlib.redirect_stdout(review_output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--review", "--base", "HEAD~1"]),
-                    0,
-                )
-            review_text = review_output.getvalue()
-            self.assertIn("Generated review pack for review", review_text)
-            self.assertIn("Selected areas: source, tests", review_text)
-            review_pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Mode: review", review_pack)
-            self.assertIn("- `src/app.py`", review_pack)
-            self.assertIn("- `tests/test_app.py`", review_pack)
-
-            self.assertEqual(self.engine.main(["checkpoint", "--repo", str(repo), "--pack", "--quiet"]), 0)
-            self.assertTrue((repo / ".context-pack/local/LOCAL.md").exists())
-            self.assertTrue((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
-            status = subprocess.run(
-                ["git", "status", "--porcelain=v1", "-uall"],
-                cwd=repo,
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout
-            self.assertEqual(status.strip(), "")
-
-    def test_start_task_review_phrase_uses_review_mode(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-            (repo / "src").mkdir()
-            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
-
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-            subprocess.run(["git", "add", "."], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
-            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "review this branch"]),
-                    0,
-                )
-
-            text = output.getvalue()
-            self.assertIn("Generated review pack for review", text)
-            self.assertIn("Selected areas: source\n", text)
-            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Mode: review", pack)
-            self.assertIn("Task: review this branch", pack)
-            self.assertIn("- `src/app.py`", pack)
-            self.assertNotIn("- overview (score", pack)
-
-    def test_start_task_review_phrase_infers_base_for_committed_branch(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-            (repo / "src").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-            subprocess.run(["git", "add", "."], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "checkout", "-b", "feature/review-demo"], cwd=repo, check=True, capture_output=True)
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 45\n", encoding="utf-8")
-            subprocess.run(["git", "add", "src/app.py"], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "tune login timeout"], cwd=repo, check=True, capture_output=True)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "review this branch"]),
-                    0,
-                )
-
-            text = output.getvalue()
-            self.assertIn("Generated review pack for review", text)
-            self.assertIn("Review base: main (auto)", text)
-            self.assertIn("Selected areas: source", text)
-            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Mode: review", pack)
-            self.assertIn("Task: review this branch", pack)
-            self.assertIn("- `src/app.py`", pack)
-
-    def test_start_task_soft_review_phrases_use_review_mode(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-            (repo / "src").mkdir()
-            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
-
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-            subprocess.run(["git", "add", "."], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
-            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
-
-            for phrase in ("look over my changes", "take a look at this PR", "변경사항 봐줘", "PR 확인해줘"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(
-                            self.engine.main(["start", "--repo", str(repo), "--task", phrase]),
-                            0,
-                        )
-
-                    text = output.getvalue()
-                    self.assertIn("Generated review pack for review", text)
-                    self.assertIn("Selected areas: source", text)
-                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-                    self.assertIn("Mode: review", pack)
-                    self.assertIn(f"Task: {phrase}", pack)
-                    self.assertIn("- `src/app.py`", pack)
-
-    def test_start_task_continue_phrase_points_to_current_and_index(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "continue where we left off"]),
-                    0,
-                )
-
-            text = output.getvalue()
-            self.assertIn("No pack generated", text)
-            self.assertIn("No pack generated: continuation wording was detected.", text)
-            self.assertIn("- .context-pack/CURRENT.md", text)
-            self.assertIn("- .context-pack/INDEX.md", text)
-            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
-
-    def test_start_task_handoff_phrase_points_to_checkpoint(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "leave this easy to resume later"]),
-                    0,
-                )
-
-            text = output.getvalue()
-            self.assertIn("No pack generated", text)
-            self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
-            self.assertIn("Detected handoff/checkpoint wording", text)
-            self.assertIn("context-pack checkpoint --pack", text)
-            self.assertIn("context-pack checkpoint --publish --pack", text)
-            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
-
-    def test_start_task_short_handoff_phrases_point_to_checkpoint(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            for phrase in ("I'm done for now", "wrap this up", "pause here", "작업 끝났어", "오늘은 여기까지"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(
-                            self.engine.main(["start", "--repo", str(repo), "--task", phrase]),
-                            0,
-                        )
-
-                    text = output.getvalue()
-                    self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
-                    self.assertIn("Detected handoff/checkpoint wording", text)
-                    self.assertIn("context-pack checkpoint --pack", text)
-                    self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
-
-    def test_start_task_korean_bug_phrase_routes_to_source_and_tests(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            for phrase in ("버그 고쳐줘", "버그 잡아줘", "문제 해결해줘", "오류 수정해줘"):
-                with self.subTest(phrase=phrase):
-                    output = io.StringIO()
-                    with contextlib.redirect_stdout(output):
-                        self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", phrase]), 0)
-
-                    text = output.getvalue()
-                    self.assertIn("Selected areas: source, tests", text)
-                    pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-                    self.assertIn(f"Task: {phrase}", pack)
-                    self.assertIn("- source (score 2): starter code area for unclassified task", pack)
-                    self.assertIn("- tests (score 2): starter code area for unclassified task", pack)
-
-    def test_start_task_korean_bug_phrase_guard_avoids_meta_docs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "src").mkdir()
-            (repo / "tests").mkdir()
-            (repo / "src/app.py").write_text("def login_timeout():\n    return 30\n", encoding="utf-8")
-            (repo / "tests/test_app.py").write_text("def test_login_timeout():\n    assert True\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "버그 리포트 문서 정리"]), 0)
-
-            text = output.getvalue()
-            self.assertIn("Selected areas: overview", text)
-            self.assertNotIn("Selected areas: source, tests", text)
-
-    def test_start_task_korean_review_phrase_uses_review_mode(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-            (repo / "src").mkdir()
-            (repo / "src/app.py").write_text("def run():\n    return 1\n", encoding="utf-8")
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-            subprocess.run(["git", "add", "."], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
-            (repo / "src/app.py").write_text("def run():\n    return 2\n", encoding="utf-8")
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(self.engine.main(["start", "--repo", str(repo), "--task", "브랜치 리뷰해줘"]), 0)
-
-            self.assertIn("Generated review pack for review", output.getvalue())
-            pack = (repo / ".context-pack/packs/CONTEXT_PACK.md").read_text(encoding="utf-8")
-            self.assertIn("Mode: review", pack)
-            self.assertIn("Task: 브랜치 리뷰해줘", pack)
-            self.assertIn("- `src/app.py`", pack)
-
-    def test_start_task_korean_handoff_phrase_points_to_checkpoint(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
-
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                self.assertEqual(
-                    self.engine.main(["start", "--repo", str(repo), "--task", "나중에 이어가게 정리해줘"]),
-                    0,
-                )
-
-            text = output.getvalue()
-            self.assertIn("No pack generated: handoff/checkpoint wording was detected.", text)
-            self.assertIn("Detected handoff/checkpoint wording", text)
-            self.assertIn("context-pack checkpoint --pack", text)
-            self.assertFalse((repo / ".context-pack/packs/CONTEXT_PACK.md").exists())
-
-    def test_start_task_intent_guard_does_not_treat_meta_work_as_handoff(self) -> None:
-        self.assertEqual(
-            self.engine.infer_start_task_intent("support Korean natural bug review handoff phrases"),
-            "",
-        )
-        self.assertEqual(self.engine.infer_start_task_intent("improve code review docs"), "")
-        self.assertEqual(self.engine.infer_start_task_intent("change login button color"), "")
-        self.assertEqual(self.engine.infer_start_task_intent("implement done button"), "")
-        self.assertEqual(self.engine.infer_start_task_intent("wrap parser errors"), "")
-        self.assertEqual(self.engine.infer_start_task_intent("작업 끝 상태 표시 버그 고쳐줘"), "")
-        self.assertEqual(self.engine.infer_start_task_intent("leave this easy to resume later"), "checkpoint")
-        self.assertEqual(self.engine.infer_start_task_intent("I'm done for now"), "checkpoint")
 
     def test_start_in_existing_dirty_repo_generates_changed_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1344,7 +977,7 @@ class ContextPackTests(unittest.TestCase):
             manifest = json.loads((repo / ".context-pack/manifest.json").read_text(encoding="utf-8"))
             source = manifest["areas"]["source"]
             self.assertIn("httpx/**", source["paths"])
-            self.assertIn("httpx", source["start_files"])
+            self.assertIn("httpx/__init__.py", source["start_files"])
 
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -1384,7 +1017,7 @@ class ContextPackTests(unittest.TestCase):
 
             mobile_text = mobile_output.getvalue()
             self.assertIn("Selected areas: source", mobile_text)
-            self.assertIn("- source: task matched keywords:", mobile_text)
+            self.assertIn("- source: starter code area for unclassified task", mobile_text)
             self.assertNotIn("overview: fallback orientation", mobile_text)
 
             asset_output = io.StringIO()
@@ -1403,8 +1036,9 @@ class ContextPackTests(unittest.TestCase):
                 )
 
             asset_text = asset_output.getvalue()
-            self.assertIn("Selected areas: source, sprites", asset_text)
-            self.assertIn("- sprites: task matched keywords:", asset_text)
+            self.assertIn("Selected areas: assets, source", asset_text)
+            self.assertIn("- assets: task matched area metadata:", asset_text)
+            self.assertIn("- source: paired source area for debugging", asset_text)
             self.assertFalse((repo / ".context-pack").exists())
 
     def test_measure_before_setup_infers_go_source_and_tests(self) -> None:
@@ -1429,8 +1063,8 @@ class ContextPackTests(unittest.TestCase):
                 )
 
             text = output.getvalue()
-            self.assertIn("Selected areas: source", text)
-            self.assertIn("- source: task matched keywords:", text)
+            self.assertIn("Selected areas: source, tests", text)
+            self.assertIn("- source: starter code area for unclassified task", text)
             self.assertNotIn("overview: fallback orientation", text)
 
             self.assertEqual(self.engine.main(["init", "--repo", str(repo), "--quiet"]), 0)
@@ -1636,7 +1270,7 @@ class ContextPackTests(unittest.TestCase):
             task="public adoption proof and evidence",
         )
         self.assertEqual(adoption_matches[0].area_id, "docs")
-        self.assertIn("task matched keywords: adoption", adoption_matches[0].reasons)
+        self.assertIn("task matched area metadata: adoption", adoption_matches[0].reasons)
 
         review_matches = self.engine.selected_area_matches(
             manifest,
@@ -1652,7 +1286,8 @@ class ContextPackTests(unittest.TestCase):
             changed_files=[],
             task="fix login timeout",
         )
-        self.assertEqual([item.area_id for item in generic_fix_matches], ["overview"])
+        self.assertEqual([item.area_id for item in generic_fix_matches], ["runtime"])
+        self.assertEqual(generic_fix_matches[0].reasons, ["starter code area for unclassified task"])
 
         product_noise_matches = self.engine.selected_area_matches(
             manifest,
@@ -1689,6 +1324,19 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual([item.area_id for item in tests_only_matches], ["overview"])
 
+    def test_project_stale_detection_task_routes_to_engine(self) -> None:
+        manifest = self.engine.load_manifest(ROOT)
+        matches = self.engine.selected_area_matches(
+            manifest,
+            changed_files=[],
+            task="fix stale detection bug",
+            repo=ROOT,
+        )
+
+        self.assertEqual(matches[0].area_id, "engine")
+        reasons = " ".join(matches[0].reasons)
+        self.assertTrue("stale" in reasons or "detection" in reasons)
+
     def test_first_modified_status_file_keeps_first_character(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1704,6 +1352,27 @@ class ContextPackTests(unittest.TestCase):
             snapshot = self.engine.collect_snapshot(repo)
             self.assertIn("README.md", snapshot.dirty_files)
             self.assertNotIn("EADME.md", snapshot.dirty_files)
+
+    def test_git_snapshot_handles_korean_branch_and_rename_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            (repo / "src").mkdir()
+            original = repo / "src/초기 파일.py"
+            original.write_text("VALUE = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", "src"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "checkout", "-b", "기능/한글"], cwd=repo, check=True, capture_output=True)
+
+            renamed = repo / "src/한글 계산.py"
+            subprocess.run(["git", "mv", "src/초기 파일.py", "src/한글 계산.py"], cwd=repo, check=True)
+            snapshot = self.engine.collect_snapshot(repo)
+
+            self.assertEqual(snapshot.branch, "기능/한글")
+            self.assertIn("src/한글 계산.py", snapshot.dirty_files)
+            self.assertNotIn("src/초기 파일.py", snapshot.dirty_files)
 
     def test_status_warns_when_shared_handoff_fingerprint_is_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1844,6 +1513,71 @@ class ContextPackTests(unittest.TestCase):
             text = hook.read_text(encoding="utf-8")
             self.assertNotIn("# context-pack:start", text)
 
+    def test_safe_git_hook_executes_from_path_with_spaces_and_never_blocks_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            engine_dir = root / "engine path with spaces"
+            engine_dir.mkdir()
+            copied_engine = engine_dir / "context_pack.py"
+            shutil.copyfile(ENGINE, copied_engine)
+            repo = root / "repo"
+            repo.mkdir()
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+            subprocess.run([sys.executable, str(copied_engine), "init", "--repo", str(repo), "--quiet"], check=True)
+            subprocess.run(
+                [sys.executable, str(copied_engine), "install-git-hooks", "--repo", str(repo), "--mode", "safe", "--quiet"],
+                check=True,
+            )
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            first = subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            (repo / ".context-pack/manifest.json").unlink()
+            subprocess.run(["git", "add", "-u"], cwd=repo, check=True)
+            second = subprocess.run(["git", "commit", "-m", "remove manifest"], cwd=repo, capture_output=True, text=True)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertIn("context-pack doctor warning", second.stderr)
+
+    def test_checkpoint_logs_are_bounded(self) -> None:
+        text = "# Context Pack Log\n\nRecent checkpoints.\n"
+        for index in range(40):
+            text += f"\n## 2026-07-{index + 1:02d}T00:00:00+00:00\n- HEAD: {index}\n"
+
+        compact = self.engine.compact_checkpoint_log(text, 5)
+
+        self.assertNotIn("HEAD: 34\n", compact)
+        self.assertIn("HEAD: 35\n", compact)
+        self.assertIn("HEAD: 39\n", compact)
+        self.assertEqual(compact.count("\n## 20"), 5)
+
+    def test_doctor_warns_about_repository_wide_area(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            for index in range(30):
+                (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["everything"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/everything.md",
+                "description": "Everything.",
+                "paths": ["**"],
+                "start_files": ["src"],
+                "tests": [],
+                "keywords": ["everything"],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/everything.md").write_text("# Everything\n", encoding="utf-8")
+
+            errors, warnings = self.engine.context_setup_issues(repo)
+
+            self.assertEqual(errors, [])
+            self.assertTrue(any("repository-wide path pattern" in item for item in warnings))
+
     def test_install_codex_copies_plugin_and_updates_marketplace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1902,6 +1636,9 @@ class ContextPackTests(unittest.TestCase):
             root = Path(tmp)
             isolated_engine = root / "isolated_context_pack.py"
             isolated_engine.write_text(ENGINE.read_text(encoding="utf-8"), encoding="utf-8")
+            shutil.copyfile(BUNDLED_SKILL, root / "SKILL.md")
+            shutil.copyfile(BUNDLED_OPENAI, root / "openai.yaml")
+            shutil.copyfile(BUNDLED_PLUGIN, root / "plugin.json")
             target = root / "plugins" / "context-pack"
             marketplace = root / ".agents" / "plugins" / "marketplace.json"
             old_file = self.engine.__file__
@@ -1926,24 +1663,15 @@ class ContextPackTests(unittest.TestCase):
             plugin = json.loads((target / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
             self.assertEqual(plugin["name"], "context-pack")
             self.assertEqual(plugin["version"], self.engine.CONTEXT_PACK_VERSION)
-            self.assertIn("natural requests like fixing bugs", plugin["interface"]["longDescription"])
-            self.assertIn("reviewing branches", plugin["interface"]["longDescription"])
-            self.assertIn("focused task or review packs", plugin["interface"]["longDescription"])
             self.assertIn("focused repo context", plugin["interface"]["defaultPrompt"][0])
             skill = (target / "skills/context-pack/SKILL.md").read_text(encoding="utf-8")
-            self.assertIn("agent behavior", skill)
-            self.assertIn("Do not ask the user to name Context Pack first", skill)
-            self.assertIn("look over my changes", skill)
-            self.assertIn("I'm done for now", skill)
-            self.assertIn("If the CLI is not on `PATH`", skill)
+            self.assertIn("quiet orientation", skill)
+            self.assertIn("must not create `.context-pack/`", skill)
+            self.assertIn("explicitly asks to install", skill)
             self.assertIn("<this-skill-folder>/scripts/context_pack.py", skill)
-            self.assertIn("Do not use a target repo's `scripts/context_pack.py`", skill)
-            self.assertIn("Continuing with no clear task yet", skill)
-            self.assertIn("Use `start`; it auto-initializes lightweight context docs", skill)
-            self.assertIn("context-pack measure", skill)
             self.assertIn("setup --dry-run", skill)
             openai = (target / "skills/context-pack/agents/openai.yaml").read_text(encoding="utf-8")
-            self.assertIn("focused repo context", openai)
+            self.assertIn("$context-pack", openai)
             script = (target / "skills/context-pack/scripts/context_pack.py").read_text(encoding="utf-8")
             self.assertIn("CONTEXT_PACK_VERSION", script)
 
@@ -1955,28 +1683,38 @@ class ContextPackTests(unittest.TestCase):
 
     def test_packaged_cli_engine_stays_in_sync(self) -> None:
         self.assertEqual(ENGINE.read_text(encoding="utf-8"), BUNDLED_ENGINE.read_text(encoding="utf-8"))
+        self.assertEqual(
+            (ROOT / "plugins/context-pack/skills/context-pack/SKILL.md").read_text(encoding="utf-8"),
+            BUNDLED_SKILL.read_text(encoding="utf-8"),
+        )
+        self.assertEqual(
+            (ROOT / "plugins/context-pack/skills/context-pack/agents/openai.yaml").read_text(encoding="utf-8"),
+            BUNDLED_OPENAI.read_text(encoding="utf-8"),
+        )
+        self.assertEqual(
+            json.loads((ROOT / "plugins/context-pack/.codex-plugin/plugin.json").read_text(encoding="utf-8")),
+            json.loads(BUNDLED_PLUGIN.read_text(encoding="utf-8")),
+        )
+        npm_files = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["files"]
+        for resource in ("context_pack.py", "SKILL.md", "openai.yaml", "plugin.json"):
+            self.assertIn(f"src/context_pack/bundled/{resource}", npm_files)
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/sync_packaged_assets.py"), "--check"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
-    def test_packaged_cli_validation_covers_natural_start_routing(self) -> None:
+    def test_packaged_cli_validation_covers_explicit_agent_routing(self) -> None:
         text = (ROOT / "scripts" / "validate_packaged_cli.py").read_text(encoding="utf-8")
 
-        self.assertIn("버그 고쳐줘", text)
-        self.assertIn("버그 잡아줘", text)
-        self.assertIn("문제 해결해줘", text)
-        self.assertIn("브랜치 리뷰해줘", text)
-        self.assertIn("나중에 이어가게 정리해줘", text)
-        self.assertIn("I'm done for now", text)
-        self.assertIn("작업 끝났어", text)
-        self.assertIn("why are tests failing", text)
-        self.assertIn("login is broken", text)
-        self.assertIn("paired with tests for failure debugging", text)
-        self.assertIn("Detected handoff/checkpoint wording", text)
+        self.assertIn("--review", text)
+        self.assertIn("checkpoint", text)
+        self.assertIn("transient", text)
         self.assertIn("Generated work pack for task", text)
-        self.assertIn("Selected areas: source, tests", text)
         self.assertIn("Generated review pack for review", text)
         self.assertIn("Review base: main (auto)", text)
-        self.assertIn("review this branch", text)
-        self.assertIn("look over my changes", text)
-        self.assertIn("변경사항 봐줘", text)
         self.assertIn("before_checkpoint_status == after_checkpoint_status", text)
         self.assertIn("Mode: review", text)
 
@@ -1994,6 +1732,9 @@ class ContextPackTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("context-pack", proc.stdout)
+        self.assertIn("setup", proc.stdout)
+        self.assertNotIn("==SUPPRESS==", proc.stdout)
+        self.assertNotIn("install-git-hooks", proc.stdout)
 
     def test_python_module_without_args_shows_quickstart(self) -> None:
         env = os.environ.copy()
@@ -2012,13 +1753,12 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
         self.assertIn('Ask your agent: "Review this branch."', proc.stdout)
         self.assertNotIn('Ask your agent: "Review this branch against main."', proc.stdout)
-        self.assertIn("Direct CLI:", proc.stdout)
+        self.assertIn("Safe first run (no repo setup):", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
-        self.assertIn("context-pack measure", proc.stdout)
         self.assertIn("context-pack start --review", proc.stdout)
         self.assertNotIn("context-pack start --review --base main", proc.stdout)
-        self.assertIn("context-pack install-codex --activate", proc.stdout)
+        self.assertIn("context-pack checkpoint --pack", proc.stdout)
 
     def test_python_module_reports_version(self) -> None:
         env = os.environ.copy()
@@ -2066,13 +1806,12 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn('Ask your agent: "Fix the login timeout."', proc.stdout)
         self.assertIn('Ask your agent: "Review this branch."', proc.stdout)
         self.assertNotIn('Ask your agent: "Review this branch against main."', proc.stdout)
-        self.assertIn("Direct CLI:", proc.stdout)
+        self.assertIn("Safe first run (no repo setup):", proc.stdout)
         self.assertIn("context-pack setup --dry-run", proc.stdout)
         self.assertIn("context-pack setup", proc.stdout)
-        self.assertIn("context-pack measure", proc.stdout)
         self.assertIn("context-pack start --review", proc.stdout)
         self.assertNotIn("context-pack start --review --base main", proc.stdout)
-        self.assertIn("context-pack install-codex --activate", proc.stdout)
+        self.assertIn("context-pack checkpoint --pack", proc.stdout)
 
     def test_node_wrapper_reports_version(self) -> None:
         node = shutil.which("node")
@@ -2104,7 +1843,7 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertTrue((repo / ".context-pack/manifest.json").exists())
             self.assertTrue((repo / ".context-pack/CURRENT.md").exists())
-            self.assertIn("quiet orientation", (repo / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("Use Context Pack quietly", (repo / "AGENTS.md").read_text(encoding="utf-8"))
 
     def test_node_wrapper_can_install_codex_plugin(self) -> None:
         node = shutil.which("node")
@@ -2198,14 +1937,17 @@ class ContextPackTests(unittest.TestCase):
     def test_demo_gif_script_matches_current_product_flow(self) -> None:
         text = DEMO_GIF_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("User: Fix the login timeout.", text)
-        self.assertIn("quiet orientation", text)
+        self.assertIn("Context library: transient", text)
+        self.assertIn("repo files stay untouched", text)
+        self.assertIn("broad reading is likely cheaper", text)
         self.assertIn("context-pack setup --dry-run", text)
         self.assertIn("context-pack start --task", text)
         self.assertIn("context-pack start --review --base main", text)
         self.assertIn("fix login timeout", text)
         self.assertIn("Tiny obvious edits can skip Context Pack", text)
         self.assertIn(".context-pack/manifest.json", text)
-        self.assertIn("Approx text budget shown with chars/4 caveat", text)
+        self.assertIn("Text-budget scanning stays off unless measure is used", text)
+        self.assertIn("not Context Pack metadata", text)
         self.assertIn("checkpoint --pack", text)
         self.assertIn("Next session starts from the same map.", text)
         self.assertNotIn("Stop paying agents", text)
@@ -2217,40 +1959,25 @@ class ContextPackTests(unittest.TestCase):
             self.assertIn(demo_url, readme_text)
             self.assertNotIn('src="assets/demo.gif"', readme_text)
 
-    def test_readmes_show_agent_first_natural_language_flow(self) -> None:
+    def test_readmes_show_safe_agent_first_flow(self) -> None:
         english = (ROOT / "README.md").read_text(encoding="utf-8")
         korean = (ROOT / "README.ko.md").read_text(encoding="utf-8")
 
         for text in (english, korean):
-            self.assertIn('"Fix the login timeout."', text)
-            self.assertIn('context-pack start --task "fix login timeout"', text)
-            self.assertIn('"Login is broken."', text)
-            self.assertIn('context-pack start --task "login is broken"', text)
-            self.assertIn('"CI is red."', text)
-            self.assertIn('context-pack start --task "ci is red"', text)
-            self.assertIn('"Review this branch."', text)
+            self.assertIn("context-pack start --task", text)
             self.assertIn("context-pack start --review", text)
-            self.assertIn('"Look over my changes."', text)
-            self.assertIn('context-pack start --task "look over my changes"', text)
-            self.assertIn('"I\'m done for now."', text)
-            self.assertIn('context-pack start --task "I\'m done for now"', text)
-            self.assertIn('"Leave this easy to resume later."', text)
             self.assertIn("context-pack checkpoint --pack", text)
             self.assertIn("`.context-pack/`", text)
-            self.assertIn("`start`", text)
-            self.assertIn("source, tests", text)
-            self.assertIn("automation, source, tests", text)
-            self.assertIn("failing-test", text.lower())
-            self.assertIn("checkpoint --pack", text)
-            self.assertIn("agent contract", text.lower())
-        self.assertIn('"변경사항 봐줘."', korean)
-        self.assertIn('context-pack start --task "변경사항 봐줘"', korean)
-        self.assertIn('"버그 잡아줘."', korean)
-        self.assertIn('context-pack start --task "버그 잡아줘"', korean)
-        self.assertIn('"문제 해결해줘."', korean)
-        self.assertIn('context-pack start --task "문제 해결해줘"', korean)
-        self.assertIn('"작업 끝났어."', korean)
-        self.assertIn('context-pack start --task "작업 끝났어"', korean)
+            self.assertIn("setup --dry-run", text)
+            self.assertIn("transient", text)
+            self.assertIn("24", text)
+            self.assertIn("chars/4", text)
+            self.assertNotIn("C:/", text)
+            self.assertLessEqual(len(text.splitlines()), 220)
+        self.assertIn("not RAG", english)
+        self.assertIn("RAG가", korean)
+        self.assertIn("does not create `.context-pack/`, `AGENTS.md`, or `.gitignore`", english)
+        self.assertIn("`.context-pack/`, `AGENTS.md`, `.gitignore`를 만들지 않고", korean)
 
 
 if __name__ == "__main__":

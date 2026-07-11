@@ -14,9 +14,11 @@ import fnmatch
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -62,8 +64,13 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.2.20"
+CONTEXT_PACK_VERSION = "0.3.0"
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
+SMALL_REPO_FILE_THRESHOLD = 24
+PUBLISHED_LOG_MAX_ENTRIES = 30
+LOCAL_LOG_MAX_ENTRIES = 20
+BROAD_AREA_MIN_FILES = 20
+BROAD_AREA_RATIO = 0.65
 TEXT_BUDGET_BINARY_SUFFIXES = {
     ".7z",
     ".avif",
@@ -154,100 +161,38 @@ TOKEN_STOP_WORDS = {
 }
 CODE_TASK_TOKENS = {
     "bug",
+    "broken",
     "crash",
-    "crashed",
-    "crashes",
     "debug",
     "error",
     "exception",
     "fail",
     "failed",
-    "fails",
     "failing",
     "failure",
     "fix",
     "implement",
     "issue",
     "patch",
+    "problem",
     "regression",
     "refactor",
-    "고쳐줘",
-    "고쳐주세요",
-    "수정해줘",
-}
-ENGLISH_CODE_PROBLEM_PHRASES = (
-    " is broken ",
-    " are broken ",
-    " looks broken ",
-    " not working ",
-    " doesn't work ",
-    " doesnt work ",
-    " does not work ",
-    " won't work ",
-    " wont work ",
-    " stopped working ",
-)
-KOREAN_CODE_PROBLEM_PHRASES = (
     "버그",
     "오류",
     "에러",
     "문제",
-)
-KOREAN_CODE_ACTION_PHRASES = (
     "고쳐",
+    "고쳐줘",
     "수정",
-    "잡아",
-    "해결해",
-)
+    "수정해줘",
+    "해결해줘",
+}
 TASK_ACTION_TOKENS = CODE_TASK_TOKENS | {
-    "broken",
-    "problem",
     "review",
     "reviewed",
     "reviewing",
 }
-TEST_FAILURE_TOKENS = {
-    "broken",
-    "crash",
-    "debug",
-    "error",
-    "exception",
-    "fail",
-    "failed",
-    "fails",
-    "failing",
-    "failure",
-    "red",
-    "실패",
-    "실패해",
-    "실패함",
-}
-TEST_SCOPE_TOKENS = {
-    "spec",
-    "specs",
-    "test",
-    "tests",
-    "테스트",
-}
-CI_BUILD_SCOPE_TOKENS = {
-    "action",
-    "actions",
-    "build",
-    "builds",
-    "pipeline",
-    "pipelines",
-    "workflow",
-    "workflows",
-}
-CI_BUILD_RED_PHRASES = (
-    " ci is red ",
-    " ci went red ",
-    " build is red ",
-    " build went red ",
-    " actions are red ",
-    " pipeline is red ",
-    " workflow is red ",
-)
+FAILURE_TOKENS = CODE_TASK_TOKENS | {"red", "실패", "실패해", "실패함"}
 ROUTE_NOISE_TOKENS = {
     "agent",
     "agents",
@@ -255,93 +200,6 @@ ROUTE_NOISE_TOKENS = {
     "pack",
     "packs",
 }
-REVIEW_INTENT_TOKENS = {
-    "branch",
-    "change",
-    "changed",
-    "changes",
-    "commit",
-    "commits",
-    "diff",
-    "pr",
-    "pull",
-    "request",
-}
-ENGLISH_REVIEW_ACTION_PHRASES = (
-    " look over ",
-    " take a look at ",
-    " look at ",
-    " inspect ",
-    " audit ",
-)
-ENGLISH_REVIEW_TARGET_PHRASES = (
-    " pull request ",
-    " pr ",
-    " my changes ",
-    " the changes ",
-    " this change ",
-    " this branch ",
-    " this commit ",
-    " this diff ",
-    " my code ",
-    " this code ",
-)
-KOREAN_REVIEW_ACTION_PHRASES = (
-    "리뷰",
-    "검토",
-    "봐줘",
-    "살펴",
-    "확인해",
-)
-KOREAN_REVIEW_TARGET_PHRASES = (
-    "브랜치",
-    "변경",
-    "변경사항",
-    "커밋",
-    "차이",
-    " pr ",
-    " pull request ",
-)
-CONTINUATION_INTENT_TOKENS = {
-    "continue",
-    "left",
-    "resume",
-    "session",
-}
-HANDOFF_INTENT_TOKENS = {
-    "another",
-    "checkpoint",
-    "done",
-    "easy",
-    "handoff",
-    "later",
-    "machine",
-    "resume",
-    "session",
-    "state",
-    "work",
-}
-ENGLISH_CHECKPOINT_PHRASES = (
-    " done for now ",
-    " i am done for now ",
-    " i'm done for now ",
-    " wrap this up ",
-    " wrap it up ",
-    " wrap up this work ",
-    " pause here ",
-    " stop here ",
-    " leave it here ",
-    " leave this here ",
-)
-KOREAN_CHECKPOINT_PHRASES = (
-    "작업 끝났",
-    "작업 끝냈",
-    "오늘은 여기까지",
-    "여기까지 하고",
-    "여기서 멈",
-    "이따 이어",
-    "다음에 이어",
-)
 
 
 @dataclasses.dataclass
@@ -439,11 +297,15 @@ def normalize_path(value: str | Path) -> str:
     return str(value).replace("\\", "/").strip("/")
 
 
+def absolute_shell_path(value: str | Path) -> str:
+    return Path(value).resolve().as_posix()
+
+
 def rel_to_repo(path: Path, repo: Path) -> str:
     try:
         return normalize_path(path.resolve().relative_to(repo.resolve()))
     except ValueError:
-        return normalize_path(path)
+        return path.resolve().as_posix()
 
 
 def run(
@@ -453,13 +315,16 @@ def run(
     text: bool = True,
     check: bool = False,
 ) -> subprocess.CompletedProcess[Any]:
-    return subprocess.run(
-        cmd,
-        cwd=str(cwd),
-        capture_output=True,
-        text=text,
-        check=check,
-    )
+    kwargs: dict[str, Any] = {
+        "cwd": str(cwd),
+        "capture_output": True,
+        "check": check,
+    }
+    if text:
+        kwargs.update(text=True, encoding="utf-8", errors="surrogateescape")
+    else:
+        kwargs["text"] = False
+    return subprocess.run(cmd, **kwargs)
 
 
 def git_text(repo: Path, args: list[str]) -> str | None:
@@ -480,6 +345,45 @@ def git_bytes(repo: Path, args: list[str]) -> bytes:
     if proc.returncode != 0:
         return b""
     return proc.stdout
+
+
+def decode_git_path(value: bytes) -> str:
+    return value.decode("utf-8", errors="surrogateescape")
+
+
+def git_path_list(repo: Path, args: list[str]) -> list[str] | None:
+    try:
+        proc = run(["git", *args], repo, text=False)
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return [normalize_path(decode_git_path(item)) for item in proc.stdout.split(b"\0") if item]
+
+
+def status_lines_from_porcelain_z(data: bytes) -> list[str]:
+    parts = data.split(b"\0")
+    lines: list[str] = []
+    index = 0
+    while index < len(parts):
+        record = parts[index]
+        index += 1
+        if not record:
+            continue
+        if len(record) < 3:
+            continue
+        code = decode_git_path(record[:2])
+        destination = normalize_path(decode_git_path(record[3:]))
+        if "R" in code or "C" in code:
+            source = ""
+            if index < len(parts):
+                source = normalize_path(decode_git_path(parts[index]))
+                index += 1
+            path = f"{source} -> {destination}" if source else destination
+        else:
+            path = destination
+        lines.append(f"{code} {path}")
+    return lines
 
 
 def find_repo_root(start: Path) -> tuple[Path, bool]:
@@ -537,8 +441,8 @@ def compute_diff_hash(repo: Path, status_lines: list[str]) -> str:
 
 def collect_snapshot(start: Path) -> Snapshot:
     repo, is_git = find_repo_root(start)
-    status = git_text(repo, ["status", "--porcelain=v1", "-uall"]) if is_git else None
-    status_lines = status.splitlines() if status else []
+    status_data = git_bytes(repo, ["status", "--porcelain=v1", "-z", "-uall"]) if is_git else b""
+    status_lines = status_lines_from_porcelain_z(status_data)
     branch = git_text(repo, ["branch", "--show-current"]) if is_git else None
     if is_git and not branch:
         branch = git_text(repo, ["rev-parse", "--abbrev-ref", "HEAD"])
@@ -608,6 +512,7 @@ def default_manifest(layout: ContextLayout | None = None) -> dict[str, Any]:
         "generated_by": "context-pack",
         "areas": {
             "overview": {
+                "kind": "overview",
                 "doc": path_text(layout.areas_dir / "overview.md"),
                 "description": "Default project orientation and safe starting point.",
                 "paths": [
@@ -702,12 +607,12 @@ WEB_SOURCE_START_FILES = [
     "client/js/*.js",
     "server/js/*.js",
     "shared/js/*.js",
-    "client/src",
-    "server/src",
-    "shared/src",
-    "frontend/src",
-    "backend/src",
-    "web/src",
+    "client/src/*",
+    "server/src/*",
+    "shared/src/*",
+    "frontend/src/*",
+    "backend/src/*",
+    "web/src/*",
 ]
 
 GO_SOURCE_DIR_EXCLUDES = SOURCE_TOP_LEVEL_EXCLUDES | {
@@ -790,7 +695,18 @@ def discovered_go_test_files(repo: Path, limit: int = GO_TEST_FILE_LIMIT) -> lis
 
 def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
     paths = ["src/**", "lib/**", "app/**", "packages/**"] + WEB_SOURCE_PATHS + RUST_SOURCE_PATHS
-    start_files = ["src", "lib", "app", "packages"] + WEB_SOURCE_START_FILES + RUST_SOURCE_START_FILES
+    start_files = [
+        "src/*.py",
+        "src/*.js",
+        "src/*.ts",
+        "lib/*.py",
+        "lib/*.js",
+        "lib/*.ts",
+        "app/*.py",
+        "app/*.js",
+        "app/*.ts",
+        "packages/*/src/*",
+    ] + WEB_SOURCE_START_FILES + RUST_SOURCE_START_FILES
     for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
         if not child.is_dir():
             continue
@@ -799,7 +715,7 @@ def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
             continue
         if (child / "__init__.py").is_file():
             paths.append(f"{name}/**")
-            start_files.append(name)
+            start_files.extend([f"{name}/__init__.py", f"{name}/*.py"])
     go_source_files = discovered_go_source_files(repo)
     if go_source_files:
         paths.extend(["*.go", "cmd/**", "internal/**", "pkg/**"])
@@ -810,7 +726,14 @@ def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
 
 def inferred_test_paths(repo: Path) -> tuple[list[str], list[str]]:
     paths = ["tests/**", "test/**", "__tests__/**", "spec/**"]
-    start_files = ["tests", "test", "__tests__", "spec"]
+    start_files = [
+        "tests/test_*.py",
+        "tests/*_test.py",
+        "test/test_*.py",
+        "test/*_test.py",
+        "__tests__/*",
+        "spec/*",
+    ]
     go_test_files = discovered_go_test_files(repo)
     if go_test_files:
         paths.extend(["*_test.go", "**/*_test.go"])
@@ -824,6 +747,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
     test_paths, test_start_files = inferred_test_paths(repo)
     candidates = {
         "source": {
+            "kind": "source",
             "doc": path_text(layout.areas_dir / "source.md"),
             "description": "Application or library source code.",
             "paths": source_paths,
@@ -840,23 +764,10 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "frontend",
                 "backend",
                 "web",
-                "mobile",
-                "touch",
-                "canvas",
-                "websocket",
-                "socket",
-                "loading",
                 "go",
                 "golang",
-                "middleware",
-                "handler",
-                "filter",
-                "regex",
-                "match",
-                "matching",
                 "route",
                 "router",
-                "panic",
                 "rust",
                 "crate",
             ],
@@ -871,13 +782,21 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "stale_if_paths": source_paths,
         },
         "assets": {
+            "kind": "assets",
             "doc": path_text(layout.areas_dir / "assets.md"),
-            "description": "Static assets and frontend media that do not have a more specific inferred area.",
+            "description": "Static assets and frontend media.",
             "paths": [
                 "assets/**",
                 "public/assets/**",
                 "static/**",
                 "shared/assets/**",
+                "client/sprites/**",
+                "client/maps/**",
+                "client/img/**",
+                "client/audio/**",
+                "public/img/**",
+                "public/audio/**",
+                "media/**",
             ],
             "start_files": [
                 "assets",
@@ -886,7 +805,7 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "shared/assets",
             ],
             "tests": [],
-            "keywords": ["asset", "assets", "static", "media"],
+            "keywords": ["asset", "assets", "static", "media", "image", "audio"],
             "contracts": [
                 "Verify asset paths against the loader code before renaming or moving files.",
                 "Keep generated or exported asset formats compatible with runtime consumers.",
@@ -900,60 +819,17 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
                 "public/assets/**",
                 "static/**",
                 "shared/assets/**",
+                "client/sprites/**",
+                "client/maps/**",
+                "client/img/**",
+                "client/audio/**",
+                "public/img/**",
+                "public/audio/**",
+                "media/**",
             ],
-        },
-        "sprites": {
-            "doc": path_text(layout.areas_dir / "sprites.md"),
-            "description": "Sprite manifests, animation metadata, and game entity visual definitions.",
-            "paths": ["client/sprites/**", "sprites/**"],
-            "start_files": ["client/sprites", "sprites"],
-            "tests": [],
-            "keywords": ["sprite", "sprites", "animation", "animations", "entity", "entities"],
-            "contracts": [
-                "Sprite metadata must match the loader and renderer expectations.",
-                "Sprite names and frame data should stay compatible with entity and item references.",
-            ],
-            "failure_modes": [
-                "Debugging renderer code while ignoring missing or renamed sprite manifests.",
-                "Changing sprite metadata without checking references from gameplay code.",
-            ],
-            "stale_if_paths": ["client/sprites/**", "sprites/**"],
-        },
-        "maps": {
-            "doc": path_text(layout.areas_dir / "maps.md"),
-            "description": "Map, level, tile, and world data plus map conversion tooling.",
-            "paths": ["client/maps/**", "server/maps/**", "tools/maps/**", "maps/**"],
-            "start_files": ["client/maps", "server/maps", "tools/maps", "maps"],
-            "tests": [],
-            "keywords": ["map", "maps", "level", "levels", "tile", "tiles", "world", "tmx"],
-            "contracts": [
-                "Client and server map data must describe compatible world geometry.",
-                "Generated map data should be regenerated or verified when conversion tools change.",
-            ],
-            "failure_modes": [
-                "Fixing only client map data while server collision or spawn data still disagrees.",
-                "Reading large map exports before checking the converter or failing map section.",
-            ],
-            "stale_if_paths": ["client/maps/**", "server/maps/**", "tools/maps/**", "maps/**"],
-        },
-        "media": {
-            "doc": path_text(layout.areas_dir / "media.md"),
-            "description": "Images, audio, cursors, and presentation media for frontend or game clients.",
-            "paths": ["client/img/**", "client/audio/**", "public/img/**", "public/audio/**", "media/**"],
-            "start_files": ["client/img", "client/audio", "public/img", "public/audio", "media"],
-            "tests": [],
-            "keywords": ["image", "images", "audio", "sound", "sounds", "cursor", "media"],
-            "contracts": [
-                "Runtime asset URLs should match deployed file paths and cache assumptions.",
-                "Binary media should be verified by path and metadata rather than read as text.",
-            ],
-            "failure_modes": [
-                "Assuming media files are text-readable or useful to load into the model.",
-                "Changing references without checking generated bundles or preload lists.",
-            ],
-            "stale_if_paths": ["client/img/**", "client/audio/**", "public/img/**", "public/audio/**", "media/**"],
         },
         "tests": {
+            "kind": "tests",
             "doc": path_text(layout.areas_dir / "tests.md"),
             "description": "Test suites, fixtures, and validation commands.",
             "paths": test_paths,
@@ -970,10 +846,11 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "stale_if_paths": test_paths,
         },
         "docs": {
+            "kind": "docs",
             "doc": path_text(layout.areas_dir / "docs.md"),
             "description": "User-facing docs, onboarding notes, and repository guidance.",
             "paths": ["README.md", "README.*.md", "docs/**"],
-            "start_files": ["README.md", "docs"],
+            "start_files": ["README.md", "docs/README.md", "docs/index.md"],
             "tests": [],
             "keywords": ["docs", "readme", "agents", "claude", "onboarding", "usage", "adoption", "proof"],
             "contracts": [
@@ -987,10 +864,18 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
             "stale_if_paths": ["README.md", "README.*.md", "docs/**"],
         },
         "automation": {
+            "kind": "automation",
             "doc": path_text(layout.areas_dir / "automation.md"),
             "description": "Build, release, scripts, CI, packaging, and developer automation.",
             "paths": [".github/**", "scripts/**", "pyproject.toml", "package.json", "Makefile"],
-            "start_files": ["pyproject.toml", "package.json", "Makefile", ".github/workflows", "scripts"],
+            "start_files": [
+                "pyproject.toml",
+                "package.json",
+                "Makefile",
+                ".github/workflows/*.yml",
+                ".github/workflows/*.yaml",
+                "scripts/*.py",
+            ],
             "tests": [".github/workflows/**"],
             "keywords": ["automation", "ci", "release", "scripts", "packaging"],
             "contracts": [
@@ -1065,6 +950,21 @@ def load_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, 
     data.setdefault("version", 1)
     data.setdefault("areas", {})
     return data
+
+
+def inferred_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
+    layout = layout or PRIMARY_LAYOUT
+    return merge_inferred_areas(repo, default_manifest(layout), layout)
+
+
+def transient_pack_path(repo: Path, snapshot: Snapshot) -> Path:
+    if snapshot.is_git:
+        git_path = git_text(repo, ["rev-parse", "--git-path", "context-pack/CONTEXT_PACK.md"])
+        if git_path:
+            path = Path(git_path)
+            return path.resolve() if path.is_absolute() else (repo / path).resolve()
+    key = hashlib.sha256(str(repo.resolve()).encode("utf-8", errors="surrogateescape")).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / "context-pack" / key / "CONTEXT_PACK.md"
 
 
 def write_text_lf(path: Path, content: str) -> None:
@@ -1173,7 +1073,7 @@ stale_if:
 
 ## Common Failure Modes
 - Trusting stale summaries after the code moved on.
-- Reading append-only logs before the current source of truth.
+- Reading checkpoint history before the current source of truth.
 - Editing a copied checkout or generated file instead of the canonical workspace.
 
 ## Expand Scope If
@@ -1294,6 +1194,22 @@ def checkpoint_entry(snapshot: Snapshot) -> str:
     )
 
 
+def compact_checkpoint_log(text: str, max_entries: int) -> str:
+    lines = text.splitlines()
+    starts = [index for index, line in enumerate(lines) if line.startswith("## 20") and "T" in line]
+    if len(starts) <= max_entries:
+        return text.rstrip() + "\n"
+    keep_from = starts[-max_entries]
+    prefix = lines[: starts[0]]
+    kept = lines[keep_from:]
+    return "\n".join(prefix).rstrip() + "\n\n" + "\n".join(kept).rstrip() + "\n"
+
+
+def append_checkpoint_entry(path: Path, entry: str, *, max_entries: int) -> None:
+    text = read_text(path)
+    write_text_lf(path, compact_checkpoint_log(text.rstrip() + "\n" + entry.lstrip(), max_entries))
+
+
 def checkpoint_pack_base(repo: Path, layout: ContextLayout, snapshot: Snapshot, *, publish: bool) -> str | None:
     if not snapshot.is_git or snapshot.dirty_files:
         return None
@@ -1349,29 +1265,21 @@ def agent_rules_document(kind: str, layout: ContextLayout | None = None) -> str:
 
 
 def agent_rules_body(layout: ContextLayout | None = None) -> str:
-    layout = layout or PRIMARY_LAYOUT
-    pack_path = path_text(layout.pack_path)
     return f"""\
 ## Context Pack
 
-Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
+Use Context Pack quietly when a non-trivial coding, debugging, review, or handoff request would otherwise require broad repo reading. The user does not need to name the tool.
 
-Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", "I'm done for now", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+- Coding/debugging: `context-pack start --task "<short task>"`
+- Branch or PR review: `context-pack start --review`; add `--base <ref>` when known.
+- Dirty files are the only signal: `context-pack start --changed`
+- Read the pack path printed by `start`, then verify relevant source before editing.
 
-Run it only when repo orientation would save broad reading or preserve useful handoff state:
-- Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
-- Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
-- Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
-- Changed files are the only signal: `context-pack start --changed`
-- Missing `.context-pack/` during a normal task: still use `context-pack start`; it auto-initializes lightweight context docs.
-- Explicit install/configuration request: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for broken setup.
-- End of meaningful work or handoff: `context-pack checkpoint --pack`
+On an unconfigured repo, `start` is transient and must not create `.context-pack/`, `AGENTS.md`, or `.gitignore`. Run `context-pack setup --dry-run` and `context-pack setup` only when the user explicitly asks to persist Context Pack in the repo.
 
-Skip Context Pack for pure Q&A, tiny obvious single-file edits, or tasks where the relevant files and tests are already clear.
+Skip pure Q&A, tiny obvious edits, already-known files, and small repos where `start` says broad reading is cheaper.
 
-When a pack is generated, read `{pack_path}` before broad source reads. Treat context docs as routing hints, not ground truth; verify against source when state, stale warnings, or code behavior disagree.
-
-Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
+After meaningful work in a configured repo, run `context-pack checkpoint --pack`. Use `--publish` only when the handoff should be committed and shared through git. Treat all context docs as routing hints, never as source of truth.
 """
 
 
@@ -1419,59 +1327,6 @@ def render_index(manifest: dict[str, Any], layout: ContextLayout | None = None) 
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_review(manifest: dict[str, Any]) -> str:
-    lines = [
-        "# Review Router",
-        "",
-        "For code review, map changed files to areas, then check the listed contracts, tests, and failure modes before widening scope.",
-        "",
-        "## Area Routing",
-    ]
-    for area_id, area in sorted((manifest.get("areas") or {}).items()):
-        lines.extend(["", f"### {area_id}", f"- Doc: `{area.get('doc', '')}`"])
-        paths = area.get("paths", []) or []
-        if paths:
-            lines.append("- If changed files match:")
-            for item in paths:
-                lines.append(f"  - `{item}`")
-        tests = area.get("tests", []) or []
-        if tests:
-            lines.append("- Inspect/run tests:")
-            for item in tests:
-                lines.append(f"  - `{item}`")
-        failures = area.get("failure_modes", []) or []
-        if failures:
-            lines.append("- Common failure modes:")
-            for item in failures:
-                lines.append(f"  - {item}")
-    lines.extend(
-        [
-            "",
-            "## Escalate Review Scope When",
-            "- Public API, CLI, schema, storage format, subprocess launch, or cache/session identity changed.",
-            "- Tests or test helpers changed in a way that may hide behavior.",
-            "- A changed file does not map to any known area.",
-        ]
-    )
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def render_contracts(manifest: dict[str, Any]) -> str:
-    lines = [
-        "# Project Contracts",
-        "",
-        "Use this as a compact checklist. Keep area-specific details in `AREAS/*.md`.",
-    ]
-    for area_id, area in sorted((manifest.get("areas") or {}).items()):
-        contracts = area.get("contracts", []) or []
-        if not contracts:
-            continue
-        lines.extend(["", f"## {area_id}"])
-        for item in contracts:
-            lines.append(f"- {item}")
-    if len(lines) == 3:
-        lines.extend(["", "- No contracts recorded yet."])
-    return "\n".join(lines).rstrip() + "\n"
 
 
 def gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
@@ -1622,8 +1477,6 @@ def setup_context_target_actions(
     targets.extend(
         [
             (setup_file_action(repo, layout.index_path, force=force), layout.index_path),
-            (setup_file_action(repo, layout.review_path, force=force), layout.review_path),
-            (setup_file_action(repo, layout.contracts_path, force=force), layout.contracts_path),
             (setup_file_action(repo, layout.current_path, force=force), layout.current_path),
             (setup_file_action(repo, layout.log_path, force=force), layout.log_path),
             (setup_file_action(repo, layout.decisions_path, force=force), layout.decisions_path),
@@ -1817,10 +1670,12 @@ def cmd_init(args: argparse.Namespace) -> int:
             continue
         write_if_missing(repo / normalize_path(area.get("doc", "")), generic_area_doc(area_id, area, snapshot, layout), force=args.force)
     write_if_missing(repo / layout.index_path, render_index(manifest, layout), force=args.force)
-    write_if_missing(repo / layout.review_path, render_review(manifest), force=args.force)
-    write_if_missing(repo / layout.contracts_path, render_contracts(manifest), force=args.force)
     write_if_missing(repo / layout.current_path, current_doc(snapshot, layout), force=args.force)
-    write_if_missing(repo / layout.log_path, "# Context Pack Log\n\nAppend-only operational log.\n", force=args.force)
+    write_if_missing(
+        repo / layout.log_path,
+        "# Context Pack Log\n\nRecent published checkpoints only; older history remains available in git.\n",
+        force=args.force,
+    )
     write_if_missing(repo / layout.decisions_path, "# Decisions\n\nRecord durable direction changes only.\n", force=args.force)
     write_if_missing(repo / layout.local_path, local_checkpoint_doc(snapshot, layout), force=args.force)
 
@@ -1849,6 +1704,11 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
     layout = resolve_layout(repo, for_write=True)
+    if not (repo / layout.manifest_path).exists():
+        if not args.quiet:
+            print("Context Pack is not configured; no checkpoint files were written.")
+            print("Run `context-pack setup --dry-run` only when persistent handoff state is wanted.")
+        return 1
     ensure_dirs(repo, layout)
     pack_base = checkpoint_pack_base(repo, layout, snapshot, publish=args.publish) if args.pack else None
 
@@ -1862,9 +1722,11 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         write_text_lf(repo / layout.current_path, current)
 
         if not (repo / layout.log_path).exists():
-            write_if_missing(repo / layout.log_path, "# Context Pack Log\n\nAppend-only operational log.\n")
-        with (repo / layout.log_path).open("a", encoding="utf-8", newline="\n") as handle:
-            handle.write(entry)
+            write_if_missing(
+                repo / layout.log_path,
+                "# Context Pack Log\n\nRecent published checkpoints only; older history remains available in git.\n",
+            )
+        append_checkpoint_entry(repo / layout.log_path, entry, max_entries=PUBLISHED_LOG_MAX_ENTRIES)
         checkpoint_path = layout.current_path
         checkpoint_kind = "Published handoff"
     else:
@@ -1875,7 +1737,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         local = replace_marker(local, FINGERPRINT_START, FINGERPRINT_END, render_fingerprint(snapshot))
         if "## Local Log" not in local:
             local = local.rstrip() + "\n\n## Local Log\n"
-        local = local.rstrip() + "\n" + entry.lstrip("\n")
+        local = compact_checkpoint_log(local.rstrip() + "\n" + entry.lstrip("\n"), LOCAL_LOG_MAX_ENTRIES)
         write_text_lf(repo / layout.local_path, local)
         checkpoint_path = layout.local_path
         checkpoint_kind = "Local checkpoint"
@@ -1914,58 +1776,40 @@ def cmd_start(args: argparse.Namespace) -> int:
     repo = snapshot.repo_root
     layout = resolve_layout(repo)
     had_context = (repo / layout.manifest_path).exists()
-    initialized = False
-
-    if not had_context:
-        if args.no_init:
-            if not args.quiet:
-                print(f"Context Pack Start for {repo}")
-                print("Context library: missing")
-                print("")
-                print("Next:")
-                print("- Run `context-pack setup` or rerun `context-pack start` without `--no-init`.")
-            return 1
-        init_args = argparse.Namespace(
-            repo=str(repo),
-            quiet=True,
-            force=False,
-            no_agent_doc=args.no_agent_doc,
-            agent_doc=args.agent_doc,
-        )
-        result = cmd_init(init_args)
-        if result != 0:
-            return result
-        initialized = True
-        snapshot = collect_snapshot(repo)
-        layout = resolve_layout(repo)
+    transient = not had_context
+    manifest = load_manifest(repo, layout) if had_context else inferred_manifest(repo, layout)
+    repo_file_total = len(repo_files(repo))
 
     mode = "work"
     changed = False
     pack_reason = ""
-    task_intent = infer_start_task_intent(args.task)
 
-    if args.review or args.base or task_intent == "review":
+    if args.review or args.base:
         mode = "review"
         changed = True
         pack_reason = "review"
         args.mode = mode
         review_base_inferred = maybe_infer_review_base(args, repo, snapshot)
-    elif task_intent in {"continue", "checkpoint"}:
-        review_base_inferred = False
     elif args.task:
         review_base_inferred = False
-        changed = args.changed or (bool(snapshot.dirty_files) and not initialized)
+        changed = args.changed or (transient and bool(snapshot.dirty_files))
         pack_reason = "task"
-    elif args.changed or (snapshot.dirty_files and not initialized):
+    elif args.changed or snapshot.dirty_files:
         review_base_inferred = False
         changed = True
         pack_reason = "changed files"
     else:
         review_base_inferred = False
 
-    pack_generated = bool(pack_reason)
+    small_repo_skip = transient and not args.output and repo_file_total <= SMALL_REPO_FILE_THRESHOLD
+    pack_generated = bool(pack_reason) and not small_repo_skip
     selected: list[AreaSelection] = []
-    output_path = Path(args.output) if args.output else repo / layout.pack_path
+    if args.output:
+        output_path = Path(args.output)
+    elif transient:
+        output_path = transient_pack_path(repo, snapshot)
+    else:
+        output_path = repo / layout.pack_path
     if not output_path.is_absolute():
         output_path = repo / output_path
 
@@ -1982,10 +1826,13 @@ def cmd_start(args: argparse.Namespace) -> int:
             max_read_first=args.max_read_first,
             max_contracts=args.max_contracts,
             max_failure_modes=args.max_failure_modes,
+            text_budget=args.text_budget,
+            manifest=manifest,
+            layout=layout,
+            transient=transient,
         )
-        manifest = load_manifest(repo, layout)
         changed_files = resolve_changed_files(repo, snapshot, pack_args)
-        selected = selected_area_matches(manifest, changed_files=changed_files, task=args.task)[: args.max_areas]
+        selected = selected_area_matches(manifest, changed_files=changed_files, task=args.task, repo=repo)[: args.max_areas]
         result = build_pack(pack_args)
         if result != 0:
             return result
@@ -1993,10 +1840,10 @@ def cmd_start(args: argparse.Namespace) -> int:
     if not args.quiet:
         print(f"Context Pack Start for {repo}")
         print(f"Git: {'yes' if snapshot.is_git else 'no'}; branch: {snapshot.branch}; HEAD: {snapshot.head}")
-        if initialized:
-            print(f"Initialized: {normalize_path(layout.manifest_path)}")
-        else:
+        if had_context:
             print("Context library: ok")
+        else:
+            print("Context library: transient; no repository files were changed")
         print(f"Dirty files: {len(snapshot.dirty_files)}; diff hash: {snapshot.diff_hash}")
         print("")
         if pack_generated:
@@ -2006,7 +1853,6 @@ def cmd_start(args: argparse.Namespace) -> int:
                 print(f"Review base: {args.base}{suffix}")
             print("Selected areas: " + (", ".join(item.area_id for item in selected) if selected else "none"))
             print_selection_reasons("Why selected:", selected)
-            repo_file_total = len(repo_files(repo))
             if repo_file_total:
                 print(f"Scope reduction: start from {len(selected)} area(s) instead of scanning {repo_file_total} repo file(s)")
             text_budget = pack_text_budget_summary(output_path)
@@ -2016,35 +1862,28 @@ def cmd_start(args: argparse.Namespace) -> int:
             print("Read next:")
             print(f"- {rel_to_repo(output_path, repo)}")
             for item in selected:
-                area = (load_manifest(repo, layout).get("areas") or {}).get(item.area_id, {})
+                area = (manifest.get("areas") or {}).get(item.area_id, {})
                 doc = area.get("doc")
-                if doc:
+                if doc and (repo / doc).is_file():
                     print(f"- {doc}")
         else:
-            if task_intent == "checkpoint":
-                print("No pack generated: handoff/checkpoint wording was detected.")
-            elif task_intent == "continue":
-                print("No pack generated: continuation wording was detected.")
+            if small_repo_skip:
+                print(
+                    f"No pack generated: this unconfigured repo has {repo_file_total} files; "
+                    "broad reading is likely cheaper."
+                )
             else:
                 print("No pack generated: no task, review request, or pre-existing dirty files were found.")
             print("")
-            if task_intent == "checkpoint":
-                print("Detected handoff/checkpoint wording.")
-                print("")
-                print("Run next:")
-                print("- `context-pack checkpoint --pack`")
-                print("- `context-pack checkpoint --publish --pack` when the handoff should travel through git")
-            else:
+            if had_context:
                 print("Read next:")
                 print(f"- {normalize_path(layout.current_path)}")
                 print(f"- {normalize_path(layout.index_path)}")
-                print("")
-                print("Optional next commands:")
-                print('- `context-pack start --task "..."` for a focused work pack')
-                print("- `context-pack start --review` for a review pack")
-                print("- `context-pack start --changed` if you want to force dirty-file routing")
+            elif not small_repo_skip:
+                print("Run `context-pack setup --dry-run` only when persistent repo context is wanted.")
         print("")
-        print("End-of-work checkpoint: `context-pack checkpoint --pack`")
+        if had_context:
+            print("End-of-work checkpoint: `context-pack checkpoint --pack`")
     return 0
 
 
@@ -2071,50 +1910,63 @@ def tokenize(value: str) -> set[str]:
     cleaned = []
     for ch in value.lower():
         cleaned.append(ch if ch.isalnum() else " ")
-    return {part for part in "".join(cleaned).split() if len(part) >= 3 and part not in TOKEN_STOP_WORDS}
+    return {
+        part
+        for part in "".join(cleaned).split()
+        if (len(part) >= 3 or part == "ci" or (len(part) >= 2 and any(ord(ch) > 127 for ch in part)))
+        and part not in TOKEN_STOP_WORDS
+    }
 
 
-def contains_any(text: str, phrases: Iterable[str]) -> bool:
-    return any(phrase in text for phrase in phrases)
+def area_role(area_id: str, area: dict[str, Any]) -> str:
+    explicit = str(area.get("kind", "")).strip().lower()
+    if explicit:
+        return explicit
 
+    identity = tokenize(f"{area_id} {area.get('description', '')}")
+    role_words = {
+        "overview": {"overview", "orientation"},
+        "tests": {"test", "tests", "spec", "specs", "qa"},
+        "docs": {"doc", "docs", "documentation", "readme"},
+        "automation": {"automation", "build", "ci", "deploy", "installer", "packaging", "release", "workflow"},
+        "assets": {"asset", "assets", "audio", "image", "media", "static"},
+        "source": {"api", "app", "application", "backend", "cli", "client", "core", "engine", "frontend", "library", "runtime", "server", "source"},
+    }
+    for role in ("overview", "tests", "docs", "automation", "assets", "source"):
+        if identity & role_words[role]:
+            return role
 
-def infer_start_task_intent(task: str | None) -> str:
-    if not task:
-        return ""
-    text = f" {task.lower()} "
-    tokens = tokenize(task)
-    english_review_action = "review" in tokens or contains_any(text, ENGLISH_REVIEW_ACTION_PHRASES)
-    english_review_target = bool(tokens & REVIEW_INTENT_TOKENS) or contains_any(text, ENGLISH_REVIEW_TARGET_PHRASES)
-    korean_review_action = contains_any(text, KOREAN_REVIEW_ACTION_PHRASES)
-    korean_review_target = contains_any(text, KOREAN_REVIEW_TARGET_PHRASES)
-    if (english_review_action and english_review_target) or (korean_review_action and korean_review_target):
-        return "review"
-    if (
-        "checkpoint" in tokens
-        or contains_any(text, ENGLISH_CHECKPOINT_PHRASES)
-        or ("handoff" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"handoff"})))
-        or " hand off " in text
-        or ("later" in tokens and bool(tokens & (HANDOFF_INTENT_TOKENS - {"later"})))
-        or contains_any(text, KOREAN_CHECKPOINT_PHRASES)
-        or (contains_any(text, ["나중", "인계"]) and contains_any(text, ["이어", "정리", "넘겨"]))
-        or ("정리" in text and contains_any(text, ["이어", "세션", "인계"]))
-    ):
-        return "checkpoint"
-    if (
-        "where we left off" in text
-        or ("continue" in tokens and bool(tokens & (CONTINUATION_INTENT_TOKENS - {"continue"})))
-        or ("resume" in tokens and bool(tokens & {"session", "work"}))
-        or contains_any(text, ["이어가", "이어서", "계속 이어"])
-    ):
-        return "continue"
+    paths = " ".join(str(item) for item in area.get("paths", []) or []).lower()
+    if any(token in paths for token in ("tests/", "test/", "__tests__", "spec/", "*_test.")):
+        return "tests"
+    if any(token in paths for token in ("readme", "docs/", "*.md")):
+        return "docs"
+    if any(token in paths for token in (".github/", "workflows/", "pyproject.toml", "package.json", "makefile")):
+        return "automation"
+    if any(token in paths for token in ("assets/", "static/", "media/", "*.png", "*.jpg", "*.mp3")):
+        return "assets"
+    if area.get("paths"):
+        return "source"
     return ""
 
 
-def area_text(area_id: str, area: dict[str, Any]) -> str:
-    parts = [area_id, area.get("description", "")]
-    parts.extend(area.get("keywords", []) or [])
-    parts.extend(area.get("paths", []) or [])
-    return " ".join(str(part) for part in parts)
+def area_routing_text(repo: Path | None, area_id: str, area: dict[str, Any]) -> tuple[set[str], set[str]]:
+    strong_parts = [area_id, area.get("kind", "")]
+    strong_parts.extend(area.get("keywords", []) or [])
+    support_parts = [area.get("description", "")]
+    for field in ("paths", "start_files", "contracts", "failure_modes"):
+        support_parts.extend(area.get(field, []) or [])
+    if repo is not None:
+        doc = area_doc_path(repo, area)
+        if doc.is_file():
+            markdown = read_text(doc)
+            for heading in ("Read When", "Start With", "Contracts", "Common Failure Modes"):
+                support_parts.extend(extract_section_bullets(markdown, heading))
+    return tokenize(" ".join(str(item) for item in strong_parts)), tokenize(" ".join(str(item) for item in support_parts))
+
+
+def area_ids_for_role(areas: dict[str, Any], role: str) -> list[str]:
+    return [area_id for area_id, area in areas.items() if area_role(area_id, area) == role]
 
 
 def selected_area_matches(
@@ -2122,11 +1974,12 @@ def selected_area_matches(
     *,
     changed_files: list[str],
     task: str | None,
+    repo: Path | None = None,
 ) -> list[AreaSelection]:
     areas = manifest.get("areas") or {}
     selections: list[AreaSelection] = []
     task_tokens = tokenize(task or "")
-    task_text = f" {task.lower()} " if task else ""
+    route_tokens = task_tokens - TASK_ACTION_TOKENS - ROUTE_NOISE_TOKENS
 
     for area_id, area in areas.items():
         score = 0
@@ -2148,12 +2001,14 @@ def selected_area_matches(
             more = len(unique(matched_files)) - 3
             reasons.append(f"changed files matched: {shown}" + (f" (+{more} more)" if more > 0 else ""))
 
-        route_tokens = task_tokens - TASK_ACTION_TOKENS - ROUTE_NOISE_TOKENS
         if route_tokens:
-            overlap = route_tokens & tokenize(area_text(area_id, area))
-            if overlap:
-                score += 6 * len(overlap)
-                reasons.append("task matched keywords: " + ", ".join(sorted(overlap)[:5]))
+            strong_tokens, support_tokens = area_routing_text(repo, area_id, area)
+            strong_overlap = route_tokens & strong_tokens
+            support_overlap = (route_tokens & support_tokens) - strong_overlap
+            if strong_overlap or support_overlap:
+                score += 8 * len(strong_overlap) + 3 * len(support_overlap)
+                overlap = sorted(strong_overlap | support_overlap)
+                reasons.append("task matched area metadata: " + ", ".join(overlap[:5]))
 
         if area_id == "overview" and score > 0:
             score = min(score, 3)
@@ -2170,65 +2025,45 @@ def selected_area_matches(
 
     selections.sort(key=lambda item: (-item.score, item.area_id))
     selected_ids = {item.area_id for item in selections}
-    if is_ci_build_failure_hint(task_tokens, task_text):
-        score = max(
-            [item.score for item in selections if item.area_id == "automation"]
-            or [2]
-        )
-        for area_id in ("automation", "source", "tests"):
-            if area_id in areas and area_id not in selected_ids:
+    selected_roles = {area_role(item.area_id, areas[item.area_id]) for item in selections}
+    failure_task = bool(task_tokens & FAILURE_TOKENS)
+
+    roles_to_pair: list[str] = []
+    if failure_task and "automation" in selected_roles:
+        roles_to_pair.extend(["source", "tests"])
+    elif failure_task and "tests" in selected_roles:
+        roles_to_pair.append("source")
+    if is_code_task_hint(task_tokens) and "assets" in selected_roles:
+        roles_to_pair.append("source")
+
+    for role in unique(roles_to_pair):
+        candidates = area_ids_for_role(areas, role)
+        if candidates:
+            area_id = candidates[0]
+            score = max((item.score for item in selections), default=2)
+            if area_id in selected_ids:
+                existing = next(item for item in selections if item.area_id == area_id)
+                existing.score = max(existing.score, score)
+                reason = f"paired {role} area for debugging"
+                if reason not in existing.reasons:
+                    existing.reasons.append(reason)
+            else:
                 selections.append(
                     AreaSelection(
                         area_id=area_id,
                         score=score,
-                        reasons=["paired with CI/build failure debugging"],
+                        reasons=[f"paired {role} area for debugging"],
                         matched_files=[],
                     )
                 )
                 selected_ids.add(area_id)
-        selections.sort(key=lambda item: (-item.score, item.area_id))
-
-    if (
-        "tests" in selected_ids
-        and "source" in areas
-        and "source" not in selected_ids
-        and task_tokens & TEST_SCOPE_TOKENS
-        and task_tokens & TEST_FAILURE_TOKENS
-    ):
-        score = max((item.score for item in selections if item.area_id == "tests"), default=2)
-        selections.append(
-            AreaSelection(
-                area_id="source",
-                score=score,
-                reasons=["paired with tests for failure debugging"],
-                matched_files=[],
-            )
-        )
-        selections.sort(key=lambda item: (-item.score, item.area_id))
-
-    if (
-        selected_ids & {"assets", "sprites", "maps", "media"}
-        and "source" in areas
-        and "source" not in selected_ids
-        and is_code_task_hint(task_tokens, task_text)
-    ):
-        score = max(
-            (item.score for item in selections if item.area_id in {"assets", "sprites", "maps", "media"}),
-            default=2,
-        )
-        selections.append(
-            AreaSelection(
-                area_id="source",
-                score=score,
-                reasons=["paired with assets/media for code debugging"],
-                matched_files=[],
-            )
-        )
-        selections.sort(key=lambda item: (-item.score, item.area_id))
+    selections.sort(key=lambda item: (-item.score, item.area_id))
 
     if not selections and "overview" in areas:
-        starter_ids = [area_id for area_id in ("source", "tests") if area_id in areas]
-        if "source" in starter_ids and is_code_task_hint(task_tokens, task_text):
+        source_ids = area_ids_for_role(areas, "source")[:1]
+        test_ids = area_ids_for_role(areas, "tests")[:1]
+        starter_ids = unique(source_ids + test_ids)
+        if source_ids and is_code_task_hint(task_tokens):
             return [
                 AreaSelection(
                     area_id=area_id,
@@ -2249,21 +2084,8 @@ def selected_area_matches(
     return selections
 
 
-def is_ci_build_failure_hint(task_tokens: set[str], task_text: str) -> bool:
-    has_scope = bool(task_tokens & CI_BUILD_SCOPE_TOKENS) or contains_any(task_text, (" ci ", " github action"))
-    if not has_scope:
-        return False
-    if task_tokens & (TEST_FAILURE_TOKENS - {"red"}):
-        return True
-    return contains_any(task_text, CI_BUILD_RED_PHRASES)
-
-
-def is_code_task_hint(task_tokens: set[str], task_text: str) -> bool:
-    if task_tokens & CODE_TASK_TOKENS:
-        return True
-    if contains_any(task_text, ENGLISH_CODE_PROBLEM_PHRASES):
-        return True
-    return contains_any(task_text, KOREAN_CODE_PROBLEM_PHRASES) and contains_any(task_text, KOREAN_CODE_ACTION_PHRASES)
+def is_code_task_hint(task_tokens: set[str]) -> bool:
+    return bool(task_tokens & CODE_TASK_TOKENS)
 
 
 def selected_areas(
@@ -2271,8 +2093,9 @@ def selected_areas(
     *,
     changed_files: list[str],
     task: str | None,
+    repo: Path | None = None,
 ) -> list[str]:
-    return [item.area_id for item in selected_area_matches(manifest, changed_files=changed_files, task=task)]
+    return [item.area_id for item in selected_area_matches(manifest, changed_files=changed_files, task=task, repo=repo)]
 
 
 def selection_reason(item: AreaSelection) -> str:
@@ -2338,9 +2161,9 @@ def unique(items: Iterable[str]) -> list[str]:
 
 
 def repo_files(repo: Path) -> list[str]:
-    files = git_text(repo, ["ls-files", "--cached", "--others", "--exclude-standard"])
+    files = git_path_list(repo, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"])
     if files is not None:
-        return [normalize_path(line) for line in files.splitlines() if line.strip()]
+        return files
 
     ignored_parts = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     ignored_prefixes = {
@@ -2519,6 +2342,8 @@ def render_pack(
     changed_files: list[str],
     task: str | None,
     mode: str,
+    include_text_budget: bool = False,
+    transient: bool = False,
     max_read_first: int = 12,
     max_contracts: int = 12,
     max_failure_modes: int = 10,
@@ -2537,7 +2362,7 @@ def render_pack(
     def collect_area(selection: AreaSelection, *, primary: bool) -> None:
         area = areas.get(selection.area_id, {})
         doc_path = normalize_path(area.get("doc", ""))
-        if doc_path:
+        if doc_path and (not transient or (repo / doc_path).is_file()):
             (read_first if primary else read_later).append(doc_path)
         target = read_first if primary else read_later
         target.extend(area.get("start_files", []) or [])
@@ -2553,18 +2378,15 @@ def render_pack(
             contracts.extend(extract_section_bullets(text, "Contracts"))
             failures.extend(extract_section_bullets(text, "Common Failure Modes"))
 
-        warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
-        if warning:
-            warnings.append(warning)
+        if not transient:
+            warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
+            if warning:
+                warnings.append(warning)
 
     for selection in selections:
         collect_area(selection, primary=True)
     for selection in related_selections:
         collect_area(selection, primary=False)
-
-    if mode == "review":
-        read_first.insert(0, path_text(layout.review_path))
-        read_first.insert(0, path_text(layout.contracts_path))
 
     read_first_unique = unique(read_first)
     read_first_visible = read_first_unique[:max_read_first]
@@ -2576,12 +2398,18 @@ def render_pack(
     read_first_total = len(read_first_visible)
     area_total = len(areas)
     read_first_ratio = percent(read_first_total, repo_file_total) if repo_file_total else 0
-    repo_budget = text_budget_for_files(repo, repo_file_list)
-    read_first_files = files_for_read_first_entries(repo, read_first_visible, repo_file_list)
-    read_first_budget = text_budget_for_files(repo, read_first_files)
-    repo_tokens = estimated_tokens(repo_budget.chars)
-    read_first_tokens = estimated_tokens(read_first_budget.chars)
-    budget_ratio = round((read_first_tokens / repo_tokens) * 100) if repo_tokens and read_first_tokens else 0
+    repo_budget = TextBudget()
+    read_first_budget = TextBudget()
+    repo_tokens = 0
+    read_first_tokens = 0
+    budget_ratio = 0
+    if include_text_budget:
+        repo_budget = text_budget_for_files(repo, repo_file_list)
+        read_first_files = files_for_read_first_entries(repo, read_first_visible, repo_file_list)
+        read_first_budget = text_budget_for_files(repo, read_first_files)
+        repo_tokens = estimated_tokens(repo_budget.chars)
+        read_first_tokens = estimated_tokens(read_first_budget.chars)
+        budget_ratio = round((read_first_tokens / repo_tokens) * 100) if repo_tokens and read_first_tokens else 0
 
     def path_line(item: str) -> str:
         is_glob = any(ch in item for ch in "*?[")
@@ -2608,16 +2436,20 @@ def render_pack(
         f"- Primary areas selected: {len(selections)} of {area_total}",
         f"- Read First entries: {read_first_total}" + (f" (~{read_first_ratio}% of repo files)" if repo_file_total else ""),
         f"- Changed files in scope: {len(changed)}",
-        (
-            f"- Approx Read First text: ~{format_token_count(read_first_tokens)} tokens "
-            f"from {read_first_budget.files} file(s)"
-            + (f" (~{budget_ratio}% of repo text)" if repo_tokens else "")
-        ),
-        f"- Approx repo text: ~{format_token_count(repo_tokens)} tokens from {repo_budget.files} text file(s)",
-        "- Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.",
-        "",
-        "## Selected Areas",
     ]
+    if include_text_budget:
+        lines.extend(
+            [
+                (
+                    f"- Approx Read First text: ~{format_token_count(read_first_tokens)} tokens "
+                    f"from {read_first_budget.files} file(s)"
+                    + (f" (~{budget_ratio}% of repo text)" if repo_tokens else "")
+                ),
+                f"- Approx repo text: ~{format_token_count(repo_tokens)} tokens from {repo_budget.files} text file(s)",
+                "- Token estimates use chars/4 and skip binary, unreadable, ignored, and >1 MB files.",
+            ]
+        )
+    lines.extend(["", "## Selected Areas"])
     for item in selections:
         reason = "; ".join(item.reasons)
         lines.append(f"- {item.area_id} (score {item.score}): {reason}")
@@ -2692,11 +2524,11 @@ def render_pack(
 def build_pack(args: argparse.Namespace) -> int:
     snapshot = collect_snapshot(Path(args.repo).resolve())
     repo = snapshot.repo_root
-    layout = resolve_layout(repo, for_write=True)
-    ensure_dirs(repo, layout)
-    manifest = load_manifest(repo, layout)
+    layout = getattr(args, "layout", None) or resolve_layout(repo, for_write=True)
+    transient = bool(getattr(args, "transient", False))
+    manifest = getattr(args, "manifest", None) or load_manifest(repo, layout)
     changed = resolve_changed_files(repo, snapshot, args)
-    matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
+    matches = selected_area_matches(manifest, changed_files=changed, task=args.task, repo=repo)
     max_areas = getattr(args, "max_areas", 4) or len(matches)
     primary = matches[:max_areas]
     related = matches[max_areas:]
@@ -2711,6 +2543,8 @@ def build_pack(args: argparse.Namespace) -> int:
         changed_files=changed,
         task=args.task,
         mode=args.mode,
+        include_text_budget=bool(getattr(args, "text_budget", False)),
+        transient=transient,
         max_read_first=getattr(args, "max_read_first", 12),
         max_contracts=getattr(args, "max_contracts", 12),
         max_failure_modes=getattr(args, "max_failure_modes", 10),
@@ -2751,11 +2585,11 @@ def cmd_measure(args: argparse.Namespace) -> int:
     has_context_library = (repo / layout.manifest_path).exists()
     manifest = load_manifest(repo, layout)
     if not has_context_library:
-        manifest = merge_inferred_areas(repo, manifest, layout)
+        manifest = inferred_manifest(repo, layout)
     args.mode = "review" if getattr(args, "review", False) or getattr(args, "base", None) else "work"
     review_base_inferred = maybe_infer_review_base(args, repo, snapshot) if args.mode == "review" else False
     changed = resolve_changed_files(repo, snapshot, args)
-    matches = selected_area_matches(manifest, changed_files=changed, task=args.task)
+    matches = selected_area_matches(manifest, changed_files=changed, task=args.task, repo=repo)
     max_areas = getattr(args, "max_areas", 4) or len(matches)
     primary = matches[:max_areas]
     related = matches[max_areas:]
@@ -2769,6 +2603,8 @@ def cmd_measure(args: argparse.Namespace) -> int:
         changed_files=changed,
         task=args.task,
         mode=args.mode,
+        include_text_budget=True,
+        transient=not has_context_library,
         max_read_first=getattr(args, "max_read_first", 12),
         max_contracts=getattr(args, "max_contracts", 12),
         max_failure_modes=getattr(args, "max_failure_modes", 10),
@@ -2838,13 +2674,13 @@ def diff_name_only(repo: Path, base: str) -> list[str]:
     if not base:
         return []
     attempts = [
-        ["diff", "--name-only", "--diff-filter=ACMRTUXB", f"{base}...HEAD"],
-        ["diff", "--name-only", "--diff-filter=ACMRTUXB", base],
+        ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", f"{base}...HEAD"],
+        ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", base],
     ]
     for cmd in attempts:
-        output = git_text(repo, cmd)
+        output = git_path_list(repo, cmd)
         if output is not None:
-            return [normalize_path(line) for line in output.splitlines() if line.strip()]
+            return output
     return []
 
 
@@ -2898,23 +2734,47 @@ def maybe_infer_review_base(args: argparse.Namespace, repo: Path, snapshot: Snap
     return True
 
 
+def is_context_metadata_path(repo: Path, path: str, layout: ContextLayout) -> bool:
+    path = normalize_path(path)
+    prefixes = {
+        path_text(layout.context_dir).rstrip("/"),
+        path_text(LEGACY_CONTEXT_DIR).rstrip("/"),
+        path_text(LEGACY_HANDOFF_DIR).rstrip("/"),
+        path_text(LEGACY_PACKS_DIR).rstrip("/"),
+    }
+    if any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes):
+        return True
+    if path in {path_text(item) for item in AGENT_DOC_TARGETS.values()}:
+        return AGENT_RULES_START in read_text(repo / path)
+    if path == ".gitignore":
+        return "# context-pack generated/local files" in read_text(repo / path)
+    return False
+
+
+def filter_context_metadata_changes(repo: Path, files: Iterable[str], layout: ContextLayout) -> list[str]:
+    values = sorted(dict.fromkeys(normalize_path(item) for item in files if item))
+    product_files = [item for item in values if not is_context_metadata_path(repo, item, layout)]
+    return product_files or values
+
+
 def resolve_changed_files(repo: Path, snapshot: Snapshot, args: argparse.Namespace) -> list[str]:
+    layout = resolve_layout(repo)
     maybe_infer_review_base(args, repo, snapshot)
     base = getattr(args, "base", None)
     if base:
-        return sorted(dict.fromkeys(diff_name_only(repo, base)))
+        return filter_context_metadata_changes(repo, diff_name_only(repo, base), layout)
 
     if getattr(args, "mode", "") == "review":
         if snapshot.dirty_files:
-            return snapshot.dirty_files
+            return filter_context_metadata_changes(repo, snapshot.dirty_files, layout)
         upstream = upstream_ref(repo)
         if upstream:
             files = diff_name_only(repo, upstream)
             if files:
-                return sorted(dict.fromkeys(files))
+                return filter_context_metadata_changes(repo, files, layout)
 
     if getattr(args, "changed", False):
-        return snapshot.dirty_files
+        return filter_context_metadata_changes(repo, snapshot.dirty_files, layout)
     return []
 
 
@@ -2954,10 +2814,7 @@ def update_frontmatter_status(path: Path, status: str) -> bool:
 def committed_files_between(repo: Path, base: str, head: str = "HEAD") -> list[str] | None:
     if not base or base in {"unknown", "not-a-git-repo"}:
         return []
-    output = git_text(repo, ["diff", "--name-only", "--diff-filter=ACMRTUXB", f"{base}..{head}"])
-    if output is None:
-        return None
-    return [normalize_path(line) for line in output.splitlines() if line.strip()]
+    return git_path_list(repo, ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", f"{base}..{head}"])
 
 
 def is_handoff_only_path(path: str, layout: ContextLayout) -> bool:
@@ -3007,6 +2864,25 @@ def handoff_fingerprint_warning(repo: Path, snapshot: Snapshot, layout: ContextL
     return f"{path_text(layout.current_path)} fingerprint is stale ({'; '.join(problems)}); run `context-pack checkpoint --publish` when the shared handoff should move"
 
 
+def broad_area_warnings(repo: Path, manifest: dict[str, Any], layout: ContextLayout) -> list[str]:
+    files = [item for item in repo_files(repo) if not is_context_metadata_path(repo, item, layout)]
+    if len(files) < BROAD_AREA_MIN_FILES:
+        return []
+    warnings: list[str] = []
+    for area_id, area in sorted((manifest.get("areas") or {}).items()):
+        if area_role(area_id, area) == "overview":
+            continue
+        patterns = area.get("paths", []) or []
+        if any(normalize_path(pattern) in {"*", "**"} for pattern in patterns):
+            warnings.append(f"area {area_id} uses a repository-wide path pattern")
+            continue
+        matched = sum(1 for path in files if matches_any(path, patterns))
+        ratio = matched / len(files)
+        if matched >= BROAD_AREA_MIN_FILES and ratio >= BROAD_AREA_RATIO:
+            warnings.append(f"area {area_id} matches {matched}/{len(files)} repo files ({ratio:.0%}); narrow or split its paths")
+    return warnings
+
+
 def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -3029,6 +2905,7 @@ def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[
                 errors.append(f"area {area_id} doc missing: {rel_to_repo(doc, repo)}")
             if not area.get("paths"):
                 warnings.append(f"area {area_id} has no path patterns")
+        warnings.extend(broad_area_warnings(repo, manifest, layout))
 
     gitignore = repo / ".gitignore"
     if gitignore.exists():
@@ -3071,14 +2948,15 @@ def cmd_status(args: argparse.Namespace) -> int:
         return 1
 
     manifest = load_manifest(repo, layout)
-    matches = selected_area_matches(manifest, changed_files=snapshot.dirty_files, task=args.task)
+    routing_changed = filter_context_metadata_changes(repo, snapshot.dirty_files, layout)
+    matches = selected_area_matches(manifest, changed_files=routing_changed, task=args.task, repo=repo)
     max_areas = getattr(args, "max_areas", 4)
     primary = matches[:max_areas]
     related = matches[max_areas:]
     stale = [
         warning
         for selection in matches
-        if (warning := stale_warning(repo, snapshot, selection.area_id, (manifest.get("areas") or {}).get(selection.area_id, {}), snapshot.dirty_files))
+        if (warning := stale_warning(repo, snapshot, selection.area_id, (manifest.get("areas") or {}).get(selection.area_id, {}), routing_changed))
     ]
 
     if not args.quiet:
@@ -3141,7 +3019,8 @@ def cmd_mark_reviewed(args: argparse.Namespace) -> int:
             print("No areas selected. Pass area IDs, --task, or --all.")
         return 1
     else:
-        area_ids = selected_areas(manifest, changed_files=snapshot.dirty_files, task=args.task)
+        changed = filter_context_metadata_changes(repo, snapshot.dirty_files, layout)
+        area_ids = selected_areas(manifest, changed_files=changed, task=args.task, repo=repo)
 
     marked: list[str] = []
     missing: list[str] = []
@@ -3171,20 +3050,18 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     ensure_dirs(repo, layout)
     manifest = load_manifest(repo, layout)
     write_text_lf(repo / layout.index_path, render_index(manifest, layout))
-    write_text_lf(repo / layout.review_path, render_review(manifest))
-    write_text_lf(repo / layout.contracts_path, render_contracts(manifest))
 
     marked: list[str] = []
     if args.mark_stale:
-        changed = snapshot.dirty_files
-        for area_id in selected_areas(manifest, changed_files=changed, task=args.task):
+        changed = filter_context_metadata_changes(repo, snapshot.dirty_files, layout)
+        for area_id in selected_areas(manifest, changed_files=changed, task=args.task, repo=repo):
             area = (manifest.get("areas") or {}).get(area_id, {})
             doc = area_doc_path(repo, area)
             if doc.exists() and update_frontmatter_status(doc, "review_needed"):
                 marked.append(area_id)
 
     if not args.quiet:
-        print("Refreshed INDEX.md, REVIEW.md, and CONTRACTS.md")
+        print("Refreshed INDEX.md")
         if marked:
             print("Marked review_needed: " + ", ".join(marked))
     return 0
@@ -3313,189 +3190,37 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def packaged_resource_text(name: str) -> str:
+    script = Path(__file__).resolve()
+    candidates = [script.with_name(name)]
+    if name == "SKILL.md":
+        candidates.append(script.parent.parent / "SKILL.md")
+    elif name == "openai.yaml":
+        candidates.append(script.parent.parent / "agents" / "openai.yaml")
+    elif name == "plugin.json":
+        candidates.extend(parent / ".codex-plugin" / "plugin.json" for parent in script.parents)
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    raise SystemExit(f"Packaged Context Pack resource is missing: {name}")
+
+
 def plugin_manifest_doc() -> dict[str, Any]:
-    return {
-        "name": "context-pack",
-        "version": CONTEXT_PACK_VERSION,
-        "description": "Repo-local context packs and handoff checkpoints for coding agents.",
-        "author": {"name": "Context Pack"},
-        "license": "MIT",
-        "keywords": ["context", "handoff", "code-review", "agents", "codex", "claude", "cursor"],
-        "skills": "./skills/",
-        "interface": {
-            "displayName": "Context Pack",
-            "shortDescription": "Start agents from focused repo context.",
-            "longDescription": (
-                "Context Pack gives coding agents a lightweight repo-local map before they read broadly. It turns "
-                "natural requests like fixing bugs, debugging failing tests, reviewing branches, and handing off work "
-                "into focused task or review packs with relevant files, contracts, tests, and stale warnings, while "
-                "keeping generated checkpoints local by default."
-            ),
-            "developerName": "Context Pack",
-            "category": "Productivity",
-            "capabilities": ["Write", "Automation"],
-            "defaultPrompt": [
-                "Fix a bug from focused repo context.",
-                "Review this branch without rereading the whole repo.",
-                "Leave this work easy to resume later.",
-            ],
-            "brandColor": "#2563EB",
-        },
-    }
+    try:
+        data = json.loads(packaged_resource_text("plugin.json"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid packaged plugin.json: {exc}") from exc
+    data["version"] = CONTEXT_PACK_VERSION
+    return data
 
 
 def packaged_skill_doc() -> str:
-    return """\
----
-name: context-pack
-description: Prepare focused repo context for coding agents. Use proactively when the user naturally asks to fix a bug, debug failing tests, review a branch or PR, continue or hand off work, or start non-trivial coding where the agent would otherwise read broadly. Skip tiny obvious edits, pure Q&A, or tasks where relevant files are already known.
----
-
-# Context Pack
-
-Context Pack is an agent behavior, not a command the user should have to remember.
-
-When a user says things like "fix this bug", "review this branch", "look over my changes", "why are tests failing?", "continue this from the last session", "I'm done for now", or "I need to hand this off", use Context Pack to orient before broad repo reading, then continue the actual task. Do not ask the user to name Context Pack first. The generated docs are routing hints, not source of truth; verify behavior in source before editing or reviewing.
-
-## Core Loop
-
-1. Decide whether orientation is worth it.
-2. Run Context Pack in the target repo:
-
-   ```bash
-   context-pack <command>
-   ```
-
-   If the CLI is not on `PATH`, run the bundled engine from this skill folder instead:
-
-   ```bash
-   python <this-skill-folder>/scripts/context_pack.py <command>
-   ```
-
-   Do not use a target repo's `scripts/context_pack.py` unless the target repo is Context Pack itself.
-
-3. Read `.context-pack/packs/CONTEXT_PACK.md` when generated.
-4. Read only the listed area docs and source files first.
-5. Continue the user's coding, review, debugging, or handoff task.
-
-Report briefly. Usually one sentence is enough: selected areas, stale warning if any, and what you will inspect next. Only include scope-reduction or text-budget numbers when the user asks for proof, you ran `measure`, or the numbers materially explain the next step.
-
-## When To Use
-
-| Situation | Action |
-| --- | --- |
-| Context Pack is missing during normal task work | Use `start`; it auto-initializes lightweight context docs |
-| User explicitly asks to install/configure repo memory | `setup --dry-run`, then `setup` if setup was requested |
-| Continuing with no clear task yet | `start`, then read `CURRENT.md` and `INDEX.md` |
-| Starting non-trivial coding/debugging | `start --task "<short task>"` |
-| Reviewing a branch/PR/dirty files | `start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches |
-| Changed files are the only signal | `start --changed` |
-| User asks for proof before writing packs | `measure --task "<short task>"` |
-| Setup looks broken or incomplete | `doctor --fix` |
-| Meaningful work ended or handoff is requested | `checkpoint --pack` |
-| Handoff must travel through git | `checkpoint --publish --pack` |
-
-## When To Skip
-
-- The user asks a pure question that does not need repo orientation.
-- The change is a tiny, obvious single-file edit.
-- The relevant file and test are already clear from the conversation.
-- A fresh generated pack already matches the current task and git state.
-- Running the tool would be more expensive than directly answering.
-
-If you skip it, just proceed. Do not apologize or explain unless the user asked why.
-
-## Setup Behavior
-
-For normal work in an uninitialized repo, use `start` first; it auto-initializes lightweight context docs and keeps the user in the task.
-
-For explicit setup/configuration requests, preview writes first:
-
-```bash
-context-pack setup --dry-run
-```
-
-If the user explicitly asked to configure or install Context Pack, apply setup:
-
-```bash
-context-pack setup
-```
-
-This creates `.context-pack/`, ignored generated/local paths, and shared agent rules for `AGENTS.md`, `CLAUDE.md`, and Cursor rules. Preserve user text outside managed blocks. Do not install git hooks unless the user explicitly asks for git-boundary automation.
-
-For legacy repos, migrate only when needed:
-
-```bash
-context-pack migrate
-```
-
-## Task And Review Behavior
-
-For normal coding/debugging:
-
-```bash
-context-pack start --task "<short task>"
-```
-
-For review:
-
-```bash
-context-pack start --review
-```
-
-Add `--base <base-ref>` when the review base is known; otherwise review mode tries upstream/common default branches and uses the first diff it finds.
-
-After running `start`, read the generated pack if present. Treat stale warnings as prompts to verify source, not as facts.
-
-## Checkpoint Behavior
-
-At the end of meaningful agent work:
-
-```bash
-context-pack checkpoint --pack
-```
-
-This writes ignored local state by default, so proactive checkpoints do not dirty tracked files. Use `checkpoint --publish --pack` only when the handoff should be committed and shared through git.
-
-When the worktree is clean after commits, `checkpoint --pack` uses committed changes since the previous checkpoint when available, so handoff packs still point at the work just finished.
-
-## Admin Commands
-
-Use these only when directly relevant:
-
-```bash
-context-pack install-codex --force
-context-pack install-agent-docs
-context-pack status
-context-pack measure --task "<short task>"
-context-pack doctor --fix
-context-pack mark-reviewed <area-id>
-context-pack refresh
-context-pack install-git-hooks --mode safe
-```
-
-Run `context-pack <command> --help` for options instead of expanding this skill into a full CLI manual. Use the bundled script path only as the fallback command prefix.
-
-## Operating Rules
-
-- Keep the user in their normal workflow; do not make them manage packs manually.
-- Prefer `start` over lower-level `pack` commands.
-- Prefer source verification over trusting summaries.
-- Keep `CURRENT.md` short; durable knowledge belongs in `.context-pack/AREAS/*.md`.
-- Do not commit `.context-pack/packs/` or `.context-pack/local/LOCAL.md`.
-- If a changed file maps to no area, finish the task first, then consider updating the manifest or area docs.
-"""
+    return packaged_resource_text("SKILL.md")
 
 
 def packaged_openai_yaml() -> str:
-    return """\
-interface:
-  display_name: "Context Pack"
-  short_description: "Start agents from focused repo context"
-  default_prompt: "Fix, review, debug, or hand off work from focused repo context before broad reading."
-policy:
-  allow_implicit_invocation: true
-"""
+    return packaged_resource_text("openai.yaml")
 
 
 def plugin_wrapper_script() -> str:
@@ -3612,25 +3337,27 @@ def cmd_install_codex(args: argparse.Namespace) -> int:
 
 
 def hook_block(engine: Path, hook_name: str, mode: str) -> str:
-    engine_posix = normalize_path(engine)
+    engine_posix = shlex.quote(absolute_shell_path(engine))
+    python_posix = shlex.quote(absolute_shell_path(sys.executable))
     if hook_name == "pre-commit":
+        failure = 'exit "$code"' if mode == "aggressive" else "true"
         body = f"""\
 repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-if command -v python >/dev/null 2>&1; then
-  python "{engine_posix}" doctor --repo "$repo" --quiet
-  code=$?
-  if [ "$code" -ne 0 ]; then
-    echo "context-pack doctor failed; run: python {engine_posix} doctor --repo \"$repo\"" >&2
-    exit "$code"
-  fi
+python_exe={python_posix}
+engine={engine_posix}
+"$python_exe" "$engine" doctor --repo "$repo" --quiet
+code=$?
+if [ "$code" -ne 0 ]; then
+  echo "context-pack doctor warning (exit $code); run: context-pack doctor --repo \"$repo\"" >&2
+  {failure}
 fi"""
     else:
         command = "checkpoint --pack"
         body = f"""\
 repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-if command -v python >/dev/null 2>&1; then
-  python "{engine_posix}" {command} --repo "$repo" --quiet >/dev/null 2>&1 || true
-fi"""
+python_exe={python_posix}
+engine={engine_posix}
+"$python_exe" "$engine" {command} --repo "$repo" --quiet >/dev/null 2>&1 || true"""
     return f"{HOOK_START}\n# mode: {mode}; hook: {hook_name}\n{body}\n{HOOK_END}\n"
 
 
@@ -3763,15 +3490,20 @@ def add_pack_budget(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-read-first", type=int, default=12, help="Maximum Read First entries before spilling to Read Later")
     parser.add_argument("--max-contracts", type=int, default=12, help="Maximum contract bullets in the pack")
     parser.add_argument("--max-failure-modes", type=int, default=10, help="Maximum failure mode bullets in the pack")
+    parser.add_argument(
+        "--text-budget",
+        action="store_true",
+        help="Scan repo text to include approximate chars/4 budget metrics (measure always enables this)",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="context-pack",
-        description="Build repo-local context packs for coding agents.",
+        description="Route coding agents to focused repo context.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {CONTEXT_PACK_VERSION}")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True, metavar="{setup,start,checkpoint,doctor,install-codex}")
 
     p = sub.add_parser("setup", help="Set up Context Pack in a repo with safe onboarding defaults")
     add_common(p)
@@ -3805,7 +3537,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_setup)
 
-    p = sub.add_parser("init", help="Initialize .context-pack docs in a repo")
+    p = sub.add_parser("init", help=argparse.SUPPRESS, description="Initialize .context-pack docs in a repo")
     add_common(p)
     p.add_argument("--force", action="store_true", help="Overwrite existing context files")
     infer_group = p.add_mutually_exclusive_group()
@@ -3826,7 +3558,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update")
     p.set_defaults(func=cmd_init)
 
-    p = sub.add_parser("install-agent-docs", help="Install Context Pack rules for Codex, Claude, Cursor, and other agents")
+    p = sub.add_parser("install-agent-docs", help=argparse.SUPPRESS, description="Install Context Pack rules for coding agents")
     add_common(p)
     p.add_argument(
         "--target",
@@ -3842,20 +3574,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--publish", action="store_true", help="Update tracked handoff files instead of ignored local checkpoint state")
     p.set_defaults(func=cmd_checkpoint)
 
-    p = sub.add_parser("start", help="Auto-initialize if needed and prepare the right context pack")
+    p = sub.add_parser("start", help="Prepare focused context without modifying an unconfigured repo")
     add_common(p)
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--review", action="store_true", help="Prepare a review pack instead of a work pack")
     p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
     p.add_argument("--changed", action="store_true", help="Include dirty files when preparing a work pack")
-    p.add_argument("--no-init", action="store_true", help="Do not initialize missing context docs")
-    p.add_argument("--no-agent-doc", action="store_true", help="When initializing, do not update AGENTS.md")
-    p.add_argument("--agent-doc", default="AGENTS.md", help="Agent instruction file to update when initializing")
     p.add_argument("--output", help="Output markdown path")
     add_pack_budget(p)
     p.set_defaults(func=cmd_start)
 
-    p = sub.add_parser("pack", help="Generate a task or changed-files context pack")
+    p = sub.add_parser("pack", help=argparse.SUPPRESS, description="Generate a task or changed-files context pack")
     add_common(p)
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--changed", action="store_true", help="Select areas from dirty files")
@@ -3863,7 +3592,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_pack_budget(p)
     p.set_defaults(func=cmd_pack)
 
-    p = sub.add_parser("measure", help="Preview estimated context reduction without writing a pack")
+    p = sub.add_parser("measure", help=argparse.SUPPRESS, description="Preview estimated context reduction without writing a pack")
     add_common(p)
     p.add_argument("--task", help="Natural language task to match against area metadata")
     p.add_argument("--changed", action="store_true", help="Select areas from dirty files")
@@ -3872,7 +3601,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_pack_budget(p)
     p.set_defaults(func=cmd_measure)
 
-    p = sub.add_parser("review-pack", help="Generate a code-review context pack from dirty files")
+    p = sub.add_parser("review-pack", help=argparse.SUPPRESS, description="Generate a code-review context pack from dirty files")
     add_common(p)
     p.add_argument("--task", help="Optional review focus")
     p.add_argument("--base", help="Review committed changes against a base ref; omitted review bases are inferred when possible")
@@ -3880,7 +3609,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_pack_budget(p)
     p.set_defaults(func=cmd_review_pack)
 
-    p = sub.add_parser("refresh", help="Regenerate routing docs from manifest")
+    p = sub.add_parser("refresh", help=argparse.SUPPRESS, description="Regenerate routing docs from manifest")
     add_common(p)
     p.add_argument("--task", help="Optional task for stale marking")
     p.add_argument("--mark-stale", action="store_true", help="Mark selected area docs review_needed")
@@ -3898,32 +3627,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_doctor)
 
-    p = sub.add_parser("status", help="Show context health, selected areas, and next action")
+    p = sub.add_parser("status", help=argparse.SUPPRESS, description="Show context health, selected areas, and next action")
     add_common(p)
     p.add_argument("--task", help="Optional task to score areas against")
     p.add_argument("--max-areas", type=int, default=4, help="Maximum primary areas to show")
     p.set_defaults(func=cmd_status)
 
-    p = sub.add_parser("mark-reviewed", help="Mark area docs reviewed at the current HEAD")
+    p = sub.add_parser("mark-reviewed", help=argparse.SUPPRESS, description="Mark area docs reviewed at the current HEAD")
     add_common(p)
     p.add_argument("areas", nargs="*", help="Area IDs to mark; defaults to changed-file selected areas")
     p.add_argument("--task", help="Optional task to select areas when no explicit areas are provided")
     p.add_argument("--all", action="store_true", help="Mark all area docs reviewed")
     p.set_defaults(func=cmd_mark_reviewed)
 
-    p = sub.add_parser("gc", help="Remove generated context packs")
+    p = sub.add_parser("gc", help=argparse.SUPPRESS, description="Remove generated context packs")
     add_common(p)
     p.add_argument("--all", action="store_true", help="Also remove CONTEXT_PACK.md")
     p.set_defaults(func=cmd_gc)
 
-    p = sub.add_parser("migrate", help="Migrate legacy .codex context docs to .context-pack")
+    p = sub.add_parser("migrate", help=argparse.SUPPRESS, description="Migrate legacy .codex context docs to .context-pack")
     add_common(p)
     p.add_argument("--force", action="store_true", help="Overwrite existing .context-pack files during migration")
     p.add_argument("--include-packs", action="store_true", help="Also copy generated legacy packs")
     p.add_argument("--remove-legacy", action="store_true", help="Remove legacy .codex context and handoff dirs after copying")
     p.set_defaults(func=cmd_migrate)
 
-    p = sub.add_parser("snapshot", help="Print current repo fingerprint as JSON")
+    p = sub.add_parser("snapshot", help=argparse.SUPPRESS, description="Print current repo fingerprint as JSON")
     add_common(p)
     p.set_defaults(func=cmd_snapshot)
 
@@ -3941,7 +3670,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--quiet", action="store_true", help="Reduce command output")
     p.set_defaults(func=cmd_install_codex)
 
-    p = sub.add_parser("install-git-hooks", help="Install repo-local git hooks for automatic checkpoints")
+    p = sub.add_parser("install-git-hooks", help=argparse.SUPPRESS, description="Install repo-local git hooks for automatic checkpoints")
     add_common(p)
     p.add_argument(
         "--mode",
@@ -3951,38 +3680,38 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_install_git_hooks)
 
-    p = sub.add_parser("uninstall-git-hooks", help="Remove context-pack blocks from repo-local git hooks")
+    p = sub.add_parser("uninstall-git-hooks", help=argparse.SUPPRESS, description="Remove context-pack blocks from repo-local git hooks")
     add_common(p)
     p.set_defaults(func=cmd_uninstall_git_hooks)
 
+    visible_commands = {"setup", "start", "checkpoint", "doctor", "install-codex"}
+    sub._choices_actions[:] = [choice for choice in sub._choices_actions if choice.dest in visible_commands]
     return parser
 
 
 def print_quickstart() -> None:
     print("Context Pack")
-    print("Agent-first repo context for Codex, Claude, Cursor, and coding agents.")
+    print("Focused repo orientation for coding agents.")
     print("")
     print("Normal use:")
     print('  Ask your agent: "Fix the login timeout."')
     print('  Ask your agent: "Review this branch."')
     print('  Ask your agent: "Leave this work easy to resume later."')
     print("")
-    print("Set up this repo:")
+    print("Safe first run (no repo setup):")
+    print('  context-pack start --task "fix login timeout"')
+    print("  context-pack start --review")
+    print("")
+    print("Persist Context Pack in this repo:")
     print("  context-pack setup --dry-run")
     print("  context-pack setup")
     print("")
-    print("Direct CLI:")
-    print('  context-pack measure --task "fix login timeout"')
-    print('  context-pack start --task "fix login timeout"')
-    print("  context-pack start --review")
+    print("Handoff after meaningful work:")
     print("  context-pack checkpoint --pack")
-    print("")
-    print("Codex plugin:")
-    print("  context-pack install-codex --activate")
     print("")
     print("Need details?")
     print("  context-pack --help")
-    print("  context-pack doctor --fix")
+    print("  context-pack doctor")
 
 
 def main(argv: list[str] | None = None) -> int:

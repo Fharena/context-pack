@@ -1,69 +1,60 @@
 # Context Pack Benchmarks
 
-These are release-readiness dogfood and orientation benchmarks for the `v0.2.20` candidate.
-
-The goal is not to claim a universal token-saving percentage. Context Pack is a routing layer: it should tell an agent what to read first, explain why, and make limitations visible before the agent reads broadly.
+These results test Context Pack as a deterministic orientation layer. They do not claim a universal token-saving rate or prove that an agent writes a better patch.
 
 ## Method
 
-- Date: 2026-06-30
-- Tool: local candidate through `python scripts/benchmark_context_pack.py --public`
-- Mode: read-only first-run routing plus one synthetic handoff replay
-- Repos: shallow public GitHub clones with no `.context-pack/` installed
-- Estimates: approximate text budget uses `chars/4` and skips ignored, unreadable, known binary, empty, and files over 1 MB
-- Weak thresholds: expected selected areas must be present, read ratio must stay below each scenario threshold, and deterministic routing must finish under 5 seconds
+- Date: 2026-07-11
+- Engine: `0.3.0`
+- Command: `python scripts/benchmark_context_pack.py --public --fail-on-weak`
+- Inputs: 10 shallow public-repository clones with no Context Pack setup, plus one local handoff replay
+- Estimate: readable text characters divided by four; ignored, binary, empty, unreadable, and files over 1 MB are excluded
+- Pass condition: expected area roles selected, scenario-specific read-ratio ceiling met, no empty first-read route, routing completed under five seconds
 
-Machine-readable results live in [`docs/benchmarks/latest.json`](benchmarks/latest.json). The generated summary lives in [`docs/benchmarks/latest.md`](benchmarks/latest.md).
+The exact generated artifacts are [`benchmarks/latest.md`](benchmarks/latest.md) and [`benchmarks/latest.json`](benchmarks/latest.json).
 
-## Public Orientation Results
+## Latest Results
 
-| Scenario | Repo | Prompt | Selected first | Approx first-read text | Flags |
-| --- | --- | --- | --- | ---: | --- |
-| sampleproject-ci | `pypa/sampleproject` | `ci is red` | `automation, source, tests` | ~2.2k / ~3.3k tokens, 67% | ok |
-| requests-tests | `psf/requests` | `why are tests failing` | `source, tests` | ~103.7k / ~386.9k tokens, 27% | ok |
-| click-shell-completion | `pallets/click` | `fix shell completion bug` | `source, tests` | ~210.1k / ~357.8k tokens, 59% | ok |
-| httpx-build | `encode/httpx` | `build failed` | `automation, source, tests` | ~196.6k / ~247.7k tokens, 79% | ok |
-| browserquest-mobile | `mozilla/BrowserQuest` | `fix mobile controls bug on touch devices` | `source` | ~98.2k / ~602.2k tokens, 16% | ok |
-| browserquest-sprites | `mozilla/BrowserQuest` | `fix missing sprite asset loading bug` | `source, sprites` | ~103.6k / ~602.2k tokens, 17% | ok |
-| browserquest-websocket | `mozilla/BrowserQuest` | `debug websocket login connect failure` | `source` | ~98.2k / ~602.2k tokens, 16% | ok |
-| gin-middleware | `gin-gonic/gin` | `fix middleware panic bug` | `source` | ~8.8k / ~217.6k tokens, 4% | ok |
-| express-router | `expressjs/express` | `fix router middleware error handling` | `source` | ~15.5k / ~177.8k tokens, 9% | ok |
-| fd-rust-filter | `sharkdp/fd` | `fix regex filter bug` | `source` | ~41.8k / ~138.6k tokens, 30% | ok |
+| Scenario | Repository | Selected first | Approx. first read / repo | Ratio |
+| --- | --- | --- | ---: | ---: |
+| CI failure | `pypa/sampleproject` | automation, source, tests | 2.2k / 3.3k | 65% |
+| Test failure | `psf/requests` | source, tests | 41.3k / 386.9k | 11% |
+| Shell completion | `pallets/click` | source, tests | 101.9k / 365.7k | 28% |
+| Build failure | `encode/httpx` | automation, source, tests | 88.5k / 247.7k | 36% |
+| Mobile controls | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
+| Asset loading | `mozilla/BrowserQuest` | assets, source | 98.2k / 602.2k | 16% |
+| WebSocket login | `mozilla/BrowserQuest` | source | 98.2k / 602.2k | 16% |
+| Middleware panic | `gin-gonic/gin` | source, tests | 9.0k / 217.6k | 4% |
+| Router errors | `expressjs/express` | source | 15.5k / 177.9k | 9% |
+| Regex filter | `sharkdp/fd` | source, tests | 6.3k / 141.1k | 4% |
+
+All 10 scenarios passed their declared thresholds. These ratios describe the files named in the first-read route, not all files an agent may eventually inspect.
 
 ## Handoff Replay
 
-The synthetic replay benchmark creates a small repo, runs setup, checkpoints and publishes handoff state, clones the repo locally, then asks both checkouts the same test-failure prompt.
+The harness sets up a synthetic repository, publishes a checkpoint, clones it, and routes the same test-failure task in both checkouts.
 
 - Same routing signature after clone: yes
-- Source checkout: `source, tests`, ~404 / ~4427 tokens, 9%
-- Cloned checkout: `source, tests`, ~404 / ~4427 tokens, 9%
+- Both checkouts: `source, tests`
+- Approximate first read: 408 / 3,310 tokens, 12%
+- First-read entries: 4 in each checkout
 
-This checks the core promise that git-carried context can help a new session start from the same routing context. It does not prove that two independent agents will write identical answers.
+This verifies that git-carried context reproduces deterministic orientation. It does not imply identical natural-language answers or patches from independent agents.
 
-## Weak Spots Found And Fixed
+## What Changed During This Run
 
-- Go repos were under-inferred. A `gin-gonic/gin` middleware prompt previously risked falling back to generic orientation because the engine did not infer root and top-level Go package files. The engine now recognizes Go repos, root `*.go`, common package directories, and `*_test.go` files. Final run: `gin-middleware` selected `source` at 4%.
-- Rust repos were too broad. A `sharkdp/fd` regex/filter prompt initially pulled broader source/test context than needed. The engine now includes common Rust crate start files and Rust/filter/search keywords. Final run: `fd-rust-filter` selected `source` at 30%.
-- Media-heavy repos exposed a cold-start cost. BrowserQuest contains many binary assets; pre-fix measurement could cross the slow threshold because binary files were read before being rejected as non-text. Text-budget scanning now skips known binary suffixes and checks file size before reading. Final BrowserQuest runs stayed under the 5 second threshold.
-- Test expectations were tightened. For router/error-handling prompts, `source` is the correct first area when the generated pack still points to relevant test guidance separately; benchmarks should not reward unnecessary extra areas.
+- Custom area names now receive generic roles such as source, tests, docs, assets, and automation.
+- The router no longer contains BrowserQuest-specific sprite/map buckets or benchmark-specific framework words.
+- Inferred start files use bounded entry-point globs instead of whole source and test directories.
+- Review routing suppresses Context Pack's own metadata when product files also changed.
+- Normal `start` no longer scans the whole repository to print an approximate token statistic.
 
-## What This Proves
+## Limits
 
-- Natural prompts route to expected first-read area types without asking the user to name Context Pack.
-- `Why selected` remains inspectable before setup writes context files.
-- First-run inference now covers common Python, JavaScript client/server, web game asset, Go, and Rust layouts.
-- On a medium web game, task-specific first reads can reduce broad repo text budget from ~602.2k tokens to ~98.2k-103.6k tokens.
-- Handoff replay preserves deterministic routing across a fresh clone when context docs are committed.
+- `chars/4` is a text-budget proxy, not provider billing or tokenizer output.
+- Local durations are regression signals and vary with machine and filesystem cache.
+- The benchmark tests routing and replay, not diagnosis accuracy, patch quality, test success, or task completion time.
+- Curated area boundaries can outperform first-run inference; poor boundaries can also make routing worse.
+- Source verification remains required.
 
-## What This Does Not Prove
-
-- It does not prove a universal token reduction percentage.
-- It does not measure provider billing tokens exactly; counts are approximate text-budget estimates.
-- Duration numbers are local wall-clock regression signals and depend on machine and filesystem cache state.
-- It does not yet measure independent agent accuracy, wall-clock task speed, final patch quality, or answer consistency.
-- It does not replace source verification.
-- It does not prove monorepo quality without curated area boundaries.
-
-## Next Proof Milestone
-
-The next benchmark should be an independent-agent trace: same repo, same task, one run without Context Pack and one run with it. Compare first relevant file, read tokens, elapsed time, final patch quality, test result, and whether a fresh session reaches the same diagnosis.
+The next meaningful proof is an independent-agent A/B study with captured reads, first relevant file, elapsed time, test outcome, and blinded patch review. Until then, marketing should describe these numbers as orientation measurements only.

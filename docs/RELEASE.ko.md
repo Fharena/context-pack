@@ -8,8 +8,9 @@
 
 ```bash
 git status --short
-context-pack status
+python scripts/sync_packaged_assets.py --check
 python -m unittest discover -s tests -v
+python scripts/validate_packaged_cli.py
 python -m json.tool plugins/context-pack/.codex-plugin/plugin.json
 python -m json.tool .context-pack/manifest.json
 python -m json.tool .agents/plugins/marketplace.json
@@ -32,10 +33,10 @@ src/context_pack/__init__.py
 plugins/context-pack/.codex-plugin/plugin.json
 plugins/context-pack/skills/context-pack/scripts/context_pack.py
 src/context_pack/bundled/context_pack.py
-README.md
-README.ko.md
 CHANGELOG.md
 ```
+
+그다음 `python scripts/sync_packaged_assets.py`를 실행해 package에 포함되는 engine, skill instruction, agent metadata, plugin manifest가 canonical source와 일치하게 만듭니다.
 
 버전 동기화 테스트:
 
