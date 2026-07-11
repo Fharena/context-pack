@@ -4,12 +4,11 @@
 - Repo root: D:\SJWORK\my_project_memory
 - Git repo: yes
 - Branch: main
-- HEAD: 01f4814d3a1e
-- Dirty files: none
-- Dirty diff hash: clean
-- Updated at: 2026-07-12T03:02:49+09:00
+- HEAD: 8e8138f9a1b8
+- Dirty files: .context-pack/AREAS/docs-adoption.md, .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/overview.md, .context-pack/AREAS/skill-plugin.md, .context-pack/AREAS/tests.md
+- Dirty diff hash: sha256:76aacf6d5edeca091b93e41d
+- Updated at: 2026-07-12T05:15:05+09:00
 <!-- context-pack:fingerprint:end -->
-
 ## Active Goal
 - Context Pack `v0.5.0` is a validated release candidate with base-safe review context, confidence-labeled Evidence, handoff-derived continuation, explicit verification commands, and four-class Codex CLI A/B evidence.
 

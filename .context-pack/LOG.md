@@ -26,3 +26,9 @@ Recent published checkpoints only; older history remains available in git.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: GitHub CI run 29162621139 passed on Ubuntu/Windows with Python 3.11/3.12; release run 29162703130 rebuilt and uploaded wheel, sdist, and npm tarball assets to v0.4.0; PyPI/npm publication was intentionally skipped pending trusted-publisher setup.
+## 2026-07-12T05:15:05+09:00
+- Branch: main
+- HEAD: 8e8138f9a1b8
+- Dirty files: .context-pack/AREAS/docs-adoption.md, .context-pack/AREAS/engine.md, .context-pack/AREAS/installer-release.md, .context-pack/AREAS/overview.md, .context-pack/AREAS/skill-plugin.md, .context-pack/AREAS/tests.md
+- Dirty diff hash: sha256:76aacf6d5edeca091b93e41d
+- Verification: not recorded

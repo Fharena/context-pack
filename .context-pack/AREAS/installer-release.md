@@ -16,7 +16,7 @@ verify:
   - python -m build
   - python -m twine check dist/*
   - npm pack --dry-run
-last_reviewed_head: c18bd9bcc69b
+last_reviewed_head: 8e8138f9a1b8
 ---
 
 # Distribution
