@@ -83,22 +83,23 @@ class ContextPackTests(unittest.TestCase):
             outside = repo.parent / "outside.py"
             path_type = type(repo)
             original_resolve = path_type.resolve
+            linked_resolved = original_resolve(linked, strict=False)
+            outside_resolved = original_resolve(outside, strict=False)
 
             def resolve_outside(path: Path, strict: bool = False) -> Path:
-                if path == linked:
-                    return outside
-                return original_resolve(path, strict=strict)
+                resolved = original_resolve(path, strict=strict)
+                return outside_resolved if resolved == linked_resolved else resolved
 
             with mock.patch.object(path_type, "resolve", new=resolve_outside):
                 with self.assertRaisesRegex(self.engine.RepositoryBoundaryError, "outside the repository"):
                     self.engine.repository_path(repo, "linked.py", source="test link")
 
             redirected = repo / "redirected.py"
+            redirected_resolved = original_resolve(redirected, strict=False)
 
             def resolve_inside(path: Path, strict: bool = False) -> Path:
-                if path == linked:
-                    return redirected
-                return original_resolve(path, strict=strict)
+                resolved = original_resolve(path, strict=strict)
+                return redirected_resolved if resolved == linked_resolved else resolved
 
             with mock.patch.object(path_type, "resolve", new=resolve_inside):
                 with self.assertRaisesRegex(self.engine.RepositoryBoundaryError, "symbolic link"):
