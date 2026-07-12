@@ -4,6 +4,21 @@ All notable changes to Context Pack will be documented here.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-12
+
+### Security
+
+- Reject manifest path traversal, absolute paths, Windows drive-relative paths, UNC paths, NTFS alternate-data-stream syntax, reserved device names, and paths that resolve through symbolic links.
+- Confine area documents to `.context-pack/AREAS/` (or the legacy area directory) and prevent managed Context Pack or agent-instruction files from following symlinks during reads and writes.
+- Restrict automatic Evidence, token measurement, inferred routing, and rendered search scopes to non-ignored repository files; ignored local secrets and symlink targets are not read or suggested to agents.
+- Harden legacy migration and non-Git file discovery so recursive scans do not follow directory symlinks outside the repository.
+
+### Changed
+
+- Reused one boundary-filtered repository inventory during inferred routing and pack rendering, avoiding repeated Git scans introduced by the security checks.
+- Made packaged CLI validation use one automatically cleaned temporary workspace instead of leaving npm, demo-repository, and plugin-install directories behind.
+- Added cross-platform regression coverage for traversal, POSIX/Windows absolute forms, ignored files, resolved-path escapes, managed-file writes, and real symlinks where the host permits them.
+
 ## [0.5.0] - 2026-07-12
 
 ### Added

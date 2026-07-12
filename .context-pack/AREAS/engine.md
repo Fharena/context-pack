@@ -35,6 +35,7 @@ last_reviewed_head: 8e8138f9a1b8
 - Agent output is bounded and avoids generated context or managed agent docs as source Evidence.
 - Safe hooks invoke the exact install interpreter and fail open.
 - Normal `start` does not scan the full repository for text-budget statistics.
+- Repository-authored paths cannot escape the checkout, follow symbolic links, or route automatic Evidence into ignored files.
 
 ## Common Failure Modes
 - Branch-authored context biases a review.
@@ -43,6 +44,7 @@ last_reviewed_head: 8e8138f9a1b8
 - Context Pack metadata hides product changes or appears as source Evidence.
 - A Unix absolute hook path loses its leading slash.
 - Search-only routing adds a model turn without removing later exploration.
+- A malicious or stale manifest points Evidence or managed writes at ignored secrets, linked paths, or another checkout.
 
 ## Do Not Start With
 - generated packs

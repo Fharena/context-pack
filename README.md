@@ -126,6 +126,12 @@ Generated packs and local checkpoints stay ignored:
 .context-pack/tmp/
 ```
 
+### Repository Trust Boundary
+
+Repository configuration is input, not authority to read arbitrary local files. Manifest paths must stay repository-relative, area notes stay under `.context-pack/AREAS/`, and managed Context Pack files cannot redirect through symbolic links. Automatic Evidence, search scopes, inference, and text measurement use Git-visible, non-ignored files only, so a committed manifest cannot route the engine into an ignored `.env`, `.git/`, another checkout, or an absolute local path.
+
+Unsafe configuration fails closed before file contents are printed or managed files are written. Explicit user destinations such as `--output` remain user-controlled.
+
 ## Core Commands
 
 ```bash

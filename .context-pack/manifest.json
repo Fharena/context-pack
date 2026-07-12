@@ -18,6 +18,9 @@
         "doctor",
         "unicode",
         "path",
+        "boundary",
+        "security",
+        "symlink",
         "evidence",
         "token",
         "compact"
@@ -25,6 +28,8 @@
       "search_terms": [
         "render_agent_pack",
         "collect_evidence",
+        "repository_path",
+        "validate_manifest_paths",
         "resolve_pack_context",
         "cmd_start"
       ],
@@ -49,7 +54,8 @@
         "Git filenames are parsed losslessly enough for Unicode, spaces, renames, and Unix absolute hook paths.",
         "Generated packs are routing hints and never replace source verification.",
         "Safe hooks warn and fail open instead of blocking commits.",
-        "Agent evidence is bounded, line-numbered current source and avoids duplicate source copies."
+        "Agent evidence is bounded, line-numbered current source and avoids duplicate source copies.",
+        "Repository-authored paths cannot escape the checkout, follow symbolic links, or route automatic Evidence into ignored files."
       ],
       "failure_modes": [
         "First-run orientation creates AGENTS.md, .gitignore, or .context-pack without consent.",
@@ -57,7 +63,8 @@
         "Normal start scans every text file just to print an estimate.",
         "A hook records a broken relative engine path or propagates a safe-mode failure.",
         "Custom area names fall back to overview because roles are inferred only from literal IDs.",
-        "Search-only routing adds a model turn without removing the next grep or file-read turn."
+        "Search-only routing adds a model turn without removing the next grep or file-read turn.",
+        "A committed manifest redirects Evidence or managed writes into local secrets, linked paths, or another checkout."
       ],
       "tests": [
         "tests/test_context_pack.py"
@@ -122,6 +129,7 @@
         "Canonical engine, skill, agent metadata, and plugin manifest are synchronized before test, build, and release.",
         "The npm wrapper delegates to the bundled Python engine and does not duplicate routing logic.",
         "Packaged validation exercises transient start, configured work, review, checkpoint, and install-codex.",
+        "Packaged validation rejects unsafe manifest paths and removes its temporary workspace on completion.",
         "Registry publishing remains opt-in until trusted publishing is configured."
       ],
       "failure_modes": [

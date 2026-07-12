@@ -126,6 +126,12 @@ setup 후 버전 관리되는 도서관은 작게 유지됩니다.
 .context-pack/tmp/
 ```
 
+### 저장소 신뢰 경계
+
+저장소 설정은 입력일 뿐, 임의의 로컬 파일을 읽을 권한이 아닙니다. manifest 경로는 저장소 상대경로여야 하고, area note는 `.context-pack/AREAS/` 아래에 있어야 하며, Context Pack 관리 파일은 symbolic link로 다른 위치를 가리킬 수 없습니다. 자동 Evidence, 검색 scope, 영역 추론, text 측정은 Git에서 보이는 non-ignored 파일만 사용하므로 커밋된 manifest가 ignored `.env`, `.git/`, 다른 checkout, 절대 로컬 경로로 엔진을 유도할 수 없습니다.
+
+안전하지 않은 설정은 파일 내용을 출력하거나 관리 파일을 쓰기 전에 중단됩니다. `--output`처럼 사용자가 명시한 목적지는 계속 사용자가 직접 제어합니다.
+
 ## 핵심 명령
 
 ```bash

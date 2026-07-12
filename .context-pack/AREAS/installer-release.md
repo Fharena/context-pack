@@ -37,6 +37,7 @@ last_reviewed_head: 8e8138f9a1b8
 - Canonical engine, skill, agent metadata, and plugin manifest are synchronized before validation.
 - The npm wrapper delegates to the bundled Python engine.
 - Packaged validation covers transient preview, setup, task, review, continuation, checkpoint, and install-codex.
+- Packaged validation rejects unsafe manifest paths and removes its temporary workspace on completion.
 - Release assets are built from the exact tag after version and test checks.
 - Registry publication remains opt-in until PyPI and npm trusted publishers are configured on their registry sites.
 - `pypi` and `npm` GitHub environments provide OIDC boundaries; no registry token is committed.

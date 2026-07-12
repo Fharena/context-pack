@@ -19,7 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Iterable
 
 
@@ -64,7 +64,17 @@ AGENT_RULES_START = "<!-- context-pack:rules:start -->"
 AGENT_RULES_END = "<!-- context-pack:rules:end -->"
 HOOK_START = "# context-pack:start"
 HOOK_END = "# context-pack:end"
-CONTEXT_PACK_VERSION = "0.5.0"
+CONTEXT_PACK_VERSION = "0.5.1"
+MANIFEST_REPOSITORY_PATH_FIELDS = ("paths", "start_files", "stale_if_paths")
+WINDOWS_RESERVED_PATH_NAMES = {
+    "AUX",
+    "CLOCK$",
+    "CON",
+    "NUL",
+    "PRN",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
 TEXT_BUDGET_MAX_FILE_BYTES = 1_000_000
 SMALL_REPO_FILE_THRESHOLD = 24
 PUBLISHED_LOG_MAX_ENTRIES = 30
@@ -282,6 +292,10 @@ class ContextLayout:
     pack_path: Path
 
 
+class RepositoryBoundaryError(ValueError):
+    """Raised when repository metadata attempts to escape its allowed root."""
+
+
 PRIMARY_LAYOUT = ContextLayout(
     name="primary",
     storage_dir=CONTEXT_DIR,
@@ -329,6 +343,123 @@ def now_local() -> str:
 
 def normalize_path(value: str | Path) -> str:
     return str(value).replace("\\", "/").strip("/")
+
+
+def repository_relative_path(value: str | Path, *, source: str) -> str:
+    raw = str(value).strip()
+    portable = raw.replace("\\", "/")
+    windows_path = PureWindowsPath(raw)
+    if "\0" in raw:
+        raise RepositoryBoundaryError(f"{source} contains a NUL byte")
+    if portable.startswith("/") or PurePosixPath(portable).is_absolute():
+        raise RepositoryBoundaryError(f"{source} must be repository-relative, got {raw!r}")
+    if windows_path.drive or windows_path.root:
+        raise RepositoryBoundaryError(f"{source} must not use a drive, UNC path, or rooted path: {raw!r}")
+
+    parts: list[str] = []
+    for part in portable.split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            raise RepositoryBoundaryError(f"{source} must not contain '..': {raw!r}")
+        if any(marker in part for marker in '<>:"|'):
+            raise RepositoryBoundaryError(f"{source} contains a non-portable path character: {raw!r}")
+        if part != part.rstrip(" ."):
+            raise RepositoryBoundaryError(f"{source} contains a trailing dot or space: {raw!r}")
+        device_name = part.split(".", 1)[0].upper()
+        if not any(marker in device_name for marker in "*?[") and device_name in WINDOWS_RESERVED_PATH_NAMES:
+            raise RepositoryBoundaryError(f"{source} uses a reserved Windows device name: {raw!r}")
+        parts.append(part)
+    return "/".join(parts)
+
+
+def repository_path(
+    repo: Path,
+    value: str | Path,
+    *,
+    source: str,
+    allowed_root: str | Path | None = None,
+    allow_symlinks: bool = True,
+) -> Path:
+    repo_root = repo.resolve()
+    rel = repository_relative_path(value, source=source)
+    parts = PurePosixPath(rel).parts if rel else ()
+    path = repo_root.joinpath(*parts)
+
+    static_parts: list[str] = []
+    for part in parts:
+        if any(marker in part for marker in "*?["):
+            break
+        static_parts.append(part)
+    boundary_path = repo_root.joinpath(*static_parts)
+    try:
+        resolved = boundary_path.resolve(strict=False)
+        resolved.relative_to(repo_root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise RepositoryBoundaryError(f"{source} resolves outside the repository: {str(value)!r}") from exc
+
+    if allowed_root is not None:
+        allowed_rel = repository_relative_path(allowed_root, source=f"allowed root for {source}")
+        allowed_path = repo_root.joinpath(*PurePosixPath(allowed_rel).parts)
+        try:
+            allowed_resolved = allowed_path.resolve(strict=False)
+            allowed_resolved.relative_to(repo_root)
+            resolved.relative_to(allowed_path)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise RepositoryBoundaryError(
+                f"{source} must remain under {allowed_rel!r}: {str(value)!r}"
+            ) from exc
+
+    if not allow_symlinks and resolved != boundary_path:
+        raise RepositoryBoundaryError(f"{source} must not traverse a symbolic link: {str(value)!r}")
+    return path
+
+
+def optional_repository_path(
+    repo: Path,
+    value: str | Path,
+    *,
+    source: str,
+    allowed_root: str | Path | None = None,
+    allow_symlinks: bool = True,
+) -> Path | None:
+    try:
+        return repository_path(
+            repo,
+            value,
+            source=source,
+            allowed_root=allowed_root,
+            allow_symlinks=allow_symlinks,
+        )
+    except RepositoryBoundaryError:
+        return None
+
+
+def validate_context_layout(repo: Path, layout: ContextLayout) -> None:
+    managed_paths = {
+        layout.storage_dir,
+        layout.context_dir,
+        layout.areas_dir,
+        layout.handoff_dir,
+        layout.packs_dir,
+        layout.manifest_path,
+        layout.index_path,
+        layout.review_path,
+        layout.contracts_path,
+        layout.current_path,
+        layout.log_path,
+        layout.decisions_path,
+        layout.local_path,
+        layout.pack_path,
+    }
+    for rel in managed_paths:
+        repository_path(
+            repo,
+            rel,
+            source=f"managed Context Pack path {path_text(rel)!r}",
+            allowed_root=layout.storage_dir,
+            allow_symlinks=False,
+        )
 
 
 def absolute_shell_path(value: str | Path) -> str:
@@ -478,8 +609,8 @@ def compute_diff_hash(repo: Path, status_lines: list[str]) -> str:
         if not line.startswith("?? "):
             continue
         rel = normalize_path(line[3:].strip())
-        path = repo / rel
-        if not path.is_file():
+        path = optional_repository_path(repo, rel, source="untracked file", allow_symlinks=False)
+        if path is None or not path.is_file():
             continue
         h.update(f"\0--untracked:{rel}--\0".encode("utf-8"))
         try:
@@ -525,12 +656,15 @@ def layout_exists(repo: Path, layout: ContextLayout) -> bool:
 
 def resolve_layout(repo: Path, *, for_write: bool = False) -> ContextLayout:
     if (repo / PRIMARY_LAYOUT.manifest_path).exists() or (repo / PRIMARY_LAYOUT.storage_dir).exists():
-        return PRIMARY_LAYOUT
-    if not for_write and layout_exists(repo, LEGACY_LAYOUT):
-        return LEGACY_LAYOUT
-    if for_write and layout_exists(repo, LEGACY_LAYOUT):
-        return LEGACY_LAYOUT
-    return PRIMARY_LAYOUT
+        layout = PRIMARY_LAYOUT
+    elif not for_write and layout_exists(repo, LEGACY_LAYOUT):
+        layout = LEGACY_LAYOUT
+    elif for_write and layout_exists(repo, LEGACY_LAYOUT):
+        layout = LEGACY_LAYOUT
+    else:
+        layout = PRIMARY_LAYOUT
+    validate_context_layout(repo, layout)
+    return layout
 
 
 def path_text(path: str | Path) -> str:
@@ -611,18 +745,16 @@ def default_manifest(layout: ContextLayout | None = None) -> dict[str, Any]:
     }
 
 
-def pattern_has_match(repo: Path, pattern: str) -> bool:
+def pattern_has_match(pattern: str, repo_file_list: list[str]) -> bool:
     pattern = normalize_path(pattern)
     if any(ch in pattern for ch in "*?["):
-        try:
-            return any(path for path in repo.glob(pattern) if ".git" not in path.parts)
-        except ValueError:
-            return False
-    return (repo / pattern).exists()
+        return any(scope_pattern_matches(path, pattern) for path in repo_file_list)
+    prefix = pattern.rstrip("/") + "/"
+    return pattern in repo_file_list or any(path.startswith(prefix) for path in repo_file_list)
 
 
-def existing_patterns(repo: Path, patterns: list[str]) -> list[str]:
-    return [pattern for pattern in patterns if pattern_has_match(repo, pattern)]
+def existing_patterns(patterns: list[str], repo_file_list: list[str]) -> list[str]:
+    return [pattern for pattern in patterns if pattern_has_match(pattern, repo_file_list)]
 
 
 SOURCE_TOP_LEVEL_EXCLUDES = {
@@ -686,68 +818,50 @@ RUST_SOURCE_PATHS = ["crates/*/src/**"]
 RUST_SOURCE_START_FILES = ["src/lib.rs", "src/main.rs", "crates/*/src/lib.rs", "crates/*/src/main.rs"]
 
 
-def top_level_source_dirs_with_extension(repo: Path, extension: str, *, exclude_suffix: str = "") -> list[str]:
-    dirs: list[str] = []
-    for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
-        if not child.is_dir():
+def top_level_source_dirs_with_extension(
+    repo_file_list: list[str],
+    extension: str,
+    *,
+    exclude_suffix: str = "",
+) -> list[str]:
+    dirs: set[str] = set()
+    for rel in repo_file_list:
+        path = PurePosixPath(rel)
+        if len(path.parts) < 2 or path.suffix != extension:
             continue
-        name = child.name
+        name = path.parts[0]
         if name in GO_SOURCE_DIR_EXCLUDES or name.startswith("."):
             continue
-        try:
-            has_source = any(
-                path.is_file()
-                and path.suffix == extension
-                and (not exclude_suffix or not path.name.endswith(exclude_suffix))
-                for path in child.rglob(f"*{extension}")
-            )
-        except OSError:
-            has_source = False
-        if has_source:
-            dirs.append(name)
-    return dirs
-
-
-def looks_like_go_repo(repo: Path) -> bool:
-    if (repo / "go.mod").is_file():
-        return True
-    try:
-        return any(path.is_file() for path in repo.glob("*.go"))
-    except ValueError:
-        return False
-
-
-def discovered_go_source_files(repo: Path, limit: int = GO_SOURCE_FILE_LIMIT) -> list[str]:
-    if not looks_like_go_repo(repo):
-        return []
-    candidates: list[Path] = []
-    try:
-        candidates.extend(path for path in repo.glob("*.go") if path.is_file() and not path.name.endswith("_test.go"))
-    except ValueError:
-        pass
-    for dirname in top_level_source_dirs_with_extension(repo, ".go", exclude_suffix="_test.go"):
-        try:
-            candidates.extend(
-                path
-                for path in (repo / dirname).glob("*.go")
-                if path.is_file() and not path.name.endswith("_test.go")
-            )
-        except OSError:
+        if exclude_suffix and path.name.endswith(exclude_suffix):
             continue
-    return [rel_to_repo(path, repo) for path in sorted(candidates, key=lambda item: rel_to_repo(item, repo))[:limit]]
+        dirs.add(name)
+    return sorted(dirs, key=str.lower)
 
 
-def discovered_go_test_files(repo: Path, limit: int = GO_TEST_FILE_LIMIT) -> list[str]:
-    if not looks_like_go_repo(repo):
+def looks_like_go_repo(repo_file_list: list[str]) -> bool:
+    return "go.mod" in repo_file_list or any(PurePosixPath(path).suffix == ".go" for path in repo_file_list)
+
+
+def discovered_go_source_files(repo_file_list: list[str], limit: int = GO_SOURCE_FILE_LIMIT) -> list[str]:
+    if not looks_like_go_repo(repo_file_list):
         return []
-    try:
-        candidates = sorted(repo.glob("**/*_test.go"), key=lambda item: rel_to_repo(item, repo))
-    except ValueError:
-        candidates = []
-    return [rel_to_repo(path, repo) for path in candidates if ".git" not in path.parts][:limit]
+    candidates = [
+        path
+        for path in repo_file_list
+        if PurePosixPath(path).suffix == ".go"
+        and not PurePosixPath(path).name.endswith("_test.go")
+        and not any(part in GO_SOURCE_DIR_EXCLUDES for part in PurePosixPath(path).parts[:-1])
+    ]
+    return sorted(candidates)[:limit]
 
 
-def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
+def discovered_go_test_files(repo_file_list: list[str], limit: int = GO_TEST_FILE_LIMIT) -> list[str]:
+    if not looks_like_go_repo(repo_file_list):
+        return []
+    return sorted(path for path in repo_file_list if PurePosixPath(path).name.endswith("_test.go"))[:limit]
+
+
+def inferred_source_paths(repo_file_list: list[str]) -> tuple[list[str], list[str]]:
     paths = ["src/**", "lib/**", "app/**", "packages/**"] + WEB_SOURCE_PATHS + RUST_SOURCE_PATHS
     start_files = [
         "src/*.py",
@@ -761,24 +875,32 @@ def inferred_source_paths(repo: Path) -> tuple[list[str], list[str]]:
         "app/*.ts",
         "packages/*/src/*",
     ] + WEB_SOURCE_START_FILES + RUST_SOURCE_START_FILES
-    for child in sorted(repo.iterdir(), key=lambda item: item.name.lower()):
-        if not child.is_dir():
-            continue
-        name = child.name
+    package_dirs = {
+        PurePosixPath(path).parts[0]
+        for path in repo_file_list
+        if len(PurePosixPath(path).parts) >= 2 and PurePosixPath(path).name == "__init__.py"
+    }
+    for name in sorted(package_dirs, key=str.lower):
         if name in SOURCE_TOP_LEVEL_EXCLUDES or name.startswith("."):
             continue
-        if (child / "__init__.py").is_file():
-            paths.append(f"{name}/**")
-            start_files.extend([f"{name}/__init__.py", f"{name}/*.py"])
-    go_source_files = discovered_go_source_files(repo)
+        paths.append(f"{name}/**")
+        start_files.extend([f"{name}/__init__.py", f"{name}/*.py"])
+    go_source_files = discovered_go_source_files(repo_file_list)
     if go_source_files:
         paths.extend(["*.go", "cmd/**", "internal/**", "pkg/**"])
-        paths.extend(f"{dirname}/**" for dirname in top_level_source_dirs_with_extension(repo, ".go", exclude_suffix="_test.go"))
+        paths.extend(
+            f"{dirname}/**"
+            for dirname in top_level_source_dirs_with_extension(
+                repo_file_list,
+                ".go",
+                exclude_suffix="_test.go",
+            )
+        )
         start_files.extend(go_source_files)
     return paths, start_files
 
 
-def inferred_test_paths(repo: Path) -> tuple[list[str], list[str]]:
+def inferred_test_paths(repo_file_list: list[str]) -> tuple[list[str], list[str]]:
     paths = ["tests/**", "test/**", "__tests__/**", "spec/**"]
     start_files = [
         "tests/test_*.py",
@@ -788,17 +910,18 @@ def inferred_test_paths(repo: Path) -> tuple[list[str], list[str]]:
         "__tests__/*",
         "spec/*",
     ]
-    go_test_files = discovered_go_test_files(repo)
+    go_test_files = discovered_go_test_files(repo_file_list)
     if go_test_files:
         paths.extend(["*_test.go", "**/*_test.go"])
         start_files.extend(go_test_files)
     return paths, start_files
 
 
-def inferred_verification_commands(repo: Path) -> list[str]:
+def inferred_verification_commands(repo: Path, repo_file_list: list[str]) -> list[str]:
     commands: list[str] = []
-    package_json = repo / "package.json"
-    if package_json.is_file():
+    file_set = set(repo_file_list)
+    package_json = optional_repository_path(repo, "package.json", source="package.json", allow_symlinks=False)
+    if package_json is not None and "package.json" in file_set and package_json.is_file():
         try:
             package = json.loads(package_json.read_text(encoding="utf-8-sig"))
         except (json.JSONDecodeError, OSError):
@@ -806,21 +929,21 @@ def inferred_verification_commands(repo: Path) -> list[str]:
         test_script = (package.get("scripts") or {}).get("test") if isinstance(package, dict) else None
         if test_script and "no test specified" not in str(test_script).lower():
             commands.append("npm test")
-    if (repo / "go.mod").is_file():
+    if "go.mod" in file_set:
         commands.append("go test ./...")
-    if (repo / "Cargo.toml").is_file():
+    if "Cargo.toml" in file_set:
         commands.append("cargo test")
-    if any((repo / name).is_file() for name in ("pytest.ini", "tox.ini", "conftest.py")):
+    if any(name in file_set for name in ("pytest.ini", "tox.ini", "conftest.py")):
         commands.append("python -m pytest")
-    elif (repo / "tests").is_dir():
-        try:
-            has_unittest = any((repo / "tests").glob("test_*.py"))
-        except OSError:
-            has_unittest = False
+    elif any(path.startswith("tests/") for path in repo_file_list):
+        has_unittest = any(
+            path.startswith("tests/") and PurePosixPath(path).match("test_*.py")
+            for path in repo_file_list
+        )
         if has_unittest:
             commands.append("python -m unittest discover -s tests -v")
-    makefile = repo / "Makefile"
-    if makefile.is_file():
+    makefile = optional_repository_path(repo, "Makefile", source="Makefile", allow_symlinks=False)
+    if makefile is not None and "Makefile" in file_set and makefile.is_file():
         try:
             has_test_target = any(line.startswith("test:") for line in makefile.read_text(encoding="utf-8").splitlines())
         except (OSError, UnicodeDecodeError):
@@ -832,9 +955,10 @@ def inferred_verification_commands(repo: Path) -> list[str]:
 
 def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) -> dict[str, dict[str, Any]]:
     layout = layout or resolve_layout(repo)
-    source_paths, source_start_files = inferred_source_paths(repo)
-    test_paths, test_start_files = inferred_test_paths(repo)
-    verify_commands = inferred_verification_commands(repo)
+    repo_file_list = repo_files(repo)
+    source_paths, source_start_files = inferred_source_paths(repo_file_list)
+    test_paths, test_start_files = inferred_test_paths(repo_file_list)
+    verify_commands = inferred_verification_commands(repo, repo_file_list)
     candidates = {
         "source": {
             "kind": "source",
@@ -985,14 +1109,14 @@ def inferred_area_candidates(repo: Path, layout: ContextLayout | None = None) ->
 
     inferred: dict[str, dict[str, Any]] = {}
     for area_id, area in candidates.items():
-        matched_paths = existing_patterns(repo, area["paths"])
+        matched_paths = existing_patterns(area["paths"], repo_file_list)
         if not matched_paths:
             continue
         copy = dict(area)
         copy["paths"] = matched_paths
-        copy["start_files"] = existing_patterns(repo, area["start_files"])
-        copy["tests"] = existing_patterns(repo, area["tests"])
-        copy["stale_if_paths"] = existing_patterns(repo, area["stale_if_paths"]) or matched_paths
+        copy["start_files"] = existing_patterns(area["start_files"], repo_file_list)
+        copy["tests"] = existing_patterns(area["tests"], repo_file_list)
+        copy["stale_if_paths"] = existing_patterns(area["stale_if_paths"], repo_file_list) or matched_paths
         inferred[area_id] = copy
     return inferred
 
@@ -1016,6 +1140,8 @@ def setup_manifest(repo: Path, layout: ContextLayout, *, infer_areas: bool) -> d
     manifest = load_manifest(repo, layout)
     if infer_areas:
         manifest = merge_inferred_areas(repo, manifest, layout)
+    validate_manifest_paths(manifest, "setup manifest", layout)
+    validate_manifest_repository_paths(repo, manifest, "setup manifest", layout)
     return manifest
 
 
@@ -1029,6 +1155,56 @@ def manifest_needs_write(path: Path, manifest: dict[str, Any]) -> bool:
     return current != manifest
 
 
+def manifest_repository_paths(data: dict[str, Any], source: str) -> list[tuple[str, str, str]]:
+    areas = data.get("areas", {})
+    if not isinstance(areas, dict):
+        raise SystemExit(f"{source} field 'areas' must contain a JSON object")
+
+    paths: list[tuple[str, str, str]] = []
+    for area_id, area in areas.items():
+        if not isinstance(area, dict):
+            raise SystemExit(f"{source} area {area_id!r} must contain a JSON object")
+        doc = area.get("doc")
+        if doc is not None:
+            if not isinstance(doc, str):
+                raise SystemExit(f"{source} area {area_id!r} field 'doc' must be a string")
+            paths.append((str(area_id), "doc", doc))
+        for field in MANIFEST_REPOSITORY_PATH_FIELDS:
+            values = area.get(field, [])
+            if values is None:
+                continue
+            if not isinstance(values, list) or any(not isinstance(item, str) for item in values):
+                raise SystemExit(f"{source} area {area_id!r} field {field!r} must be a list of strings")
+            paths.extend((str(area_id), field, item) for item in values)
+    return paths
+
+
+def validate_manifest_paths(data: dict[str, Any], source: str, layout: ContextLayout) -> None:
+    areas_root = path_text(layout.areas_dir).rstrip("/")
+    for area_id, field, value in manifest_repository_paths(data, source):
+        label = f"{source} area {area_id!r} field {field!r}"
+        rel = repository_relative_path(value, source=label)
+        if field == "doc" and not rel.startswith(areas_root + "/"):
+            raise RepositoryBoundaryError(f"{label} must remain under {areas_root!r}: {value!r}")
+
+
+def validate_manifest_repository_paths(
+    repo: Path,
+    data: dict[str, Any],
+    source: str,
+    layout: ContextLayout,
+) -> None:
+    for area_id, field, value in manifest_repository_paths(data, source):
+        label = f"{source} area {area_id!r} field {field!r}"
+        repository_path(
+            repo,
+            value,
+            source=label,
+            allowed_root=layout.areas_dir if field == "doc" else None,
+            allow_symlinks=False,
+        )
+
+
 def parse_manifest(text: str, source: str, layout: ContextLayout) -> dict[str, Any]:
     try:
         data = json.loads(text)
@@ -1038,15 +1214,25 @@ def parse_manifest(text: str, source: str, layout: ContextLayout) -> dict[str, A
         raise SystemExit(f"{source} must contain a JSON object")
     data.setdefault("version", 1)
     data.setdefault("areas", {})
+    validate_manifest_paths(data, source, layout)
     return data
 
 
 def load_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
     layout = layout or resolve_layout(repo)
-    path = repo / layout.manifest_path
+    path = repository_path(
+        repo,
+        layout.manifest_path,
+        source="Context Pack manifest",
+        allowed_root=layout.storage_dir,
+        allow_symlinks=False,
+    )
     if not path.exists():
         return default_manifest(layout)
-    return parse_manifest(path.read_text(encoding="utf-8-sig"), path_text(layout.manifest_path), layout)
+    source = path_text(layout.manifest_path)
+    data = parse_manifest(path.read_text(encoding="utf-8-sig"), source, layout)
+    validate_manifest_repository_paths(repo, data, source, layout)
+    return data
 
 
 def load_manifest_from_ref(repo: Path, layout: ContextLayout, ref: str) -> tuple[dict[str, Any], str] | None:
@@ -1057,7 +1243,9 @@ def load_manifest_from_ref(repo: Path, layout: ContextLayout, ref: str) -> tuple
     if text is None:
         return None
     source = f"{commit[:12]}:{path_text(layout.manifest_path)}"
-    return parse_manifest(text, source, layout), commit
+    data = parse_manifest(text, source, layout)
+    validate_manifest_repository_paths(repo, data, source, layout)
+    return data, commit
 
 
 def resolve_pack_context(
@@ -1082,7 +1270,10 @@ def resolve_pack_context(
 
 def inferred_manifest(repo: Path, layout: ContextLayout | None = None) -> dict[str, Any]:
     layout = layout or PRIMARY_LAYOUT
-    return merge_inferred_areas(repo, default_manifest(layout), layout)
+    manifest = merge_inferred_areas(repo, default_manifest(layout), layout)
+    validate_manifest_paths(manifest, "inferred manifest", layout)
+    validate_manifest_repository_paths(repo, manifest, "inferred manifest", layout)
+    return manifest
 
 
 def transient_pack_path(repo: Path, snapshot: Snapshot) -> Path:
@@ -1499,7 +1690,7 @@ def gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
 
 
 def missing_gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
-    path = repo / ".gitignore"
+    path = repository_path(repo, ".gitignore", source=".gitignore", allow_symlinks=False)
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     normalized = set(line.strip() for line in text.splitlines())
     return [entry for entry in gitignore_entries(repo, layout) if entry not in normalized]
@@ -1507,7 +1698,7 @@ def missing_gitignore_entries(repo: Path, layout: ContextLayout) -> list[str]:
 
 def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
     layout = layout or PRIMARY_LAYOUT
-    path = repo / ".gitignore"
+    path = repository_path(repo, ".gitignore", source=".gitignore", allow_symlinks=False)
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     missing = missing_gitignore_entries(repo, layout)
     if not missing:
@@ -1519,7 +1710,7 @@ def append_gitignore(repo: Path, layout: ContextLayout | None = None) -> None:
 
 def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md", layout: ContextLayout | None = None) -> None:
     layout = layout or resolve_layout(repo)
-    path = repo / agent_doc
+    path = repository_path(repo, agent_doc, source="agent instruction file", allow_symlinks=False)
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     rules = agent_rules(layout)
     if AGENT_RULES_START in text and AGENT_RULES_END in text:
@@ -1534,7 +1725,7 @@ def append_agent_rules(repo: Path, *, agent_doc: str = "AGENTS.md", layout: Cont
 def append_agent_rules_for_kind(repo: Path, kind: str, layout: ContextLayout | None = None) -> Path:
     layout = layout or resolve_layout(repo)
     rel_path = AGENT_DOC_TARGETS[kind]
-    path = repo / rel_path
+    path = repository_path(repo, rel_path, source=f"{kind} agent instruction file", allow_symlinks=False)
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     if AGENT_RULES_START in text and AGENT_RULES_END in text:
         text = replace_marker(text, AGENT_RULES_START, AGENT_RULES_END, agent_rules_body(layout))
@@ -1605,7 +1796,7 @@ def setup_gitignore_action(repo: Path, layout: ContextLayout) -> str:
 
 def setup_agent_doc_action(repo: Path, kind: str) -> str:
     rel_path = AGENT_DOC_TARGETS[kind]
-    path = repo / rel_path
+    path = repository_path(repo, rel_path, source=f"{kind} agent instruction file", allow_symlinks=False)
     if not path.exists():
         return "create"
     text = path.read_text(encoding="utf-8")
@@ -1829,7 +2020,11 @@ def cmd_init(args: argparse.Namespace) -> int:
     for area_id, area in (manifest.get("areas") or {}).items():
         if area_id == "overview":
             continue
-        write_if_missing(repo / normalize_path(area.get("doc", "")), generic_area_doc(area_id, area, snapshot, layout), force=args.force)
+        write_if_missing(
+            area_doc_path(repo, area, layout),
+            generic_area_doc(area_id, area, snapshot, layout),
+            force=args.force,
+        )
     write_if_missing(repo / layout.index_path, render_index(manifest, layout), force=args.force)
     write_if_missing(repo / layout.current_path, current_doc(snapshot, layout), force=args.force)
     write_if_missing(
@@ -2132,6 +2327,33 @@ def pattern_matches(path: str, pattern: str) -> bool:
     if "/" not in pattern and fnmatch.fnmatchcase(Path(path).name, pattern):
         return True
     return False
+
+
+def scope_pattern_matches(path: str, pattern: str) -> bool:
+    path_parts = tuple(part for part in normalize_path(path).split("/") if part)
+    pattern_parts = tuple(part for part in normalize_path(pattern).split("/") if part)
+    memo: dict[tuple[int, int], bool] = {}
+
+    def matches(pattern_index: int, path_index: int) -> bool:
+        key = (pattern_index, path_index)
+        if key in memo:
+            return memo[key]
+        if pattern_index == len(pattern_parts):
+            result = path_index == len(path_parts)
+        elif pattern_parts[pattern_index] == "**":
+            result = matches(pattern_index + 1, path_index) or (
+                path_index < len(path_parts) and matches(pattern_index, path_index + 1)
+            )
+        else:
+            result = (
+                path_index < len(path_parts)
+                and fnmatch.fnmatchcase(path_parts[path_index], pattern_parts[pattern_index])
+                and matches(pattern_index + 1, path_index + 1)
+            )
+        memo[key] = result
+        return result
+
+    return matches(0, 0)
 
 
 def matches_any(path: str, patterns: Iterable[str]) -> bool:
@@ -2488,7 +2710,11 @@ def unique(items: Iterable[str]) -> list[str]:
 def repo_files(repo: Path) -> list[str]:
     files = git_path_list(repo, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"])
     if files is not None:
-        return files
+        return [
+            rel
+            for rel in files
+            if optional_repository_path(repo, rel, source="Git file", allow_symlinks=False) is not None
+        ]
 
     ignored_parts = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     ignored_prefixes = {
@@ -2499,16 +2725,30 @@ def repo_files(repo: Path) -> list[str]:
         ".codex/context/tmp/",
     }
     out: list[str] = []
-    for path in repo.rglob("*"):
-        if not path.is_file():
-            continue
-        rel = rel_to_repo(path, repo)
-        parts = set(Path(rel).parts)
-        if parts & ignored_parts:
-            continue
-        if any(rel.startswith(prefix) for prefix in ignored_prefixes):
-            continue
-        out.append(rel)
+    for root_text, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
+        root = Path(root_text)
+        safe_dirs: list[str] = []
+        for dirname in dirnames:
+            path = root / dirname
+            rel = normalize_path(path.relative_to(repo))
+            parts = set(PurePosixPath(rel).parts)
+            prefix = rel.rstrip("/") + "/"
+            if parts & ignored_parts or any(prefix.startswith(item) for item in ignored_prefixes):
+                continue
+            safe_path = optional_repository_path(repo, rel, source="repository directory", allow_symlinks=False)
+            if safe_path is not None and safe_path.is_dir():
+                safe_dirs.append(dirname)
+        dirnames[:] = safe_dirs
+
+        for filename in filenames:
+            path = root / filename
+            rel = normalize_path(path.relative_to(repo))
+            parts = set(PurePosixPath(rel).parts)
+            if parts & ignored_parts or any(rel.startswith(prefix) for prefix in ignored_prefixes):
+                continue
+            safe_path = optional_repository_path(repo, rel, source="repository file", allow_symlinks=False)
+            if safe_path is not None and safe_path.is_file():
+                out.append(rel)
     return sorted(out)
 
 
@@ -2536,7 +2776,8 @@ def readable_text_chars(path: Path) -> int | None:
 def text_budget_for_files(repo: Path, files: Iterable[str]) -> TextBudget:
     budget = TextBudget()
     for rel in unique(files):
-        chars = readable_text_chars(repo / rel)
+        path = optional_repository_path(repo, rel, source="text budget file", allow_symlinks=False)
+        chars = readable_text_chars(path) if path is not None else None
         if chars is None:
             budget.skipped += 1
             continue
@@ -2549,40 +2790,66 @@ def files_for_read_first_entries(repo: Path, entries: Iterable[str], repo_file_l
     repo_file_set = set(repo_file_list)
     out: list[str] = []
     for raw in entries:
-        entry = normalize_path(raw)
+        try:
+            entry = repository_relative_path(raw, source="Read First entry")
+        except RepositoryBoundaryError:
+            continue
         if not entry:
             continue
-        path = repo / entry
         if any(ch in entry for ch in "*?["):
-            try:
-                matches = [rel_to_repo(item, repo) for item in repo.glob(entry) if item.is_file()]
-            except ValueError:
-                matches = []
-            out.extend(item for item in matches if item in repo_file_set)
+            out.extend(item for item in repo_file_list if scope_pattern_matches(item, entry))
             continue
-        if path.is_file() and entry in repo_file_set:
+        if entry in repo_file_set:
             out.append(entry)
             continue
-        if path.is_dir():
-            prefix = entry.rstrip("/") + "/"
-            out.extend(item for item in repo_file_list if item.startswith(prefix))
+        prefix = entry.rstrip("/") + "/"
+        out.extend(item for item in repo_file_list if item.startswith(prefix))
     return unique(out)
 
 
 def files_for_evidence_entries(repo: Path, entries: Iterable[str], repo_file_list: list[str]) -> list[str]:
+    repo_file_set = set(repo_file_list)
     out: list[str] = []
     for raw in entries:
-        entry = normalize_path(raw)
+        try:
+            entry = repository_relative_path(raw, source="Evidence entry")
+        except RepositoryBoundaryError:
+            continue
         if not entry:
             continue
-        path = repo / entry
-        if path.is_file():
+        if entry in repo_file_set:
             out.append(entry)
-        elif path.is_dir():
-            prefix = entry.rstrip("/") + "/"
-            out.extend(item for item in repo_file_list if item.startswith(prefix))
-        else:
-            out.extend(item for item in repo_file_list if pattern_matches(item, entry))
+            continue
+        prefix = entry.rstrip("/") + "/"
+        descendants = [item for item in repo_file_list if item.startswith(prefix)]
+        if descendants:
+            out.extend(descendants)
+            continue
+        out.extend(item for item in repo_file_list if scope_pattern_matches(item, entry))
+    return unique(out)
+
+
+def safe_scope_entries(repo: Path, entries: Iterable[str], repo_file_list: list[str]) -> list[str]:
+    repo_file_set = set(repo_file_list)
+    out: list[str] = []
+    for raw in entries:
+        try:
+            entry = repository_relative_path(raw, source="scope entry")
+        except RepositoryBoundaryError:
+            continue
+        if not entry:
+            continue
+        if any(ch in entry for ch in "*?["):
+            if any(scope_pattern_matches(path, entry) for path in repo_file_list):
+                out.append(entry)
+            continue
+        prefix = entry.rstrip("/") + "/"
+        if entry in repo_file_set or any(path.startswith(prefix) for path in repo_file_list):
+            out.append(entry)
+            continue
+        path = optional_repository_path(repo, entry, source="scope entry", allow_symlinks=False)
+        if path is not None and not path.exists():
+            out.append(entry)
     return unique(out)
 
 
@@ -2661,6 +2928,7 @@ def collect_evidence(
     *,
     changed_files: list[str],
     task: str | None,
+    repo_file_list: list[str] | None = None,
 ) -> EvidenceResult:
     configured_terms = configured_search_terms(areas, selections)
     fallback_terms = fallback_task_search_terms(task)
@@ -2671,7 +2939,7 @@ def collect_evidence(
             for token in ordered_tokens(Path(path).stem)
             if len(token) >= 4
         )[:EVIDENCE_MAX_TERMS]
-    repo_file_list = repo_files(repo)
+    repo_file_list = repo_file_list if repo_file_list is not None else repo_files(repo)
 
     preferred_entries: list[str] = list(changed_files)
     fallback_entries: list[str] = []
@@ -2693,7 +2961,8 @@ def collect_evidence(
     records: list[tuple[str, list[str]]] = []
     scanned_bytes = 0
     for rel in candidate_files[:EVIDENCE_MAX_FILES]:
-        result = read_evidence_lines(repo / rel)
+        path = optional_repository_path(repo, rel, source="evidence file", allow_symlinks=False)
+        result = read_evidence_lines(path) if path is not None else None
         if result is None:
             continue
         lines, size = result
@@ -2948,17 +3217,31 @@ def verification_commands(items: Iterable[str], task: str | None, limit: int) ->
     return rank_task_text(commands, task, limit)
 
 
-def area_doc_path(repo: Path, area: dict[str, Any]) -> Path:
-    return repo / normalize_path(area.get("doc", ""))
+def area_doc_path(repo: Path, area: dict[str, Any], layout: ContextLayout | None = None) -> Path:
+    layout = layout or resolve_layout(repo)
+    return repository_path(
+        repo,
+        area.get("doc", ""),
+        source="area document",
+        allowed_root=layout.areas_dir,
+        allow_symlinks=False,
+    )
 
 
-def area_doc_text(repo: Path, area: dict[str, Any], context_ref: str | None = None) -> str:
-    rel = normalize_path(area.get("doc", ""))
+def area_doc_text(
+    repo: Path,
+    area: dict[str, Any],
+    context_ref: str | None = None,
+    layout: ContextLayout | None = None,
+) -> str:
+    layout = layout or resolve_layout(repo)
+    rel = repository_relative_path(area.get("doc", ""), source="area document")
     if not rel:
         return ""
+    doc = area_doc_path(repo, area, layout)
     if context_ref:
         return git_file_text(repo, context_ref, rel) or ""
-    return read_text(repo / rel)
+    return read_text(doc)
 
 
 def context_provenance(mode: str, context_ref: str | None, inferred_context: bool) -> str:
@@ -2971,8 +3254,15 @@ def context_provenance(mode: str, context_ref: str | None, inferred_context: boo
     return "Notes and routing: tracked working-tree context; Evidence: current source."
 
 
-def stale_warning(repo: Path, snapshot: Snapshot, area_id: str, area: dict[str, Any], changed_files: list[str]) -> str | None:
-    doc = area_doc_path(repo, area)
+def stale_warning(
+    repo: Path,
+    snapshot: Snapshot,
+    area_id: str,
+    area: dict[str, Any],
+    changed_files: list[str],
+    layout: ContextLayout | None = None,
+) -> str | None:
+    doc = area_doc_path(repo, area, layout)
     if not doc.exists():
         return f"{area_id}: area doc missing at {rel_to_repo(doc, repo)}"
     text = read_text(doc)
@@ -3138,13 +3428,17 @@ def render_pack(
     contracts: list[str] = []
     failures: list[str] = []
     warnings: list[str] = []
+    repo_file_list = repo_files(repo)
 
     def collect_area(selection: AreaSelection, *, primary: bool) -> None:
         area = areas.get(selection.area_id, {})
         target = read_first if primary else read_later
-        start_files = area.get("start_files", []) or []
+        start_files = safe_scope_entries(repo, area.get("start_files", []) or [], repo_file_list)
         for start_file in start_files:
-            is_scope = any(ch in start_file for ch in "*?[") or (repo / start_file).is_dir()
+            prefix = start_file.rstrip("/") + "/"
+            is_scope = any(ch in start_file for ch in "*?[") or any(
+                path.startswith(prefix) for path in repo_file_list
+            )
             if primary and (task or is_scope):
                 search_scopes.append(start_file)
             else:
@@ -3158,13 +3452,13 @@ def render_pack(
             contracts.extend(area_contracts)
             failures.extend(area_failures)
 
-        text = area_doc_text(repo, area, context_ref)
+        text = area_doc_text(repo, area, context_ref, layout)
         if primary:
             extend_distinct_text(contracts, extract_section_bullets(text, "Contracts"))
             extend_distinct_text(failures, extract_section_bullets(text, "Common Failure Modes"))
 
         if not transient and not context_ref:
-            warning = stale_warning(repo, snapshot, selection.area_id, area, changed)
+            warning = stale_warning(repo, snapshot, selection.area_id, area, changed, layout)
             if warning:
                 warnings.append(warning)
 
@@ -3189,6 +3483,7 @@ def render_pack(
                 selections,
                 changed_files=changed,
                 task=task,
+                repo_file_list=repo_file_list,
             )
             if include_evidence and (task or changed)
             else None
@@ -3216,7 +3511,6 @@ def render_pack(
     read_later = unique(read_first_unique[max_read_first:] + read_later)
     contracts_visible, contracts_hidden = split_limited(contracts, max_contracts)
     failures_visible, failures_hidden = split_limited(failures, max_failure_modes)
-    repo_file_list = repo_files(repo)
     repo_file_total = len(repo_file_list)
     read_first_total = len(read_first_visible)
     area_total = len(areas)
@@ -3236,7 +3530,8 @@ def render_pack(
 
     def path_line(item: str) -> str:
         is_glob = any(ch in item for ch in "*?[")
-        suffix = "" if is_glob or (item and (repo / item).exists()) else " (missing)"
+        path = optional_repository_path(repo, item, source="pack path", allow_symlinks=False)
+        suffix = "" if is_glob or (path is not None and path.exists()) else " (missing)"
         return f"- `{item}`{suffix}"
 
     task_label = task if task else ("changed files" if changed else "general orientation")
@@ -3630,9 +3925,11 @@ def is_context_metadata_path(repo: Path, path: str, layout: ContextLayout) -> bo
     if any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes):
         return True
     if path in {path_text(item) for item in AGENT_DOC_TARGETS.values()}:
-        return AGENT_RULES_START in read_text(repo / path)
+        agent_path = optional_repository_path(repo, path, source="agent instruction file", allow_symlinks=False)
+        return agent_path is not None and AGENT_RULES_START in read_text(agent_path)
     if path == ".gitignore":
-        return "# context-pack generated/local files" in read_text(repo / path)
+        gitignore = optional_repository_path(repo, path, source=".gitignore", allow_symlinks=False)
+        return gitignore is not None and "# context-pack generated/local files" in read_text(gitignore)
     return False
 
 
@@ -3785,7 +4082,8 @@ def search_term_health_warnings(repo: Path, manifest: dict[str, Any]) -> list[st
         file_counts = {term: 0 for term in terms}
         scanned_bytes = 0
         for rel in candidates:
-            result = read_evidence_lines(repo / rel)
+            path = optional_repository_path(repo, rel, source="search-term evidence file", allow_symlinks=False)
+            result = read_evidence_lines(path) if path is not None else None
             if result is None:
                 continue
             lines, size = result
@@ -3830,12 +4128,16 @@ def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[
             errors.append(f"missing {rel}")
 
     if (repo / layout.manifest_path).exists():
-        manifest = load_manifest(repo, layout)
+        try:
+            manifest = load_manifest(repo, layout)
+        except RepositoryBoundaryError as exc:
+            errors.append(str(exc))
+            manifest = {}
         areas = manifest.get("areas") or {}
         if not areas:
             warnings.append("manifest has no areas")
         for area_id, area in sorted(areas.items()):
-            doc = area_doc_path(repo, area)
+            doc = area_doc_path(repo, area, layout)
             if not doc.exists():
                 errors.append(f"area {area_id} doc missing: {rel_to_repo(doc, repo)}")
             if not area.get("paths"):
@@ -3843,7 +4145,7 @@ def context_setup_issues(repo: Path, snapshot: Snapshot | None = None) -> tuple[
         warnings.extend(broad_area_warnings(repo, manifest, layout))
         warnings.extend(search_term_health_warnings(repo, manifest))
 
-    gitignore = repo / ".gitignore"
+    gitignore = repository_path(repo, ".gitignore", source=".gitignore", allow_symlinks=False)
     if gitignore.exists():
         text = gitignore.read_text(encoding="utf-8")
         required_ignores = [
@@ -4025,8 +4327,8 @@ def cmd_gc(args: argparse.Namespace) -> int:
 
 
 def migrate_file(repo: Path, source_rel: Path, target_rel: Path, *, force: bool) -> bool:
-    source = repo / source_rel
-    target = repo / target_rel
+    source = repository_path(repo, source_rel, source="legacy migration source", allow_symlinks=False)
+    target = repository_path(repo, target_rel, source="legacy migration target", allow_symlinks=False)
     if not source.exists() or not source.is_file():
         return False
     if target.exists() and not force:
@@ -4035,6 +4337,30 @@ def migrate_file(repo: Path, source_rel: Path, target_rel: Path, *, force: bool)
     text = source.read_text(encoding="utf-8")
     write_text_lf(target, rewrite_legacy_paths(text))
     return True
+
+
+def repository_tree_files(repo: Path, root_rel: Path, *, source: str) -> list[Path]:
+    root = repository_path(repo, root_rel, source=source, allow_symlinks=False)
+    if not root.exists():
+        return []
+    out: list[Path] = []
+    for current_text, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+        current = Path(current_text)
+        safe_dirs: list[str] = []
+        for dirname in dirnames:
+            path = current / dirname
+            rel = path.relative_to(repo)
+            safe_path = optional_repository_path(repo, rel, source=source, allow_symlinks=False)
+            if safe_path is not None and safe_path.is_dir():
+                safe_dirs.append(dirname)
+        dirnames[:] = safe_dirs
+        for filename in filenames:
+            path = current / filename
+            rel = path.relative_to(repo)
+            safe_path = optional_repository_path(repo, rel, source=source, allow_symlinks=False)
+            if safe_path is not None and safe_path.is_file():
+                out.append(path.relative_to(root))
+    return sorted(out, key=path_text)
 
 
 def safe_remove_tree(path: Path, repo: Path) -> None:
@@ -4058,6 +4384,8 @@ def cmd_migrate(args: argparse.Namespace) -> int:
             print(".context-pack already exists. Use --force to overwrite copied files.")
         return 1
 
+    validate_context_layout(repo, LEGACY_LAYOUT)
+    validate_context_layout(repo, PRIMARY_LAYOUT)
     ensure_dirs(repo, PRIMARY_LAYOUT)
     mappings = [
         (LEGACY_MANIFEST_PATH, MANIFEST_PATH),
@@ -4078,33 +4406,34 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         elif (repo / source_rel).exists() and before:
             skipped += 1
 
-    legacy_areas = repo / LEGACY_AREAS_DIR
-    if legacy_areas.exists():
-        for source in legacy_areas.rglob("*"):
-            if not source.is_file():
-                continue
-            rel = source.relative_to(legacy_areas)
-            target_rel = AREAS_DIR / rel
-            before = (repo / target_rel).exists()
-            if migrate_file(repo, LEGACY_AREAS_DIR / rel, target_rel, force=args.force):
-                migrated += 1
-            elif before:
-                skipped += 1
+    for rel in repository_tree_files(repo, LEGACY_AREAS_DIR, source="legacy area tree"):
+        target_rel = AREAS_DIR / rel
+        before = (repo / target_rel).exists()
+        if migrate_file(repo, LEGACY_AREAS_DIR / rel, target_rel, force=args.force):
+            migrated += 1
+        elif before:
+            skipped += 1
 
     if args.include_packs:
-        legacy_packs = repo / LEGACY_PACKS_DIR
-        if legacy_packs.exists():
-            for source in legacy_packs.rglob("*"):
-                if not source.is_file():
-                    continue
-                rel = source.relative_to(legacy_packs)
-                target = repo / PACKS_DIR / rel
-                if target.exists() and not args.force:
-                    skipped += 1
-                    continue
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
-                migrated += 1
+        for rel in repository_tree_files(repo, LEGACY_PACKS_DIR, source="legacy pack tree"):
+            source = repository_path(
+                repo,
+                LEGACY_PACKS_DIR / rel,
+                source="legacy pack source",
+                allow_symlinks=False,
+            )
+            target = repository_path(
+                repo,
+                PACKS_DIR / rel,
+                source="legacy pack target",
+                allow_symlinks=False,
+            )
+            if target.exists() and not args.force:
+                skipped += 1
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+            migrated += 1
 
     append_gitignore(repo, PRIMARY_LAYOUT)
 
@@ -4678,6 +5007,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
+    except RepositoryBoundaryError as exc:
+        eprint(f"Context Pack refused an unsafe repository path: {exc}")
+        return 2
     except KeyboardInterrupt:
         eprint("Interrupted")
         return 130

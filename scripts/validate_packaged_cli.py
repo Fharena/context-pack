@@ -44,8 +44,9 @@ def write_demo_repo(repo: pathlib.Path) -> None:
         (repo / "src" / f"module_{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
 
 
-def validate_transient_start(binary: pathlib.Path) -> None:
-    repo = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-transient-"))
+def validate_transient_start(binary: pathlib.Path, workspace: pathlib.Path) -> None:
+    repo = workspace / "transient"
+    repo.mkdir()
     configure_git_repo(repo)
     write_demo_repo(repo)
     run(["git", "add", "."], cwd=repo)
@@ -76,8 +77,9 @@ def validate_transient_start(binary: pathlib.Path) -> None:
     assert not (repo / ".git/context-pack/CONTEXT_PACK.md").exists()
 
 
-def validate_configured_flow(binary: pathlib.Path) -> None:
-    repo = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-configured-"))
+def validate_configured_flow(binary: pathlib.Path, workspace: pathlib.Path) -> None:
+    repo = workspace / "configured"
+    repo.mkdir()
     configure_git_repo(repo)
     write_demo_repo(repo)
     run([str(binary), "setup", "--repo", str(repo), "--quiet"])
@@ -112,40 +114,76 @@ def validate_configured_flow(binary: pathlib.Path) -> None:
     assert before_checkpoint_status == after_checkpoint_status
 
 
+def validate_security_boundary(binary: pathlib.Path, workspace: pathlib.Path) -> None:
+    repo = workspace / "security"
+    repo.mkdir()
+    configure_git_repo(repo)
+    write_demo_repo(repo)
+    run([str(binary), "setup", "--repo", str(repo), "--quiet"])
+
+    sentinel = "OUTSIDE_PACKAGE_SENTINEL"
+    outside = workspace / "outside.py"
+    outside.write_text(f"{sentinel} = True\n", encoding="utf-8")
+    manifest_path = repo / ".context-pack/manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["areas"]["overview"]["start_files"] = ["../outside.py"]
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    args = [str(binary), "start", "--agent", "--repo", str(repo), "--task", "fix onboarding"]
+    print("+", " ".join(args), flush=True)
+    proc = subprocess.run(args, cwd=repo, env=SUBPROCESS_ENV, capture_output=True, text=True)
+    combined = proc.stdout + proc.stderr
+    if proc.returncode != 2:
+        raise AssertionError(f"Expected unsafe manifest rejection, got {proc.returncode}:\n{combined}")
+    if sentinel in combined:
+        raise AssertionError(f"Outside sentinel leaked through packaged CLI:\n{combined}")
+    if "refused an unsafe repository path" not in combined:
+        raise AssertionError(f"Missing boundary error from packaged CLI:\n{combined}")
+
+
 def main() -> int:
     npm = shutil.which("npm") or "npm"
-    pack_dir = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-npm-pack-"))
-    prefix = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-npm-install-"))
-    info = json.loads(
-        subprocess.check_output([npm, "pack", "--json", "--pack-destination", str(pack_dir)], cwd=ROOT, text=True)
-    )
-    tgz = pack_dir / info[0]["filename"]
-    run([npm, "install", "--prefix", str(prefix), str(tgz), "--silent"])
-    binary = prefix / "node_modules" / ".bin" / ("context-pack.cmd" if os.name == "nt" else "context-pack")
+    with tempfile.TemporaryDirectory(prefix="context-pack-package-validation-") as tmp:
+        workspace = pathlib.Path(tmp)
+        pack_dir = workspace / "npm-pack"
+        prefix = workspace / "npm-install"
+        pack_dir.mkdir()
+        prefix.mkdir()
+        info = json.loads(
+            subprocess.check_output(
+                [npm, "pack", "--json", "--pack-destination", str(pack_dir)],
+                cwd=ROOT,
+                text=True,
+            )
+        )
+        tgz = pack_dir / info[0]["filename"]
+        run([npm, "install", "--prefix", str(prefix), str(tgz), "--silent"])
+        binary = prefix / "node_modules" / ".bin" / ("context-pack.cmd" if os.name == "nt" else "context-pack")
 
-    run_output([str(binary)], ["Normal use:", "context-pack setup --dry-run"])
-    run_output([str(binary), "--version"], info[0]["version"])
-    run([str(binary), "--help"])
-    validate_transient_start(binary)
-    validate_configured_flow(binary)
+        run_output([str(binary)], ["Normal use:", "context-pack setup --dry-run"])
+        run_output([str(binary), "--version"], info[0]["version"])
+        run([str(binary), "--help"])
+        validate_transient_start(binary, workspace)
+        validate_configured_flow(binary, workspace)
+        validate_security_boundary(binary, workspace)
 
-    install_root = pathlib.Path(tempfile.mkdtemp(prefix="context-pack-codex-install-"))
-    target = install_root / "plugins/context-pack"
-    marketplace = install_root / ".agents/plugins/marketplace.json"
-    run(
-        [
-            str(binary),
-            "install-codex",
-            "--target",
-            str(target),
-            "--marketplace",
-            str(marketplace),
-            "--quiet",
-        ]
-    )
-    assert (target / ".codex-plugin/plugin.json").exists()
-    assert (target / "skills/context-pack/SKILL.md").exists()
-    assert json.loads(marketplace.read_text(encoding="utf-8"))["plugins"][0]["name"] == "context-pack"
+        install_root = workspace / "codex-install"
+        target = install_root / "plugins/context-pack"
+        marketplace = install_root / ".agents/plugins/marketplace.json"
+        run(
+            [
+                str(binary),
+                "install-codex",
+                "--target",
+                str(target),
+                "--marketplace",
+                str(marketplace),
+                "--quiet",
+            ]
+        )
+        assert (target / ".codex-plugin/plugin.json").exists()
+        assert (target / "skills/context-pack/SKILL.md").exists()
+        assert json.loads(marketplace.read_text(encoding="utf-8"))["plugins"][0]["name"] == "context-pack"
     return 0
 
 

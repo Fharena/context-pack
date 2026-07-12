@@ -40,6 +40,215 @@ class ContextPackTests(unittest.TestCase):
     def setUp(self) -> None:
         self.engine = load_engine()
 
+    def symlink_or_skip(self, link: Path, target: Path) -> None:
+        try:
+            link.symlink_to(target, target_is_directory=target.is_dir())
+        except (NotImplementedError, OSError) as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+
+    def test_repository_relative_path_rejects_portable_escape_forms(self) -> None:
+        unsafe = [
+            "../secret.py",
+            "src/../../secret.py",
+            "/var/tmp/secret.py",
+            r"X:\private\secret.py",
+            r"X:private\secret.py",
+            r"\\server\share\secret.py",
+            "src/file.py:stream",
+            "src/CON.txt",
+            "NUL",
+            "src/trailing.",
+            "src/bad|name.py",
+            "src/secret.py\0tail",
+        ]
+        for value in unsafe:
+            with self.subTest(value=value):
+                with self.assertRaises(self.engine.RepositoryBoundaryError):
+                    self.engine.repository_relative_path(value, source="test path")
+
+        self.assertEqual(
+            self.engine.repository_relative_path(r"src\runtime\selector.py", source="test path"),
+            "src/runtime/selector.py",
+        )
+        self.assertEqual(
+            self.engine.repository_relative_path("./src//runtime.py", source="test path"),
+            "src/runtime.py",
+        )
+
+    def test_repository_path_rejects_resolved_escape_and_symlink_redirect(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            linked = repo / "linked.py"
+            outside = repo.parent / "outside.py"
+            path_type = type(repo)
+            original_resolve = path_type.resolve
+
+            def resolve_outside(path: Path, strict: bool = False) -> Path:
+                if path == linked:
+                    return outside
+                return original_resolve(path, strict=strict)
+
+            with mock.patch.object(path_type, "resolve", new=resolve_outside):
+                with self.assertRaisesRegex(self.engine.RepositoryBoundaryError, "outside the repository"):
+                    self.engine.repository_path(repo, "linked.py", source="test link")
+
+            redirected = repo / "redirected.py"
+
+            def resolve_inside(path: Path, strict: bool = False) -> Path:
+                if path == linked:
+                    return redirected
+                return original_resolve(path, strict=strict)
+
+            with mock.patch.object(path_type, "resolve", new=resolve_inside):
+                with self.assertRaisesRegex(self.engine.RepositoryBoundaryError, "symbolic link"):
+                    self.engine.repository_path(
+                        repo,
+                        "linked.py",
+                        source="test link",
+                        allow_symlinks=False,
+                    )
+
+    def test_scope_globs_do_not_cross_directory_boundaries(self) -> None:
+        self.assertTrue(self.engine.scope_pattern_matches("client/js/app.js", "client/js/*.js"))
+        self.assertFalse(self.engine.scope_pattern_matches("client/js/lib/app.js", "client/js/*.js"))
+        self.assertFalse(self.engine.scope_pattern_matches("client/js/lib/app.js", "lib/*.js"))
+        self.assertTrue(self.engine.scope_pattern_matches("lib/app.js", "lib/*.js"))
+        self.assertFalse(self.engine.scope_pattern_matches("pkg/main.go", "*.go"))
+        self.assertTrue(self.engine.scope_pattern_matches("client/js/lib/app.js", "client/js/**"))
+        self.assertTrue(self.engine.scope_pattern_matches("pkg/deep/value_test.go", "**/*_test.go"))
+
+    def test_manifest_escape_is_refused_before_read_or_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            outside = root / "outside.py"
+            sentinel = "OUTSIDE_SECRET_SENTINEL"
+            outside.write_text(f"{sentinel} = True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["overview"]["start_files"] = ["../outside.py"]
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                start_result = self.engine.main(
+                    ["start", "--agent", "--task", "fix onboarding", "--repo", str(repo)]
+                )
+            self.assertEqual(start_result, 2)
+            self.assertNotIn(sentinel, stdout.getvalue() + stderr.getvalue())
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                setup_result = self.engine.main(["setup", "--force", "--repo", str(repo)])
+            self.assertEqual(setup_result, 2)
+            self.assertEqual(outside.read_text(encoding="utf-8"), f"{sentinel} = True\n")
+
+    def test_manifest_doc_is_confined_to_area_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "README.md").write_text("PROJECT_DOC_SENTINEL\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["overview"]["doc"] = "README.md"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                result = self.engine.main(
+                    ["start", "--agent", "--task", "review overview", "--repo", str(repo)]
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("must remain under", stderr.getvalue())
+            self.assertNotIn("PROJECT_DOC_SENTINEL", stderr.getvalue())
+
+    def test_ignored_file_is_not_read_or_emitted_as_agent_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            with (repo / ".gitignore").open("a", encoding="utf-8") as handle:
+                handle.write(".env\n")
+            secret = "LOCAL_ENV_SECRET_SENTINEL=do-not-read\n"
+            (repo / ".env").write_text(secret, encoding="utf-8")
+
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["auth"] = {
+                "kind": "source",
+                "doc": ".context-pack/AREAS/auth.md",
+                "description": "Authentication configuration.",
+                "paths": [".env"],
+                "start_files": [".env"],
+                "search_terms": ["auth_config_token"],
+                "keywords": ["auth"],
+                "tests": [],
+            }
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / ".context-pack/AREAS/auth.md").write_text("# Auth\n", encoding="utf-8")
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                result = self.engine.main(
+                    ["start", "--agent", "--task", "fix auth", "--repo", str(repo)]
+                )
+            self.assertEqual(result, 0)
+            self.assertNotIn("LOCAL_ENV_SECRET_SENTINEL", stdout.getvalue())
+            self.assertNotIn("`.env`", stdout.getvalue())
+
+    def test_manifest_symlink_escape_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            (repo / "src").mkdir()
+            outside = root / "outside.py"
+            sentinel = "SYMLINK_SECRET_SENTINEL"
+            outside.write_text(f"{sentinel} = True\n", encoding="utf-8")
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            self.symlink_or_skip(repo / "src/linked.py", outside)
+
+            manifest_path = repo / ".context-pack/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["areas"]["overview"]["start_files"] = ["src/linked.py"]
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                result = self.engine.main(
+                    ["start", "--agent", "--task", "fix linked source", "--repo", str(repo)]
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("symbolic link", stderr.getvalue())
+            self.assertNotIn(sentinel, stdout.getvalue() + stderr.getvalue())
+
+    def test_checkpoint_does_not_follow_managed_file_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            self.assertEqual(self.engine.main(["setup", "--repo", str(repo), "--quiet"]), 0)
+            outside = root / "outside-current.md"
+            original = "OUTSIDE_CURRENT_SENTINEL\n"
+            outside.write_text(original, encoding="utf-8")
+            current = repo / ".context-pack/CURRENT.md"
+            current.unlink()
+            self.symlink_or_skip(current, outside)
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                result = self.engine.main(
+                    ["checkpoint", "--publish", "--repo", str(repo), "--quiet"]
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("symbolic link", stderr.getvalue())
+            self.assertEqual(outside.read_text(encoding="utf-8"), original)
+
     def test_engine_has_no_unreferenced_top_level_symbols(self) -> None:
         tree = ast.parse(ENGINE.read_text(encoding="utf-8"))
         definitions = {
@@ -2174,6 +2383,9 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("Review base: main (auto)", text)
         self.assertIn("before_checkpoint_status == after_checkpoint_status", text)
         self.assertIn("Mode: review", text)
+        self.assertIn("validate_security_boundary", text)
+        self.assertIn("OUTSIDE_PACKAGE_SENTINEL", text)
+        self.assertIn("TemporaryDirectory", text)
 
     def test_python_module_cli_runs(self) -> None:
         env = os.environ.copy()
