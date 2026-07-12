@@ -44,3 +44,9 @@ Recent published checkpoints only; older history remains available in git.
 - Dirty files: none
 - Dirty diff hash: clean
 - Verification: GitHub CI run 29166590894 and Release run 29166729855 passed; v0.5.0 wheel, sdist, and npm tarball are uploaded; field-test issue #1 is open; PyPI/npm publication remains pending registry-side setup.
+## 2026-07-12T13:51:31+09:00
+- Branch: main
+- HEAD: f450046cf68a
+- Dirty files: .context-pack/CURRENT.md
+- Dirty diff hash: sha256:d52a9533651dcb3b4881c1ee
+- Verification: Local 106-test suite, packaged npm boundary attack, wheel/sdist build and install, public 10/10 routing gate, CI run 29180231197, and Release run 29180289927 passed; v0.5.1 assets are uploaded.
