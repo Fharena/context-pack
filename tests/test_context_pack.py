@@ -224,7 +224,8 @@ class ContextPackTests(unittest.TestCase):
                     ["start", "--agent", "--task", "fix linked source", "--repo", str(repo)]
                 )
             self.assertEqual(result, 2)
-            self.assertIn("symbolic link", stderr.getvalue())
+            self.assertIn("refused an unsafe repository path", stderr.getvalue())
+            self.assertIn("outside the repository", stderr.getvalue())
             self.assertNotIn(sentinel, stdout.getvalue() + stderr.getvalue())
 
     def test_checkpoint_does_not_follow_managed_file_symlink(self) -> None:
@@ -246,7 +247,8 @@ class ContextPackTests(unittest.TestCase):
                     ["checkpoint", "--publish", "--repo", str(repo), "--quiet"]
                 )
             self.assertEqual(result, 2)
-            self.assertIn("symbolic link", stderr.getvalue())
+            self.assertIn("refused an unsafe repository path", stderr.getvalue())
+            self.assertIn("outside the repository", stderr.getvalue())
             self.assertEqual(outside.read_text(encoding="utf-8"), original)
 
     def test_engine_has_no_unreferenced_top_level_symbols(self) -> None:
